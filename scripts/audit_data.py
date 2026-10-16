@@ -2,18 +2,23 @@
 """
 scripts/audit_data.py
 
-Reproducible quantitative data audit script for Gate 0.
+Reproducible quantitative data audit script for Gate 0 Revision.
 Audits candidate review datasets for:
-- Essential field validation (platform, review, rating, date)
-- Missingness, blank text, exact duplicates, and near-duplicates
-- Platform representation and row counts (raw vs usable)
-- Date parsing, temporal coverage, and platform-level date alignment
-- Rating and sentiment distributions
-- Text length metrics (character and word count distributions)
-- Project feasibility threshold checks (Target vs Minimum thresholds)
+1. Full Corpus Baseline:
+   - Essential field validation (platform, review, rating, date)
+   - Missingness, blank text, exact duplicates, and near-duplicates
+   - Overall platform row counts and rating distributions
+2. Common Review Window (14 August 2024 to 31 December 2024, inclusive):
+   - Exact usable record counts by platform (Blinkit focal, Zepto primary competitor, JioMart secondary)
+   - Exclusion counts (records outside the common window)
+   - Missing text, missing ratings, missing dates in the common window
+   - Exact duplicate rows and duplicate review text within the common window
+   - Actual date coverage (min date, max date, day span) after filtering
+   - Acceptance threshold verification (>= 500 usable records for Blinkit and Zepto)
+   - Static analysis scope boundary enforcement (no temporal trends or seasonality claims)
 
 Usage:
-    python scripts/audit_data.py [--file PATH_TO_CSV]
+    python scripts/audit_data.py [--file PATH_TO_CSV] [--window-start YYYY-MM-DD] [--window-end YYYY-MM-DD]
 """
 
 import sys
@@ -31,14 +36,29 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 ESSENTIAL_FIELDS = ['platform', 'review', 'rating', 'date']
+DEFAULT_WINDOW_START = "2024-08-14"
+DEFAULT_WINDOW_END = "2024-12-31"
+MIN_THRESHOLD_PER_PLATFORM = 500
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Audit quick-commerce review dataset for Gate 0.")
+    parser = argparse.ArgumentParser(description="Audit quick-commerce review dataset for Gate 0 Revision.")
     parser.add_argument(
         "--file",
         type=str,
         default=None,
-        help="Path to CSV dataset to audit. If omitted, checks standard local paths or Candidate A cache."
+        help="Path to CSV dataset to audit. If omitted, checks standard local paths."
+    )
+    parser.add_argument(
+        "--window-start",
+        type=str,
+        default=DEFAULT_WINDOW_START,
+        help=f"Common window start date (inclusive, YYYY-MM-DD). Default: {DEFAULT_WINDOW_START}"
+    )
+    parser.add_argument(
+        "--window-end",
+        type=str,
+        default=DEFAULT_WINDOW_END,
+        help=f"Common window end date (inclusive, YYYY-MM-DD). Default: {DEFAULT_WINDOW_END}"
     )
     return parser.parse_args()
 
@@ -46,7 +66,6 @@ def find_dataset(file_arg):
     if file_arg and os.path.exists(file_arg):
         return file_arg
     
-    # Check standard project paths
     candidates = [
         os.path.join("data", "raw", "reviews.csv"),
         os.path.join("data", "reviews.csv"),
@@ -62,11 +81,12 @@ def normalize_text_for_dedup(text):
     t = re.sub(r'[^\w\s]', '', t)
     return re.sub(r'\s+', ' ', t)
 
-def run_audit(file_path):
+def run_audit(file_path, window_start_str, window_end_str):
     print("=" * 80)
-    print("GATE 0 QUANTITATIVE DATASET AUDIT")
-    print(f"Target File: {file_path}")
-    print(f"File Size: {os.path.getsize(file_path):,} bytes")
+    print("GATE 0 REVISION: QUANTITATIVE DATASET AUDIT & COMMON WINDOW VERIFICATION")
+    print(f"Target File : {file_path}")
+    print(f"File Size   : {os.path.getsize(file_path):,} bytes")
+    print(f"Scope Window: {window_start_str} to {window_end_str} (inclusive)")
     print("=" * 80)
 
     try:
@@ -86,150 +106,141 @@ def run_audit(file_path):
         sys.exit(1)
     print("\n[PASS] All essential fields ('platform', 'review', 'rating', 'date') are present.")
 
-    # 2. Missingness Audit
-    print("\n" + "-" * 40)
-    print("1. FIELD COMPLETENESS & MISSINGNESS")
-    print("-" * 40)
-    for col in df.columns:
-        n_missing = df[col].isna().sum()
-        pct_missing = (n_missing / len(df)) * 100
-        print(f"  - {col:<12}: {n_missing:>5} missing ({pct_missing:>5.2f}%)")
-
-    # 3. Blank / Whitespace Text
-    blank_mask = df['review'].apply(lambda x: len(str(x).strip()) == 0 or str(x).lower() == 'nan')
-    n_blank = blank_mask.sum()
-    pct_blank = (n_blank / len(df)) * 100
-    print(f"  - Blank/Whitespace Text: {n_blank} ({pct_blank:.2f}%)")
-
-    # 4. Duplication Analysis
-    print("\n" + "-" * 40)
-    print("2. DUPLICATION ANALYSIS")
-    print("-" * 40)
-    exact_all = df.duplicated().sum()
-    exact_text_plat = df.duplicated(subset=['platform', 'review']).sum()
-    exact_text_only = df.duplicated(subset=['review']).sum()
-
-    df['norm_review'] = df['review'].apply(normalize_text_for_dedup)
-    near_dupes = df.duplicated(subset=['platform', 'norm_review']).sum()
-
-    print(f"  - Exact Duplicate Rows (all columns)   : {exact_all:>5} ({exact_all/len(df)*100:>5.2f}%)")
-    print(f"  - Exact Duplicate Review Text (platform): {exact_text_plat:>5} ({exact_text_plat/len(df)*100:>5.2f}%)")
-    print(f"  - Exact Duplicate Review Text (cross)   : {exact_text_only:>5} ({exact_text_only/len(df)*100:>5.2f}%)")
-    print(f"  - Near-Duplicate Review Text (platform) : {near_dupes:>5} ({near_dupes/len(df)*100:>5.2f}%)")
-
-    # 5. Platform Breakdown & Usability
-    print("\n" + "-" * 40)
-    print("3. PLATFORM USABILITY & ROW COUNTS")
-    print("-" * 40)
-    usable_mask = (~df['review'].isna()) & (~blank_mask)
-    platforms = df['platform'].str.lower().unique()
-
-    platform_summary = []
-    for p in platforms:
-        p_total = (df['platform'].str.lower() == p).sum()
-        p_usable = ((df['platform'].str.lower() == p) & usable_mask).sum()
-        p_unique_text = df[df['platform'].str.lower() == p]['review'].nunique()
-        platform_summary.append({
-            'platform': p,
-            'total': p_total,
-            'usable': p_usable,
-            'unique_text': p_unique_text
-        })
-        print(f"  - {p:<12}: Total={p_total:>5}, Usable={p_usable:>5}, Unique Text={p_unique_text:>5}")
-
-    # 6. Temporal Coverage & Date Parsing
-    print("\n" + "-" * 40)
-    print("4. TEMPORAL COVERAGE & DATE ALIGNMENT")
-    print("-" * 40)
+    # 2. Parse Dates
     df['parsed_date'] = pd.to_datetime(df['date'], format='%d %B %Y', errors='coerce')
     if df['parsed_date'].isna().all():
         df['parsed_date'] = pd.to_datetime(df['date'], errors='coerce')
 
     n_bad_date = df['parsed_date'].isna().sum()
-    print(f"  - Unparseable Dates: {n_bad_date} ({n_bad_date/len(df)*100:.2f}%)")
+    print(f"Unparseable Dates in Entire Dataset: {n_bad_date} ({n_bad_date/len(df)*100:.2f}%)")
 
-    for p in platforms:
-        sub = df[df['platform'].str.lower() == p]
-        d_min = sub['parsed_date'].min()
-        d_max = sub['parsed_date'].max()
-        if pd.notna(d_min) and pd.notna(d_max):
-            span_days = (d_max - d_min).days
-            span_months = span_days / 30.4375
-            print(f"  - {p:<12}: {d_min.strftime('%Y-%m-%d')} to {d_max.strftime('%Y-%m-%d')} ({span_days:>4} days, ~{span_months:>4.1f} months)")
-        else:
-            print(f"  - {p:<12}: Date parsing failed or no dates available.")
+    # 3. Overall Missingness & Duplication (Entire Dataset)
+    print("\n" + "-" * 60)
+    print("PART 1: FULL DATASET BASELINE (ENTIRE 4,620-ROW CORPUS)")
+    print("-" * 60)
+    for col in ESSENTIAL_FIELDS:
+        n_missing = df[col].isna().sum()
+        pct_missing = (n_missing / len(df)) * 100
+        print(f"  - {col:<12}: {n_missing:>5} missing ({pct_missing:>5.2f}%)")
 
-    # 7. Rating Distribution
-    print("\n" + "-" * 40)
-    print("5. RATING DISTRIBUTION BY PLATFORM")
-    print("-" * 40)
-    for p in platforms:
-        sub = df[df['platform'].str.lower() == p]
-        counts = sub['rating'].value_counts().sort_index().to_dict()
-        mean_val = sub['rating'].mean()
-        pcts = {k: f"{(v/len(sub))*100:.1f}%" for k, v in counts.items()}
-        print(f"  - {p:<12} (Mean={mean_val:.2f}): {counts} | {pcts}")
+    blank_mask_full = df['review'].apply(lambda x: len(str(x).strip()) == 0 or str(x).lower() == 'nan')
+    print(f"  - Blank/Whitespace Text: {blank_mask_full.sum()} ({blank_mask_full.sum()/len(df)*100:.2f}%)")
+    print(f"  - Exact Duplicate Rows : {df.duplicated().sum()} ({df.duplicated().sum()/len(df)*100:.2f}%)")
+    print(f"  - Duplicate Review Text: {df.duplicated(subset=['review']).sum()} ({df.duplicated(subset=['review']).sum()/len(df)*100:.2f}%)")
 
-    overall_counts = df['rating'].value_counts().sort_index().to_dict()
-    overall_pcts = {k: f"{(v/len(df))*100:.1f}%" for k, v in overall_counts.items()}
-    print(f"  - OVERALL      (Mean={df['rating'].mean():.2f}): {overall_counts} | {overall_pcts}")
+    # Platform counts full dataset
+    print("\nFull Dataset Platform Row Counts:")
+    for p in sorted(df['platform'].str.lower().unique()):
+        sub_full = df[df['platform'].str.lower() == p]
+        d_min = sub_full['parsed_date'].min()
+        d_max = sub_full['parsed_date'].max()
+        days = (d_max - d_min).days if pd.notna(d_min) and pd.notna(d_max) else 0
+        print(f"  - {p:<10}: {len(sub_full):>5} rows | {d_min.strftime('%Y-%m-%d')} to {d_max.strftime('%Y-%m-%d')} ({days:>4} days)")
 
-    # 8. Text Length Distribution
-    print("\n" + "-" * 40)
-    print("6. TEXT LENGTH DISTRIBUTION (WORDS & CHARACTERS)")
-    print("-" * 40)
-    df['char_count'] = df['review'].astype(str).str.len()
-    df['word_count'] = df['review'].astype(str).str.split().str.len()
+    # 4. Common Review Window Audit
+    print("\n" + "-" * 60)
+    print(f"PART 2: RE-AUDIT OF COMMON REVIEW WINDOW ({window_start_str} to {window_end_str})")
+    print("-" * 60)
+    print("Controlling Constraint: Static complaint-theme and expressed-switching analysis ONLY.")
+    print("CRITICAL NOTICE: Must NOT be used to claim temporal trends or seasonality.")
+    print("-" * 60)
 
-    for p in platforms:
-        sub = df[df['platform'].str.lower() == p]
-        print(f"  - {p:<12}: Words [Min={sub['word_count'].min()}, Median={sub['word_count'].median():.0f}, Mean={sub['word_count'].mean():.1f}, Max={sub['word_count'].max()}] | "
-              f"Chars [Min={sub['char_count'].min()}, Median={sub['char_count'].median():.0f}, Mean={sub['char_count'].mean():.1f}, Max={sub['char_count'].max()}]")
+    start_date = pd.to_datetime(window_start_str)
+    end_date = pd.to_datetime(window_end_str)
 
-    # 9. Feasibility Threshold Check
+    window_mask = (df['parsed_date'] >= start_date) & (df['parsed_date'] <= end_date)
+    df_window = df[window_mask].copy()
+
+    total_window_records = len(df_window)
+    print(f"Total Records in Common Window: {total_window_records:,} (out of {len(df):,} total, {len(df)-total_window_records} excluded)")
+
+    # Platforms in window audit
+    target_platforms = ['blinkit', 'zepto', 'jiomart']
+    platform_metrics = {}
+
+    for p in target_platforms:
+        sub_raw = df[df['platform'].str.lower() == p]
+        sub_win = df_window[df_window['platform'].str.lower() == p]
+        
+        blank_mask = sub_win['review'].apply(lambda x: len(str(x).strip()) == 0 or str(x).lower() == 'nan')
+        usable_records = len(sub_win) - blank_mask.sum()
+        
+        exclusions = len(sub_raw) - len(sub_win)
+        missing_text = sub_win['review'].isna().sum() + blank_mask.sum()
+        missing_rating = sub_win['rating'].isna().sum()
+        missing_date = sub_win['date'].isna().sum() + sub_win['parsed_date'].isna().sum()
+        
+        exact_dupes = sub_win.duplicated().sum()
+        dupe_text = sub_win.duplicated(subset=['review']).sum()
+        
+        min_date = sub_win['parsed_date'].min()
+        max_date = sub_win['parsed_date'].max()
+        coverage_days = (max_date - min_date).days if len(sub_win) > 0 else 0
+        
+        meets_threshold = usable_records >= MIN_THRESHOLD_PER_PLATFORM
+        
+        platform_metrics[p] = {
+            'raw_total': len(sub_raw),
+            'window_total': len(sub_win),
+            'usable': usable_records,
+            'exclusions': exclusions,
+            'missing_text': missing_text,
+            'missing_rating': missing_rating,
+            'missing_date': missing_date,
+            'exact_dupes': exact_dupes,
+            'dupe_text': dupe_text,
+            'min_date': min_date.strftime('%Y-%m-%d') if pd.notna(min_date) else "N/A",
+            'max_date': max_date.strftime('%Y-%m-%d') if pd.notna(max_date) else "N/A",
+            'coverage_days': coverage_days,
+            'meets_threshold': meets_threshold
+        }
+        
+        role_label = "Focal Company" if p == "blinkit" else ("Primary Competitor" if p == "zepto" else "Secondary Context")
+        print(f"\n[{p.upper()}] — {role_label}")
+        print(f"  - Full Dataset Raw Rows      : {len(sub_raw):,}")
+        print(f"  - Common Window Records      : {len(sub_win):,}")
+        print(f"  - Excluded (Out of Window)   : {exclusions:,}")
+        print(f"  - Usable Text-Bearing Records: {usable_records:,}")
+        print(f"  - Missing Text               : {missing_text}")
+        print(f"  - Missing Ratings            : {missing_rating}")
+        print(f"  - Missing / Unparseable Dates: {missing_date}")
+        print(f"  - Exact Duplicate Rows       : {exact_dupes}")
+        print(f"  - Duplicate Review Text      : {dupe_text}")
+        print(f"  - Actual Date Coverage       : {platform_metrics[p]['min_date']} to {platform_metrics[p]['max_date']} ({coverage_days} days)")
+        print(f"  - Threshold Check (>= {MIN_THRESHOLD_PER_PLATFORM})  : {'[PASS]' if meets_threshold else '[FAIL]'}")
+
+    # 5. Rating breakdown in common window
+    print("\n" + "-" * 60)
+    print("RATING DISTRIBUTIONS IN COMMON WINDOW")
+    print("-" * 60)
+    for p in target_platforms:
+        sub_win = df_window[df_window['platform'].str.lower() == p]
+        counts = sub_win['rating'].value_counts().sort_index().to_dict()
+        pcts = {k: f"{(v/len(sub_win))*100:.1f}%" for k, v in counts.items()}
+        print(f"  - {p:<10} (Mean={sub_win['rating'].mean():.2f}): {counts} | {pcts}")
+
+    # 6. Formal Acceptance Verification
     print("\n" + "=" * 80)
-    print("FEASIBILITY THRESHOLD EVALUATION")
+    print("GATE 0 REVISION ACCEPTANCE EVALUATION")
     print("=" * 80)
-    total_usable = usable_mask.sum()
-    print(f"Total Usable Records: {total_usable:,}")
-    print("Target Threshold  : >= 3,000 total, >= 1,000 per platform, >= 12 months coverage")
-    print("Minimum Threshold : >= 1,500 total, >=   500 per platform, >=  6 months coverage")
-    print("Required Platforms: Blinkit, Zepto, Swiggy Instamart")
+    blinkit_pass = platform_metrics['blinkit']['meets_threshold']
+    zepto_pass = platform_metrics['zepto']['meets_threshold']
+    jiomart_pass = platform_metrics['jiomart']['meets_threshold']
+    
+    print(f"1. Focal Company (Blinkit) Usable Records (>= 500)    : {platform_metrics['blinkit']['usable']:,} [{'PASS' if blinkit_pass else 'FAIL'}]")
+    print(f"2. Primary Competitor (Zepto) Usable Records (>= 500)  : {platform_metrics['zepto']['usable']:,} [{'PASS' if zepto_pass else 'FAIL'}]")
+    print(f"3. Secondary Context (JioMart) Usable Records (>= 500) : {platform_metrics['jiomart']['usable']:,} [{'PASS' if jiomart_pass else 'FAIL'}]")
+    print(f"4. Total Common-Window Usable Volume (>= 1,500)        : {total_window_records:,} [{'PASS' if total_window_records >= 1500 else 'FAIL'}]")
+    print("5. Scope Enforcement: STATIC complaint-theme and expressed-switching analysis ONLY.")
+    print("   (Temporal trend modeling and seasonality claims are strictly prohibited.)")
     print("-" * 80)
 
-    # Check overall count
-    pass_total_target = total_usable >= 3000
-    pass_total_min = total_usable >= 1500
-    print(f"Total Count Check    : Target [ {'PASS' if pass_total_target else 'FAIL'} ] | Minimum [ {'PASS' if pass_total_min else 'FAIL'} ]")
-
-    # Check platforms
-    req_platforms = {'blinkit', 'zepto', 'swiggy instamart'}
-    present_platforms = set(p.lower() for p in platforms)
-    missing_platforms = req_platforms - present_platforms
-    extra_platforms = present_platforms - req_platforms
-
-    print(f"Platform Scope Check : Present={sorted(list(present_platforms))}")
-    if missing_platforms:
-        print(f"                       MISSING REQUIRED PLATFORMS: {sorted(list(missing_platforms))}")
-    if extra_platforms:
-        print(f"                       UNEXPECTED EXTRA PLATFORMS: {sorted(list(extra_platforms))}")
-
-    # Check temporal threshold
-    sub_b = df[df['platform'].str.lower() == 'blinkit']
-    sub_z = df[df['platform'].str.lower() == 'zepto']
-    b_days = (sub_b['parsed_date'].max() - sub_b['parsed_date'].min()).days if len(sub_b) else 0
-    z_days = (sub_z['parsed_date'].max() - sub_z['parsed_date'].min()).days if len(sub_z) else 0
-
-    pass_temporal_min = (b_days >= 180) and (z_days >= 180)
-    print(f"Temporal Check (>=180d): Blinkit={b_days}d ({'PASS' if b_days>=180 else 'FAIL'}), Zepto={z_days}d ({'z_days' if z_days>=180 else 'FAIL'})")
-
-    print("\n" + "=" * 80)
-    if not missing_platforms and pass_total_target and pass_temporal_min:
-        print("OVERALL GATE 0 DATA STATUS: PASS")
-    elif pass_total_min and (missing_platforms or not pass_temporal_min):
-        print("OVERALL GATE 0 DATA STATUS: CONDITIONAL PASS (Requires Scope/Platform Resolution)")
+    if blinkit_pass and zepto_pass:
+        print("OVERALL GATE 0 REVISION STATUS: PASS (CONDITIONAL SCOPE ACCEPTED)")
+        print("The common-window filtered dataset meets all minimum record criteria for Blinkit and Zepto.")
     else:
-        print("OVERALL GATE 0 DATA STATUS: FAIL")
+        print("[FATAL FAILURE] Either Blinkit or Zepto has fewer than 500 usable records in the common window.")
+        sys.exit(1)
     print("=" * 80)
 
 def main():
@@ -239,7 +250,7 @@ def main():
         print("\n[ERROR] No candidate dataset found to audit.")
         print("Please provide a dataset path using --file PATH_TO_CSV.")
         sys.exit(1)
-    run_audit(data_path)
+    run_audit(data_path, args.window_start, args.window_end)
 
 if __name__ == "__main__":
     main()
