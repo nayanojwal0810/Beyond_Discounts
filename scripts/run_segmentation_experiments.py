@@ -81,6 +81,7 @@ def parse_arguments(args=None):
     parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="Path to processed data directory.")
     parser.add_argument("--subsamples", type=int, default=20, help="Number of subsamples for stability evaluation.")
     parser.add_argument("--subsample-ratio", type=float, default=0.8, help="Subsample ratio for stability evaluation.")
+    parser.add_argument("--validation-resamples", type=int, default=9999, help="Fixed-margin Monte Carlo resamples for QA49 cluster validation (minimum 999).")
     return parser.parse_args(args)
 
 
@@ -693,6 +694,8 @@ def apply_multiple_testing_corrections(records):
 
 def run_experiments(args=None):
     parsed = parse_arguments(args)
+    if parsed.validation_resamples < 999:
+        raise ValueError("--validation-resamples must be >= 999.")
     os.makedirs(parsed.reports_dir, exist_ok=True)
     os.makedirs(parsed.data_dir, exist_ok=True)
 
