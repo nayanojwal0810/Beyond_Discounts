@@ -169,6 +169,14 @@ class TestCRMAnalysis(unittest.TestCase):
             self.assertTrue(os.path.exists(status_path))
             fit = pd.read_csv(fit_path)
             self.assertGreaterEqual(len(fit), 3)
+            coefficients = pd.read_csv(coef_path)
+            self.assertIn("p_value_holm_within_model", coefficients.columns)
+            self.assertIn("p_adjustment_method", coefficients.columns)
+            predictor_rows = coefficients[coefficients["term_type"] == "predictor"]
+            self.assertTrue(predictor_rows["p_value_holm_within_model"].notna().all())
+            self.assertTrue(
+                (predictor_rows["p_value_holm_within_model"] >= predictor_rows["p_value"] - 1e-12).all()
+            )
             primary = fit[fit["model"] == "QA47 ordered logit — prespecified trend model"]
             self.assertEqual(len(primary), 1)
             self.assertEqual(int(primary.iloc[0]["n"]), 807)
