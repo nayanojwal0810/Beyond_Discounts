@@ -19,12 +19,13 @@ Enforces:
        * ALL 807 current active users (Ever=1, Freq>1) must have substantive values in {1..5}
        * ALL 456 non-current users (Freq=1) must have code 6 (Not applicable)
        * Any violation (current user with code 6, non-current with 1..5, invalid values, ambiguous) fails audit
-   - QA 16 - QA 45 Skip Logic for 456 Non-Current Respondents:
-       * Validates specific source codebook N/A values across single-select variables
-       * Validates multi-select N/A indicators (Reason Not Applicable=1, Category Not Applicable=1, Problem Not Applicable=1)
-       * Validates that specific option indicators are strictly 0 for non-current respondents
-       * Validates satisfaction battery (QA 37-40) equals Code 6 for all 456 non-current respondents
-       * Validates QA 48 current-user skip flag (0 for non-current, 1 for current) and non-user reason dummies
+   - QA 16 - QA 45 Response Classifications for 456 Non-Current Respondents:
+       * Explicit Source-Defined N/A Codes: Validates specific codebook N/A values across single-select variables (QA 16, 17, 19, 20, 21, 23, 25, 27-30, 32-35, 37-40, 41, 42, 44, 45)
+       * Multi-Select N/A Indicators: Validates N/A dummy indicators (Reason Not Applicable=1, Category Not Applicable=1, Problem Not Applicable=1) and substantive options=0
+       * Substantive Zero-Spend / Non-Use: QA 26 code 1 means ₹0 monthly spend (not N/A); QA 43 code 6 means 'I do not use quick commerce' (substantive non-use, not N/A)
+       * Physical Store Preferences (QA 24): Has NO 'not applicable – never used' option in Code Book; NOT skip-coded; substantive physical preferences across all respondents
+       * Satisfaction Battery (QA 37-40): Equals Code 6 for all 456 non-current respondents
+       * QA 48 Skip Flag Routing: 0 for non-current, 1 for current active users; current active users have 0 on all non-user reasons
    - QA 46 (Next 3 Month Use):
        * Validates substantive Likert values in {1..5} across ALL 1,263 respondents
    - QA 49 (Improvement Most Likely to Increase Use):
@@ -32,6 +33,7 @@ Enforces:
 3. Completeness & Multi-Tier Missingness Breakdown:
    - Physical blank/null cells (isna)
    - Explicit Not-Applicable / Skip-coded responses
+   - Substantive zero-spending and non-use responses
    - Substantive observed responses
 4. Real Audit Status & Error Handling:
    - Returns status 'FAILED' and non-zero exit code (1) on ANY blocking schema, dimension, null, or routing error
@@ -543,56 +545,86 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
             blocking_errors.append(f"Required routing column '{col_qa47}' is missing.")
 
         # -------------------------------------------------------------
-        # ENFORCE QA 16 - QA 45 SKIP LOGIC AGAINST SOURCE CODEBOOK
+        # ENFORCE QA 16 - QA 45 ROUTING AGAINST SOURCE CODEBOOK
         # -------------------------------------------------------------
-        # Source codebook defines exact expected skip values for non-current respondents (Freq == 1):
-        qa16_45_single_select_rules = {
-            'Common Days': 5,
-            'Common Time': 7,
-            'Items per Order': 7,
-            'Expected Delivery': 7,
-            'Spontaneous Frequency': 6,
-            'Most Frequent Category': 8,
-            'Order Spend': 8,
-            'Monthly Spend': 1,
-            'Total Spending Change': 6,
-            'Discount Overspend': 6,
-            'Threshold Extra Items': 6,
-            'Payment Method': 7,
-            'Most Important Factor': 9,
-            'Compare Platform Prices': 6,
-            'Compare Physical Prices': 6,
-            'Fast Delivery Importance': 6,
-            'Overall Satisfaction': 6,
-            'Product Quality Satisfaction': 6,
-            'Delivery Reliability Satisfaction': 6,
-            'Value Money Satisfaction': 6,
-            'Kirana Visit Change': 7,
-            'Supermarket Visit Change': 7,
-            'Shopping Routine Role': 6,
-            'Unplanned Purchase': 6,
-            'New Brand Trial': 6
+        # Distinction across variables for non-current respondents (Order Frequency == 1, n=456):
+        # 1. Variables with explicit source-defined N/A / skip codes:
+        #    QA 16, 17, 19, 20, 21, 23, 25, 27-30, 32-35, 37-40, 41, 42, 44, 45 (single-select)
+        #    QA 18, 22, 36 (multi-select N/A dummy indicators)
+        # 2. Variables holding substantive zero-spending or non-use responses:
+        #    QA 26 (Monthly Spend): Code 1 means "₹0" monthly spend in Code Book, NOT N/A.
+        #    QA 43 (Shopping Routine Role): Code 6 means "I do not use quick commerce", substantive non-use, NOT N/A.
+        # 3. Physical store category preferences (QA 24):
+        #    Has NO "not applicable – never used" option in the Code Book and must NOT be blanket-classified as skip-coded.
+        #    All respondents (current and non-current) indicate physical-store preferences. Indicators must NOT be forced to 0.
+
+        source_defined_na_single_select_rules = {
+            'Common Days': 5,                     # QA 16: Not applicable – never used = 5
+            'Common Time': 7,                     # QA 17: Not applicable – never used = 7
+            'Items per Order': 7,                 # QA 19: Not applicable – never used = 7
+            'Expected Delivery': 7,               # QA 20: Not applicable – never used = 7
+            'Spontaneous Frequency': 6,           # QA 21: Not applicable – never used = 6
+            'Most Frequent Category': 8,          # QA 23: Not applicable – never used = 8
+            'Order Spend': 8,                     # QA 25: Not applicable – never used = 8
+            'Total Spending Change': 6,           # QA 27: Not applicable – never used = 6
+            'Discount Overspend': 6,              # QA 28: Not applicable – never used = 6
+            'Threshold Extra Items': 6,           # QA 29: Not applicable – never used = 6
+            'Payment Method': 7,                  # QA 30: Not applicable – never used = 7
+            'Most Important Factor': 9,           # QA 32: Not applicable – never used = 9
+            'Compare Platform Prices': 6,         # QA 33: Not applicable – never used = 6
+            'Compare Physical Prices': 6,         # QA 34: Not applicable – never used = 6
+            'Fast Delivery Importance': 6,        # QA 35: Not applicable – never used = 6
+            'Overall Satisfaction': 6,            # QA 37: Not applicable – never used = 6
+            'Product Quality Satisfaction': 6,    # QA 38: Not applicable – never used = 6
+            'Delivery Reliability Satisfaction': 6,# QA 39: Not applicable – never used = 6
+            'Value Money Satisfaction': 6,        # QA 40: Not applicable – never used = 6
+            'Kirana Visit Change': 7,             # QA 41: Not applicable – never used = 7
+            'Supermarket Visit Change': 7,        # QA 42: Not applicable – never used = 7
+            'Unplanned Purchase': 6,              # QA 44: Not applicable – never used = 6
+            'New Brand Trial': 6                  # QA 45: Not applicable – never used = 6
         }
 
-        qa16_45_skip_violations = {}
-        for field, expected_skip_code in qa16_45_single_select_rules.items():
+        qa16_45_routing_violations = {}
+
+        # 1. Validate explicit source-defined N/A single-select codes
+        for field, expected_na_code in source_defined_na_single_select_rules.items():
             if field in work_df.columns:
                 s_field = pd.to_numeric(work_df.loc[non_current_users_mask, field], errors='coerce')
-                mismatches = int((s_field != expected_skip_code).sum())
+                mismatches = int((s_field != expected_na_code).sum())
                 if mismatches > 0:
-                    qa16_45_skip_violations[field] = mismatches
+                    qa16_45_routing_violations[field] = mismatches
                     blocking_errors.append(
-                        f"QA16-45 Skip Violation in '{field}': {mismatches} non-current users do not have expected skip code {expected_skip_code}."
+                        f"QA16-45 Routing Violation in '{field}': {mismatches} non-current users do not have source N/A code {expected_na_code}."
                     )
 
-        # Multi-select skip logic checks for non-current users:
-        # QA 18: Reason Not Applicable must be 1, substantive reasons must be 0
+        # 2. Validate substantive zero-spending response in QA 26 (Monthly Spend == 1 means ₹0, not N/A)
+        if 'Monthly Spend' in work_df.columns:
+            s_ms = pd.to_numeric(work_df.loc[non_current_users_mask, 'Monthly Spend'], errors='coerce')
+            mismatches = int((s_ms != 1).sum())
+            if mismatches > 0:
+                qa16_45_routing_violations['Monthly Spend != 1 (₹0)'] = mismatches
+                blocking_errors.append(
+                    f"QA26 Routing Violation: {mismatches} non-current users do not report substantive ₹0 monthly spend (Code 1)."
+                )
+
+        # 3. Validate substantive non-use shopping routine in QA 43 (Shopping Routine Role == 6 means 'I do not use quick commerce', not N/A)
+        if 'Shopping Routine Role' in work_df.columns:
+            s_srr = pd.to_numeric(work_df.loc[non_current_users_mask, 'Shopping Routine Role'], errors='coerce')
+            mismatches = int((s_srr != 6).sum())
+            if mismatches > 0:
+                qa16_45_routing_violations['Shopping Routine Role != 6 (Do not use)'] = mismatches
+                blocking_errors.append(
+                    f"QA43 Routing Violation: {mismatches} non-current users do not report substantive non-use routine role (Code 6)."
+                )
+
+        # 4. Multi-select skip logic checks for non-current users:
+        # QA 18: Reason Not Applicable must be 1, substantive order reasons must be 0
         if 'Reason Not Applicable' in work_df.columns:
             rna = pd.to_numeric(work_df.loc[non_current_users_mask, 'Reason Not Applicable'], errors='coerce')
             mismatches = int((rna != 1).sum())
             if mismatches > 0:
-                qa16_45_skip_violations['Reason Not Applicable != 1'] = mismatches
-                blocking_errors.append(f"QA18 Skip Violation: {mismatches} non-current users have 'Reason Not Applicable' != 1.")
+                qa16_45_routing_violations['Reason Not Applicable != 1'] = mismatches
+                blocking_errors.append(f"QA18 Routing Violation: {mismatches} non-current users have 'Reason Not Applicable' != 1.")
 
         reason_substantive_cols = [
             'Reason Forgotten Item', 'Reason Urgent Need', 'Reason Grocery Topup',
@@ -604,24 +636,31 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
             sub_reason_sum = work_df.loc[non_current_users_mask, present_reason_sub].apply(pd.to_numeric, errors='coerce').sum(axis=1)
             violations = int((sub_reason_sum > 0).sum())
             if violations > 0:
-                qa16_45_skip_violations['Substantive Reasons > 0 for non-current'] = violations
-                blocking_errors.append(f"QA18 Skip Violation: {violations} non-current users marked substantive order reasons.")
+                qa16_45_routing_violations['Substantive Reasons > 0 for non-current'] = violations
+                blocking_errors.append(f"QA18 Routing Violation: {violations} non-current users marked substantive order reasons.")
 
-        # QA 22: Category Not Applicable must be 1, substantive categories must be 0
+        # QA 22: Category Not Applicable must be 1, substantive purchased categories must be 0
         if 'Category Not Applicable' in work_df.columns:
             cna = pd.to_numeric(work_df.loc[non_current_users_mask, 'Category Not Applicable'], errors='coerce')
             mismatches = int((cna != 1).sum())
             if mismatches > 0:
-                qa16_45_skip_violations['Category Not Applicable != 1'] = mismatches
-                blocking_errors.append(f"QA22 Skip Violation: {mismatches} non-current users have 'Category Not Applicable' != 1.")
+                qa16_45_routing_violations['Category Not Applicable != 1'] = mismatches
+                blocking_errors.append(f"QA22 Routing Violation: {mismatches} non-current users have 'Category Not Applicable' != 1.")
 
         category_substantive_cols = [c for c in work_df.columns if c.startswith('Category ') and c != 'Category Not Applicable']
         if category_substantive_cols:
             sub_cat_sum = work_df.loc[non_current_users_mask, category_substantive_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1)
             violations = int((sub_cat_sum > 0).sum())
             if violations > 0:
-                qa16_45_skip_violations['Substantive Categories > 0 for non-current'] = violations
-                blocking_errors.append(f"QA22 Skip Violation: {violations} non-current users marked substantive purchased categories.")
+                qa16_45_routing_violations['Substantive Categories > 0 for non-current'] = violations
+                blocking_errors.append(f"QA22 Routing Violation: {violations} non-current users marked substantive purchased categories.")
+
+        # QA 24: Physical Store Category Preferences (Physical ...)
+        # Has no N/A code in codebook; non-current users indicate physical store preferences.
+        phys_cols = [c for c in work_df.columns if c.startswith('Physical ')]
+        non_current_phys_pref_cnt = 0
+        if phys_cols:
+            non_current_phys_pref_cnt = int((work_df.loc[non_current_users_mask, phys_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1) > 0).sum())
 
         # QA 31: Factor dummies must all be 0 for non-current users
         factor_cols = [c for c in work_df.columns if c.startswith('Factor ')]
@@ -629,31 +668,31 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
             factor_sum = work_df.loc[non_current_users_mask, factor_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1)
             violations = int((factor_sum > 0).sum())
             if violations > 0:
-                qa16_45_skip_violations['Factor Dummies > 0 for non-current'] = violations
-                blocking_errors.append(f"QA31 Skip Violation: {violations} non-current users marked choice factors.")
+                qa16_45_routing_violations['Factor Dummies > 0 for non-current'] = violations
+                blocking_errors.append(f"QA31 Routing Violation: {violations} non-current users marked choice factors.")
 
         # QA 36: Problem Not Applicable must be 1, Problem No Major Problem must be 0, specific problems must be 0
         if 'Problem Not Applicable' in work_df.columns:
             pna = pd.to_numeric(work_df.loc[non_current_users_mask, 'Problem Not Applicable'], errors='coerce')
             mismatches = int((pna != 1).sum())
             if mismatches > 0:
-                qa16_45_skip_violations['Problem Not Applicable != 1'] = mismatches
-                blocking_errors.append(f"QA36 Skip Violation: {mismatches} non-current users have 'Problem Not Applicable' != 1.")
+                qa16_45_routing_violations['Problem Not Applicable != 1'] = mismatches
+                blocking_errors.append(f"QA36 Routing Violation: {mismatches} non-current users have 'Problem Not Applicable' != 1.")
 
         if 'Problem No Major Problem' in work_df.columns:
             pnmp = pd.to_numeric(work_df.loc[non_current_users_mask, 'Problem No Major Problem'], errors='coerce')
             mismatches = int((pnmp != 0).sum())
             if mismatches > 0:
-                qa16_45_skip_violations['Problem No Major Problem != 0 for non-current'] = mismatches
-                blocking_errors.append(f"QA36 Skip Violation: {mismatches} non-current users marked 'Problem No Major Problem'.")
+                qa16_45_routing_violations['Problem No Major Problem != 0 for non-current'] = mismatches
+                blocking_errors.append(f"QA36 Routing Violation: {mismatches} non-current users marked 'Problem No Major Problem'.")
 
         problem_substantive_cols = [c for c in work_df.columns if c.startswith('Problem ') and c not in ['Problem Not Applicable', 'Problem No Major Problem']]
         if problem_substantive_cols:
             sub_prob_sum = work_df.loc[non_current_users_mask, problem_substantive_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1)
             violations = int((sub_prob_sum > 0).sum())
             if violations > 0:
-                qa16_45_skip_violations['Substantive Problems > 0 for non-current'] = violations
-                blocking_errors.append(f"QA36 Skip Violation: {violations} non-current users marked specific problem experiences.")
+                qa16_45_routing_violations['Substantive Problems > 0 for non-current'] = violations
+                blocking_errors.append(f"QA36 Routing Violation: {violations} non-current users marked specific problem experiences.")
 
         # QA 48 Skip Flag Routing:
         # Non-current users must have 'Reason Not Applicable Current User' == 0
@@ -664,10 +703,10 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
             non_curr_flag_viol = int((s_nac[non_current_users_mask] != 0).sum())
             curr_flag_viol = int((s_nac[current_users_mask] != 1).sum())
             if non_curr_flag_viol > 0:
-                qa16_45_skip_violations['QA48 current-user flag != 0 for non-current'] = non_curr_flag_viol
+                qa16_45_routing_violations['QA48 current-user flag != 0 for non-current'] = non_curr_flag_viol
                 blocking_errors.append(f"QA48 Routing Violation: {non_curr_flag_viol} non-current users have '{col_na_curr}' != 0.")
             if curr_flag_viol > 0:
-                qa16_45_skip_violations['QA48 current-user flag != 1 for current'] = curr_flag_viol
+                qa16_45_routing_violations['QA48 current-user flag != 1 for current'] = curr_flag_viol
                 blocking_errors.append(f"QA48 Routing Violation: {curr_flag_viol} current users have '{col_na_curr}' != 1.")
 
         reason_non_user_cols = [
@@ -681,7 +720,7 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
             curr_non_user_reasons_sum = work_df.loc[current_users_mask, present_non_user_reasons].apply(pd.to_numeric, errors='coerce').sum(axis=1)
             violations = int((curr_non_user_reasons_sum > 0).sum())
             if violations > 0:
-                qa16_45_skip_violations['Non-User Reasons marked by Current Users'] = violations
+                qa16_45_routing_violations['Non-User Reasons marked by Current Users'] = violations
                 blocking_errors.append(f"QA48 Routing Violation: {violations} current active users marked non-user reasons.")
 
         # -------------------------------------------------------------
@@ -752,8 +791,19 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
         }
 
         routing_breakdown = {
-            'qa16_to_qa45_skip_coded_count': freq_never,
-            'qa16_to_qa45_skip_violations': qa16_45_skip_violations,
+            'non_current_respondents_count': freq_never,
+            'source_defined_na_variables_count': len(source_defined_na_single_select_rules) + 4,
+            'substantive_non_use_or_zero_spend_variables': {
+                'qa26_monthly_spend_zero_code_1_count': int((pd.to_numeric(work_df.loc[non_current_users_mask, 'Monthly Spend'], errors='coerce') == 1).sum()) if 'Monthly Spend' in work_df.columns else 0,
+                'qa43_shopping_routine_non_use_code_6_count': int((pd.to_numeric(work_df.loc[non_current_users_mask, 'Shopping Routine Role'], errors='coerce') == 6).sum()) if 'Shopping Routine Role' in work_df.columns else 0
+            },
+            'physical_store_preferences_qa24': {
+                'has_source_na_code': False,
+                'status': 'Not skip-coded; substantive physical-store category preferences across all respondents',
+                'non_current_respondents_with_preferences_count': non_current_phys_pref_cnt
+            },
+            'qa16_to_qa45_routing_violations': qa16_45_routing_violations,
+            'qa16_to_qa45_skip_violations': qa16_45_routing_violations,  # backwards-compatible alias
             'qa47_discount_continuation': qa47_stats,
             'qa46_future_use_intention': qa46_stats,
             'qa49_preferred_improvement': qa49_stats,
@@ -764,13 +814,18 @@ def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=Tr
     completeness_summary = {
         'physical_blank_cells': total_null_cells,
         'physical_data_completeness_pct': 100.0 if total_null_cells == 0 else round((1 - total_null_cells / (total_rows * total_cols)) * 100, 2),
+        'respondents_classified_as_non_current': usage_status_audit.get('current_order_frequency_never', 0),
         'explicit_not_applicable_counts': {
-            'qa16_to_qa45_skip_coded_respondents': usage_status_audit.get('current_order_frequency_never', 0),
             'qa37_to_qa40_satisfaction_code_6_not_applicable': int((pd.to_numeric(work_df.get('Overall Satisfaction', pd.Series()), errors='coerce') == 6).sum()),
             'qa47_discount_reduction_code_6_not_applicable': int((pd.to_numeric(work_df.get('Continue If Discounts Reduced', pd.Series()), errors='coerce') == 6).sum()),
             'qa48_current_user_skip_flag_code_1': int((pd.to_numeric(work_df.get('Reason Not Applicable Current User', pd.Series()), errors='coerce') == 1).sum()),
             'category_not_applicable_code_1': int((pd.to_numeric(work_df.get('Category Not Applicable', pd.Series()), errors='coerce') == 1).sum()),
-            'problem_not_applicable_code_1': int((pd.to_numeric(work_df.get('Problem Not Applicable', pd.Series()), errors='coerce') == 1).sum())
+            'problem_not_applicable_code_1': int((pd.to_numeric(work_df.get('Problem Not Applicable', pd.Series()), errors='coerce') == 1).sum()),
+            'reason_not_applicable_code_1': int((pd.to_numeric(work_df.get('Reason Not Applicable', pd.Series()), errors='coerce') == 1).sum())
+        },
+        'substantive_non_use_and_zero_spending_counts': {
+            'qa26_monthly_spend_zero_code_1_count': int((pd.to_numeric(work_df.get('Monthly Spend', pd.Series()), errors='coerce') == 1).sum()),
+            'qa43_shopping_routine_non_use_code_6_count': int((pd.to_numeric(work_df.get('Shopping Routine Role', pd.Series()), errors='coerce') == 6).sum())
         },
         'substantive_observed_response_counts': {
             'qa46_future_use_intention_substantive_1_to_5': routing_breakdown.get('qa46_future_use_intention', {}).get('substantive_total_1_to_5', 0),
@@ -899,8 +954,15 @@ def print_survey_audit_report(file_path, sheet_name, file_sha256, file_size, aud
     print(f"  Total Rows Accounted For                      : {tot:,}")
 
     print("\nQuestionnaire Routing & Variable Availability Breakdown:")
-    print(f"  * QA 16 - QA 45 Skip-Coded Modules for Non-Current Users: {rt.get('qa16_to_qa45_skip_coded_count', 0)} respondents")
-    print(f"      - Single-Select & Dummy Skip Violations: {len(rt.get('qa16_to_qa45_skip_violations', {}))}")
+    non_curr_cnt = us.get('current_order_frequency_never', 0)
+    print(f"  * Non-Current Respondents (QA 15 Order Frequency == Never): {fmt_num(non_curr_cnt)} respondents")
+    print(f"      - Routing Violations: {len(rt.get('qa16_to_qa45_routing_violations', {}))}")
+    print(f"      - Explicit Source-Defined N/A Single-Selects & Dummies: Fully verified for all {non_curr_cnt} non-current respondents")
+    sub_nu = rt.get('substantive_non_use_or_zero_spend_variables', {})
+    print(f"      - Substantive Zero-Spend (QA 26 Monthly Spend == ₹0): {sub_nu.get('qa26_monthly_spend_zero_code_1_count', 0)} / {non_curr_cnt}")
+    print(f"      - Substantive Non-Use Routine (QA 43 Shopping Routine == Do not use): {sub_nu.get('qa43_shopping_routine_non_use_code_6_count', 0)} / {non_curr_cnt}")
+    phys_info = rt.get('physical_store_preferences_qa24', {})
+    print(f"      - Physical Store Preferences (QA 24): NOT skip-coded ({phys_info.get('non_current_respondents_with_preferences_count', 0)} / {non_curr_cnt} non-current respondents report physical preferences)")
     print("    - Service Satisfaction (QA 37-40) coded as 'Not applicable - never used' (Code 6):")
     for sf, cnt in us.get('previous_users_satisfaction_mislabeled_as_never_used', {}).items():
         print(f"        * {sf:<33}: {cnt} / 80 previous users mislabeled")
@@ -912,7 +974,7 @@ def print_survey_audit_report(file_path, sheet_name, file_sha256, file_size, aud
     q47 = rt.get('qa47_discount_continuation', {})
     print(f"  * QA 47 Willingness to Continue if Discounts Reduced:")
     print(f"      - Current Users Substantive (1-5): {q47.get('current_users_substantive_1_to_5', 0):>4} / {cu}")
-    print(f"      - Non-Current Users N/A (Code 6) : {q47.get('non_current_users_with_code_6', 0):>4} / {us.get('current_order_frequency_never', 0)} (Explicit N/A; NOT defection)")
+    print(f"      - Non-Current Users N/A (Code 6) : {q47.get('non_current_users_with_code_6', 0):>4} / {non_curr_cnt} (Explicit N/A; NOT defection)")
     q49 = rt.get('qa49_preferred_improvement', {})
     print(f"  * QA 49 Preferred Improvement: Substantive (1-10) across ALL {fmt_num(q49.get('substantive_total_1_to_10', 0))} respondents")
     print(f"  * QA 48 Reasons for Not Currently Using Quick Commerce:")

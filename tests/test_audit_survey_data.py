@@ -400,6 +400,11 @@ class TestAuditSurveyData(unittest.TestCase):
         self.assertEqual(rt['qa46_future_use_intention']['substantive_total_1_to_5'], 3)
         self.assertEqual(rt['qa47_discount_continuation']['current_users_substantive_1_to_5'], 1)
         self.assertEqual(rt['qa47_discount_continuation']['non_current_users_with_code_6'], 2)
+        self.assertEqual(rt['non_current_respondents_count'], 2)
+        self.assertEqual(rt['substantive_non_use_or_zero_spend_variables']['qa26_monthly_spend_zero_code_1_count'], 2)
+        self.assertEqual(rt['substantive_non_use_or_zero_spend_variables']['qa43_shopping_routine_non_use_code_6_count'], 2)
+        self.assertFalse(rt['physical_store_preferences_qa24']['has_source_na_code'])
+        self.assertEqual(len(rt['qa16_to_qa45_routing_violations']), 0)
         self.assertEqual(len(rt['qa16_to_qa45_skip_violations']), 0)
         self.assertEqual(result['status'], 'SUCCESS_WITH_WARNINGS')
 
@@ -492,21 +497,21 @@ class TestAuditSurveyData(unittest.TestCase):
         viol_sat['Overall Satisfaction'] = 4  # VIOLATION: Non-current must be 6
         res_sat = audit_survey_dataframe(pd.DataFrame([viol_sat]), enforce_dimensions=False, enforce_full_manifest=False)
         self.assertEqual(res_sat['status'], 'FAILED')
-        self.assertTrue(any("QA16-45 Skip Violation in 'Overall Satisfaction'" in err for err in res_sat['blocking_errors']))
+        self.assertTrue(any("QA16-45 Routing Violation in 'Overall Satisfaction'" in err for err in res_sat['blocking_errors']))
 
         # Sub-test 2: Non-current user with substantive category marked (Fresh Fruit Veg = 1)
         viol_cat = dict(non_curr)
         viol_cat['Category Fresh Fruit Veg'] = 1  # VIOLATION: Non-current cannot purchase categories
         res_cat = audit_survey_dataframe(pd.DataFrame([viol_cat]), enforce_dimensions=False, enforce_full_manifest=False)
         self.assertEqual(res_cat['status'], 'FAILED')
-        self.assertTrue(any("QA22 Skip Violation" in err for err in res_cat['blocking_errors']))
+        self.assertTrue(any("QA22 Routing Violation" in err for err in res_cat['blocking_errors']))
 
         # Sub-test 3: Non-current user with substantive problem marked (Problem Out of Stock = 1)
         viol_prob = dict(non_curr)
         viol_prob['Problem Out of Stock'] = 1  # VIOLATION: Non-current cannot experience service problems
         res_prob = audit_survey_dataframe(pd.DataFrame([viol_prob]), enforce_dimensions=False, enforce_full_manifest=False)
         self.assertEqual(res_prob['status'], 'FAILED')
-        self.assertTrue(any("QA36 Skip Violation" in err for err in res_prob['blocking_errors']))
+        self.assertTrue(any("QA36 Routing Violation" in err for err in res_prob['blocking_errors']))
 
         # Sub-test 4: Current active user with Reason Not Applicable Current User == 0
         viol_curr_flag = dict(self.base_row)
@@ -514,6 +519,20 @@ class TestAuditSurveyData(unittest.TestCase):
         res_curr_flag = audit_survey_dataframe(pd.DataFrame([viol_curr_flag]), enforce_dimensions=False, enforce_full_manifest=False)
         self.assertEqual(res_curr_flag['status'], 'FAILED')
         self.assertTrue(any("QA48 Routing Violation" in err for err in res_curr_flag['blocking_errors']))
+
+        # Sub-test 5: Non-current user reporting positive monthly spend (e.g. 3 instead of 1 [₹0])
+        viol_spend = dict(non_curr)
+        viol_spend['Monthly Spend'] = 3  # VIOLATION: Non-current must report ₹0 monthly spend (Code 1)
+        res_spend = audit_survey_dataframe(pd.DataFrame([viol_spend]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_spend['status'], 'FAILED')
+        self.assertTrue(any("QA26 Routing Violation" in err for err in res_spend['blocking_errors']))
+
+        # Sub-test 6: Non-current user reporting active shopping routine role (e.g. 2 instead of 6 ['I do not use quick commerce'])
+        viol_routine = dict(non_curr)
+        viol_routine['Shopping Routine Role'] = 2  # VIOLATION: Non-current must report Code 6
+        res_routine = audit_survey_dataframe(pd.DataFrame([viol_routine]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_routine['status'], 'FAILED')
+        self.assertTrue(any("QA43 Routing Violation" in err for err in res_routine['blocking_errors']))
 
     def test_qa46_and_qa49_universal_coverage_validation(self):
         """

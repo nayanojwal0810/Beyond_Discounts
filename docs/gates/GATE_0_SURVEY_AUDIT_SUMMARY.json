@@ -75,7 +75,18 @@
     }
   },
   "questionnaire_routing": {
-    "qa16_to_qa45_skip_coded_count": 456,
+    "non_current_respondents_count": 456,
+    "source_defined_na_variables_count": 27,
+    "substantive_non_use_or_zero_spend_variables": {
+      "qa26_monthly_spend_zero_code_1_count": 456,
+      "qa43_shopping_routine_non_use_code_6_count": 456
+    },
+    "physical_store_preferences_qa24": {
+      "has_source_na_code": false,
+      "status": "Not skip-coded; substantive physical-store category preferences across all respondents",
+      "non_current_respondents_with_preferences_count": 456
+    },
+    "qa16_to_qa45_routing_violations": {},
     "qa16_to_qa45_skip_violations": {},
     "qa47_discount_continuation": {
       "current_users_substantive_1_to_5": 807,
@@ -104,13 +115,18 @@
   "completeness_and_missingness": {
     "physical_blank_cells": 0,
     "physical_data_completeness_pct": 100.0,
+    "respondents_classified_as_non_current": 456,
     "explicit_not_applicable_counts": {
-      "qa16_to_qa45_skip_coded_respondents": 456,
       "qa37_to_qa40_satisfaction_code_6_not_applicable": 456,
       "qa47_discount_reduction_code_6_not_applicable": 456,
       "qa48_current_user_skip_flag_code_1": 807,
       "category_not_applicable_code_1": 456,
-      "problem_not_applicable_code_1": 456
+      "problem_not_applicable_code_1": 456,
+      "reason_not_applicable_code_1": 456
+    },
+    "substantive_non_use_and_zero_spending_counts": {
+      "qa26_monthly_spend_zero_code_1_count": 456,
+      "qa43_shopping_routine_non_use_code_6_count": 456
     },
     "substantive_observed_response_counts": {
       "qa46_future_use_intention_substantive_1_to_5": 1263,
@@ -161,6 +177,6 @@
     "input_worksheet": "Data",
     "input_file_sha256": "c6e92099b960f11472558b629e90b2926012061eac45b9051973c8fe79e1a73d",
     "input_file_size_bytes": 565344,
-    "audit_timestamp_utc": "2026-10-17T09:34:18.075274+00:00"
+    "audit_timestamp_utc": "2026-10-17T10:01:39.772883+00:00"
   }
 }

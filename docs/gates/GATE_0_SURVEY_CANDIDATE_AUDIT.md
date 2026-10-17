@@ -149,8 +149,13 @@ The questionnaire routing operates across four distinct modular blocks:
 ### 5.3 Detailed Module Analysis & Routing Rules
 
 #### Module A: QA 16–QA 45 (Order Patterns, Spending, Problems, Satisfaction)
-- **Non-Current Users ($n=456$):** All 456 respondents (376 never-users + 80 previous users) were skip-routed past these modules. Fields are coded with explicit not-applicable values (e.g., Code 6 for satisfaction, Code 1 for `Problem Not Applicable` and `Category Not Applicable`).
-- **Impact on the 80 Previous Users:** Historical service satisfaction scores (QA 37–40) and operational problem histories (QA 36) are unobserved. **Do not impute this history.**
+- **Non-Current Users ($n=456$):** Respondents whose current order frequency is "Never" (376 never-users + 80 previous users). The source Code Book establishes distinct response semantics across these questions:
+  - **Explicit Source-Defined N/A / Skip Codes:** Single-select questions (QA 16, 17, 19, 20, 21, 23, 25, 27–30, 32–35, 37–40, 41, 42, 44, 45) and multi-select N/A indicator dummies (QA 18 `Reason Not Applicable` = 1, QA 22 `Category Not Applicable` = 1, QA 36 `Problem Not Applicable` = 1; substantive options = 0; QA 31 factor dummies = 0) hold explicit codebook N/A values.
+  - **Substantive Zero-Spend & Non-Use Responses:**
+    - QA 26 (`Monthly Spend`): Code 1 explicitly means **₹0 monthly quick-commerce spend** in the Code Book, not N/A. All 456 non-current users substantive report ₹0 monthly spend.
+    - QA 43 (`Shopping Routine Role`): Code 6 explicitly means **"I do not use quick commerce"**, a substantive non-use response rather than N/A. All 456 non-current users report this non-use routine role.
+  - **Physical-Store Category Preferences (QA 24):** QA 24 has **no "not applicable – never used" option** in the Code Book and must **not** be blanket-classified as skip-coded. All respondents (both current active users and non-current users) report physical-store shopping preferences. Physical-store preference indicators are substantive across the sample and must not be required to be zero for non-current respondents.
+- **Impact on the 80 Previous Users:** Historical service satisfaction scores (QA 37–40) and operational problem histories (QA 36) are unobserved for previous users because the questionnaire routed them to Code 6 (*"Not applicable – never used"*). **Do not impute this history.**
 
 #### Module B: QA 46 (Stated Future-Use Intention)
 - **Question:** *"How likely are you to use quick-commerce services in the next three months?"*
@@ -207,14 +212,14 @@ To protect academic credibility and scientific integrity, the following practice
 1. **Audit Script ([`scripts/audit_survey_data.py`](file:///e:/FDA/Beyond_Discounts/scripts/audit_survey_data.py)):**
    - Implements full 130-column normalized schema manifest verification (`EXPECTED_COLUMN_MANIFEST_130`), detecting missing, unexpected, or replaced columns even when total column count remains 130.
    - Enforces strict QA 47 routing: 807 current users strictly in $\{1..5\}$, 456 non-current users strictly Code 6; violations trigger status `FAILED` and exit code 1.
-   - Enforces QA 16–QA 45 skip logic against source codebook rules for all 456 non-current users (single-select N/A codes, multi-select N/A dummies, and 0 for substantive options).
+   - Enforces QA 16–QA 45 routing against source codebook rules: verifies explicit source-defined N/A codes, substantive zero-spend (QA 26 = ₹0), substantive non-use routine (QA 43 = "I do not use quick commerce"), and preserves QA 24 physical-store preferences as not skip-coded.
    - Enforces universal substantive coverage for QA 46 (1–5) and QA 49 (1–10) across all 1,263 respondents.
    - Fully supports `--sheet` argument pass-through to `pd.read_excel`.
    - Returns exit code 1 on blocking schema, routing, dimension, or code violations.
 2. **Test Suite ([`tests/test_audit_survey_data.py`](file:///e:/FDA/Beyond_Discounts/tests/test_audit_survey_data.py)):**
-   - 25 automated unit tests repository-wide (15 in `test_audit_survey_data.py`), executing in ~5s (`Ran 25 tests in 5.067s, OK`).
+   - 25 automated unit tests repository-wide (15 in `test_audit_survey_data.py`), executing cleanly (`Ran 25 tests, OK`).
    - Validates missing mandatory columns, duplicate normalized headers, full 130-column manifest column replacement regression, sheet arguments, null vs N/A handling, subgroup derivation, and exit codes.
-   - Features comprehensive negative tests for QA 47 routing violations, QA 16–45 skip-logic violations, and QA 46/49 coverage violations using synthetic fixtures.
+   - Features comprehensive negative tests for QA 47 routing violations, QA 16–45 routing/skip violations (satisfaction, categories, problems, spend, shopping routine, skip flags), and QA 46/49 coverage violations using synthetic fixtures.
 3. **Machine-Readable Summary ([`docs/gates/GATE_0_SURVEY_AUDIT_SUMMARY.json`](file:///e:/FDA/Beyond_Discounts/docs/gates/GATE_0_SURVEY_AUDIT_SUMMARY.json)):**
    - Aggregate audit findings including source hashes, dimensions, subgroup counts, questionnaire routing metrics, and platform usage footprints (zero row-level PII).
 

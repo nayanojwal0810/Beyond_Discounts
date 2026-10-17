@@ -64,16 +64,19 @@ Total Survey Cells: 164,190 (1,263 respondents x 130 columns)
     ├── Substantive Observed Responses:
     │   ├── Demographics (QA 1-8): n=1,263
     │   ├── Platform Footprint (QA 11-12): n=1,263
-    │   ├── Order Habits & Spending (QA 16-27): n=807 current users
+    │   ├── Physical-Store Category Preferences (QA 24): n=1,263 (not skip-coded; substantive across all respondents)
+    │   ├── Substantive Zero-Spend (QA 26 Code 1 = ₹0): n=456 non-current users
+    │   ├── Substantive Non-Use Routine (QA 43 Code 6 = Do not use): n=456 non-current users
+    │   ├── Order Habits & Active Spending (QA 16-27): n=807 current users
     │   ├── Service Satisfaction (QA 37-40): n=807 current users
     │   ├── QA 46 Stated Future Intention: n=1,263 (100% of respondents)
     │   ├── QA 47 Discount Reduction Continuation: n=807 current users
     │   ├── QA 48 Non-Use Reasons: n=456 non-current users (376 never + 80 previous)
     │   └── QA 49 Preferred Improvements: n=1,263 (100% of respondents)
-    └── Explicit Not-Applicable / Skip-Coded Responses:
-        ├── QA 16-45 Non-Current User Skips: n=456 respondents
-        ├── QA 37-40 Satisfaction Code 6: n=456 respondents
-        ├── QA 47 Discount Continuation Code 6: n=456 respondents
+    └── Explicit Source-Defined Not-Applicable / Skip-Coded Responses:
+        ├── QA 16-45 Single-Select & Dummy N/A Codes: n=456 non-current respondents
+        ├── QA 37-40 Satisfaction Code 6: n=456 non-current respondents
+        ├── QA 47 Discount Continuation Code 6: n=456 non-current respondents
         └── QA 48 Current-User Skip Flag (Code 1): n=807 current users
 ```
 
