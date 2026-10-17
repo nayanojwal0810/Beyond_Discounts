@@ -92,7 +92,7 @@ Historical app-review feasibility artifacts and scripts remain for auditability 
 ## 5. Reproduction & Execution Guide
 
 ### Local input setup
-Place the Mendeley survey workbook and its codebook/questionnaire under `data/raw/survey/` as documented in `data/README.md`. Do not commit the workbook, questionnaire-level rows, or any row-level derived data. Dataset source: [Mendeley Data, DOI 10.17632/cw88nb7822.1](https://data.mendeley.com/datasets/cw88nb7822/1).
+Place the Mendeley survey workbook and its codebook/questionnaire under `data/raw/survey/` as documented in `data/README.md`. Do not commit the workbook, questionnaire-level rows, or any row-level derived data. Install the declared direct-dependency baseline with `python -m pip install -r requirements.txt`; full pipeline verification on the local workbook is still pending. Dataset source: [Mendeley Data, DOI 10.17632/cw88nb7822.1](https://data.mendeley.com/datasets/cw88nb7822/1).
 
 ### Run sequence
 ```bash
@@ -104,7 +104,7 @@ python -m unittest discover tests
 
 The segmentation experiment prepares its feature matrices and holdout locally if missing, then writes aggregate outputs under `reports/segmentation/`. Gate 1C.1 is not closed until the full local run succeeds and its regenerated reports reconcile.
 
-**Open reproducibility issue:** package versions are not yet pinned in a verified lock file, and parts of the test suite still rely on local prepared matrices. Clean-clone environment setup and tests independent of the original workbook are explicit Gate 1C.1 acceptance criteria. Existing committed aggregate reports are evidence of prior runs, not proof the current branch has been rerun end-to-end.
+**Reproducibility status:** direct dependency versions are pinned in `requirements.txt`, but this is not a full transitive/hash lock and has not been verified against a complete real-workbook run. The clean-clone clustering test path now has synthetic fixtures; the full workbook pipeline remains an explicit Gate 1C.1 acceptance criterion. Existing committed aggregate reports are evidence of prior runs, not proof the current branch has been rerun end-to-end.
 
 ## 6. Project Governance & Working Rules
 
