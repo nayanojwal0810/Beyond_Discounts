@@ -1,7 +1,7 @@
 # Gate 1D — Lifecycle-Based CRM Decision Analysis Plan
 
 **Project:** Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce  
-**Status:** Approved analytical direction; implementation and results pending  
+**Status:** Analytical direction approved; implementation drafted in `scripts/run_crm_analysis.py`; synthetic tests pending CI; real-data results not yet produced  
 **Data:** Chandra, *A Large-Scale Survey Dataset on Quick-Commerce Adoption* (Mendeley Data, DOI 10.17632/cw88nb7822.1; repository record declares CC BY 4.0).  
 **Unit of analysis:** One survey respondent.  
 **Study type:** Cross-sectional secondary analysis of self-reported survey responses.
@@ -180,6 +180,10 @@ Avoid flashy hard-persona cards when clusters are weak. Each displayed insight m
 ### Final report (Gate 3)
 Write after the analysis is frozen: research context, 15+ critically synthesised related works, source/provenance and sampling limitation, coding/routing decisions, hypotheses, methods, results and effect sizes, clustering negative findings, CRM decision matrix, pilot-test recommendations, dashboard, reproducibility instructions and limitations. The literature review must distinguish direct Indian q-commerce evidence from adjacent e-commerce/customer-segmentation methods; do not inflate source relevance.
 
+## 9. Implementation status
+
+The initial implementation is in `scripts/run_crm_analysis.py`. It writes aggregate-only QA46 distributions and cohort comparison, QA48 barrier prevalence and Fisher/Holm comparisons, QA49 full-option/action-family distributions and fixed-margin Monte Carlo association tests, plus current-user QA47 ordered-logit models, categorical-coding/link sensitivity checks, and a respondent-clustered parallel-slopes diagnostic. No real-workbook outputs are accepted until the script is run locally after Gate 1C.1; the model's convergence and diagnostic results must be examined rather than assumed.
+
 ## 9. Gate sequence and sign-off
 
 | Gate | Deliverable | Approval condition |
@@ -190,4 +194,4 @@ Write after the analysis is frozen: research context, 15+ critically synthesised
 | 2 | Dashboard | All views trace to frozen aggregate tables and explain uncertainty |
 | 3 | Final academic report / presentation | Literature review verified; conclusions match tables; no unsupported platform-specific or causal claims |
 
-**Immediate next task:** have the implementation worker execute Gate 1C.1 locally using the untracked source workbook, return the exact test output, regenerated `stability_runs.csv`, generated artifact diff, environment versions and commit SHA. The Principal Project Lead then approves or rejects Gate 1C.1 before any dashboard build.
+**Immediate next task:** verify the draft CI checks, then have the implementation worker execute Gate 1C.1 locally using the untracked source workbook, return exact test output, regenerated `stability_runs.csv`, artifact diff, environment versions and commit SHA. Once Gate 1C.1 is approved, run `python scripts/run_crm_analysis.py --file data/raw/survey/Data.xlsx --sheet Data --out-dir reports/crm/tables` and review all generated outputs before dashboard work. The script's synthetic test fixtures are software tests only and must never be reported as survey results.
