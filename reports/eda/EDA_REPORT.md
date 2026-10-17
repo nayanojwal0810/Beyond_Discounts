@@ -1,5 +1,8 @@
 # Gate 1A: Comprehensive Exploratory Data Analysis Report
 
+> **Stage / interpretation note (17 Oct 2026):** This is the Gate 1A EDA artifact, retained as the historical descriptive-data stage. Its early research-question wording and conceptual persona/action hypotheses are not final findings. Gate 1C's later exploratory clustering results do not justify hard persona targeting; the current controlling decision is the lifecycle-first CRM analysis in [Gate 1D plan](../crm/CRM_DECISION_ANALYSIS_PLAN.md) (from this report's directory; adjust relative path when rendered) and the technical gate record in [Gate 1C.1](../../docs/gates/GATE_1C1_TECHNICAL_REVIEW.md). Interpret QA46/QA47 as stated intentions, not behavior or price elasticity.
+
+
 **Canonical Project Title:** Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce
 **Controlling Dataset:** `data/raw/survey/Data.xlsx` (Worksheet `Data`, 1,263 rows × 130 columns)
 **Primary Instrument:** `data/raw/survey/Questionairre.docx` & `data/raw/survey/Code Book.docx` (Chandra, Mendeley Data, DOI: `10.17632/cw88nb7822.1`)
