@@ -1061,6 +1061,56 @@ def generate_fig3_qa47_distribution(df, figures_dir):
     plt.close()
 
 
+def get_fig4_monthly_spend_config(curr_df):
+    """
+    Builds verified categorical configuration for Figure 4 monthly spend subplot:
+    - Calculates dynamic category counts directly from active-user data.
+    - Generates dynamic axis labels with accurate counts.
+    - Constructs explicit label-to-color mapping guaranteeing #9E9E9E for 'Not sure'.
+    - Enforces category order and visual separation boundaries.
+    """
+    spend_base_names = {
+        2: '<₹1k',
+        3: '₹1k–₹2.5k',
+        4: '₹2.5k–₹5k',
+        5: '₹5k–₹7.5k',
+        6: '₹7.5k–₹10k',
+        7: '₹10k+',
+        8: 'Not sure'
+    }
+    spend_codes = [2, 3, 4, 5, 6, 7, 8]
+    spend_counts = curr_df['Monthly Spend'].value_counts().to_dict()
+
+    spend_labels = {
+        code: f"{spend_base_names[code]}\n(n={spend_counts.get(code, 0)})"
+        for code in spend_codes
+    }
+    spend_order = [spend_labels[code] for code in spend_codes]
+
+    ordered_colors = ['#90CAF9', '#64B5F6', '#42A5F5', '#2196F3', '#1E88E5', '#1565C0']
+    spend_palette = {
+        spend_labels[code]: color
+        for code, color in zip(spend_codes[:6], ordered_colors)
+    }
+    spend_palette[spend_labels[8]] = '#9E9E9E'
+
+    n_ordered = sum(spend_counts.get(c, 0) for c in spend_codes[:6])
+    n_not_sure = spend_counts.get(8, 0)
+    n_total = sum(spend_counts.get(c, 0) for c in spend_codes)
+
+    return {
+        'spend_labels': spend_labels,
+        'spend_order': spend_order,
+        'spend_palette': spend_palette,
+        'spend_counts': spend_counts,
+        'n_ordered': n_ordered,
+        'n_not_sure': n_not_sure,
+        'n_total': n_total,
+        'not_sure_label': spend_labels[8],
+        'not_sure_color': '#9E9E9E'
+    }
+
+
 def generate_fig4_discount_bivariate(df, figures_dir):
     """Figure 4: Bivariate Exploration of QA 47 Discount Continuation Intention."""
     curr_df = df[df['user_subgroup'] == 'Current Active User'].copy()
@@ -1079,50 +1129,58 @@ def generate_fig4_discount_bivariate(df, figures_dir):
     curr_df['freq_label'] = curr_df['Order Frequency'].map(freq_labels)
     freq_order = ['< 1x/mo', '1–3x/mo', '~1x/wk', '2–3x/wk', '4–6x/wk', 'Daily']
     sns.boxplot(data=curr_df, x='freq_label', y='Continue If Discounts Reduced', order=freq_order,
-                hue='freq_label', legend=False,
+                hue='freq_label', hue_order=freq_order, legend=False,
                 ax=axes[0, 0], palette="Blues_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho1, p1 = stats.spearmanr(curr_df['Order Frequency'], curr_df['Continue If Discounts Reduced'])
     p1_str = f"p = {p1:.3f}" if p1 >= 0.001 else "p < 0.001"
-    axes[0, 0].set_title(f'QA 47 by Order Frequency (QA 15, Codes 2–7)\n(Spearman ρ = {rho1:+.3f}, {p1_str}; Inconclusive)', fontsize=12, fontweight='bold')
+    axes[0, 0].set_title(f'QA 47 by Order Frequency (QA 15, Codes 2–7, n = 807)\n(Spearman ρ = {rho1:+.3f}, {p1_str}; Inconclusive)', fontsize=12, fontweight='bold')
     axes[0, 0].set_xlabel('Current Order Frequency Category', fontsize=11)
     axes[0, 0].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[0, 0].set_yticks(range(1, 6))
 
     # 2. Monthly Spend vs QA 47 (all 7 active categories: 2 to 8)
     # Codes 2–7 are ordered spend brackets; Code 8 is 'Not sure' (non-ordinal category)
-    spend_labels = {
-        2: '<₹1k\n(n=178)',
-        3: '₹1k–₹2.5k\n(n=230)',
-        4: '₹2.5k–₹5k\n(n=195)',
-        5: '₹5k–₹7.5k\n(n=114)',
-        6: '₹7.5k–₹10k\n(n=40)',
-        7: '₹10k+\n(n=26)',
-        8: 'Not sure\n(n=24)'
-    }
-    curr_df['spend_label'] = curr_df['Monthly Spend'].map(spend_labels)
-    spend_order = [
-        '<₹1k\n(n=178)', '₹1k–₹2.5k\n(n=230)', '₹2.5k–₹5k\n(n=195)',
-        '₹5k–₹7.5k\n(n=114)', '₹7.5k–₹10k\n(n=40)', '₹10k+\n(n=26)',
-        'Not sure\n(n=24)'
-    ]
-    spend_colors = ['#90CAF9', '#64B5F6', '#42A5F5', '#2196F3', '#1E88E5', '#1565C0', '#9E9E9E']
-    sns.boxplot(data=curr_df, x='spend_label', y='Continue If Discounts Reduced', order=spend_order,
-                palette=spend_colors, hue='spend_label', legend=False,
-                ax=axes[0, 1], width=0.55, boxprops=dict(edgecolor='#333333'))
+    spend_cfg = get_fig4_monthly_spend_config(curr_df)
+    curr_df['spend_label'] = curr_df['Monthly Spend'].map(spend_cfg['spend_labels'])
+
+    sns.boxplot(
+        data=curr_df,
+        x='spend_label',
+        y='Continue If Discounts Reduced',
+        order=spend_cfg['spend_order'],
+        hue='spend_label',
+        hue_order=spend_cfg['spend_order'],
+        palette=spend_cfg['spend_palette'],
+        legend=False,
+        ax=axes[0, 1],
+        width=0.55,
+        boxprops=dict(edgecolor='#333333')
+    )
 
     # Visual demarcation: separate ordered spend brackets from non-ordinal 'Not sure'
     axes[0, 1].axvline(5.5, color='#757575', linestyle='--', linewidth=1.5, alpha=0.8)
-    axes[0, 1].text(2.5, 5.25, 'Ordered Spend Brackets (n = 783)', ha='center', fontsize=9.5, fontweight='bold', color='#1565C0')
-    axes[0, 1].text(6.0, 5.25, 'Non-Ordinal\n(n = 24)', ha='center', fontsize=8.5, fontweight='bold', color='#616161')
+    axes[0, 1].text(2.5, 5.25, f"Ordered Spend Brackets (n = {spend_cfg['n_ordered']})",
+                    ha='center', fontsize=9.5, fontweight='bold', color='#1565C0')
+    axes[0, 1].text(6.0, 5.25, f"Non-Ordinal\n(n = {spend_cfg['n_not_sure']})",
+                    ha='center', fontsize=8.5, fontweight='bold', color='#616161')
     axes[0, 1].set_ylim(0.8, 5.55)
 
     # Kruskal-Wallis test across all 7 active categories of Monthly Spend
-    spend_groups = [curr_df.loc[curr_df['Monthly Spend'] == c, 'Continue If Discounts Reduced'].values for c in sorted(curr_df['Monthly Spend'].unique())]
+    spend_groups = [curr_df.loc[curr_df['Monthly Spend'] == c, 'Continue If Discounts Reduced'].values
+                    for c in sorted(curr_df['Monthly Spend'].unique())]
     h_spend, p_spend = stats.kruskal(*spend_groups)
     eps2_spend = h_spend / (len(curr_df) - 1)
     p_spend_str = f"p = {p_spend:.3f}" if p_spend >= 0.001 else "p < 0.001"
-    axes[0, 1].set_title(f'QA 47 by Monthly Spend (QA 26, 7 Categories, n = 807)\n(Kruskal–Wallis H = {h_spend:.2f}, {p_spend_str}, ε² = {eps2_spend:.3f}; Inconclusive)', fontsize=12, fontweight='bold')
-    axes[0, 1].set_xlabel('Monthly Spend Category (Current Active Users n = 807: 783 ordered + 24 Not sure)', fontsize=10)
+    axes[0, 1].set_title(
+        f"QA 47 by Monthly Spend (QA 26, 7 Categories, n = {spend_cfg['n_total']})\n"
+        f"(Kruskal–Wallis H = {h_spend:.2f}, {p_spend_str}, ε² = {eps2_spend:.3f}; Inconclusive)",
+        fontsize=12, fontweight='bold'
+    )
+    axes[0, 1].set_xlabel(
+        f"Monthly Spend Category (Current Active Users n = {spend_cfg['n_total']}: "
+        f"{spend_cfg['n_ordered']} ordered + {spend_cfg['n_not_sure']} Not sure)",
+        fontsize=10
+    )
     axes[0, 1].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[0, 1].set_yticks(range(1, 6))
 
@@ -1131,7 +1189,7 @@ def generate_fig4_discount_bivariate(df, figures_dir):
     curr_df['thresh_label'] = curr_df['Threshold Extra Items'].map(thresh_labels)
     thresh_order = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always']
     sns.boxplot(data=curr_df, x='thresh_label', y='Continue If Discounts Reduced', order=thresh_order,
-                hue='thresh_label', legend=False,
+                hue='thresh_label', hue_order=thresh_order, legend=False,
                 ax=axes[1, 0], palette="Oranges_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho3, p3 = stats.spearmanr(curr_df['Threshold Extra Items'], curr_df['Continue If Discounts Reduced'])
     p3_str = f"p = {p3:.3f}" if p3 >= 0.001 else "p < 0.001"
@@ -1141,8 +1199,9 @@ def generate_fig4_discount_bivariate(df, figures_dir):
     axes[1, 0].set_yticks(range(1, 6))
 
     # 4. Multi-Platform Usage Count vs QA 47
+    plat_order = sorted(curr_df['platforms_used_count'].unique())
     sns.boxplot(data=curr_df, x='platforms_used_count', y='Continue If Discounts Reduced',
-                hue='platforms_used_count', legend=False,
+                order=plat_order, hue='platforms_used_count', hue_order=plat_order, legend=False,
                 ax=axes[1, 1], palette="Purples_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho4, p4 = stats.spearmanr(curr_df['platforms_used_count'], curr_df['Continue If Discounts Reduced'])
     p4_str = f"p = {p4:.3f}" if p4 >= 0.001 else "p < 0.001"

@@ -24,6 +24,7 @@ from scipy import stats
 
 from scripts.run_eda import (
     load_and_preprocess_data,
+    get_fig4_monthly_spend_config,
     DEFAULT_SURVEY_PATH,
     DEFAULT_SHEET,
     DEFAULT_TABLES_DIR,
@@ -382,12 +383,12 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
     def test_qa47_association_analysis_methods_and_categories(self):
         """
         Validates statistical rigor of QA 47 association analysis (Table 7):
-        - QA19 code 6 ('Varies considerably') is handled as a separate non-ordinal response via Kruskal-Wallis.
-        - QA26 code 8 ('Not sure') is handled as a separate non-ordinal response via Kruskal-Wallis.
-        - Correct analysis methods are recorded (Kruskal-Wallis for QA 19/26; Spearman for 11 ordered/continuous variables).
-        - Test sample sizes and category totals reconcile to all 807 eligible current active users.
-        - Other eligible ordinal predictors retain valid ordered treatment.
-        - Bonferroni multiple testing correction is applied consistently across all 13 primary tests.
+        - QA19 contains exactly response codes 1–6, and QA26 contains codes 2–8.
+        - All category groups are represented and sample totals reconcile to 807.
+        - Calculated Kruskal-Wallis statistic and raw p-value match generated Table 7 values.
+        - QA19 code 6 ('Varies considerably') and QA26 code 8 ('Not sure') are evaluated as separate non-ordinal categories.
+        - Remaining 11 predictors retain valid Spearman treatment.
+        - Each Bonferroni-adjusted p-value agrees with dynamically calculated raw p-value * 13 (capped at 1).
         """
         tpath = os.path.join(DEFAULT_TABLES_DIR, "qa47_cross_tabs_and_associations.csv")
         tdf = pd.read_csv(tpath)
@@ -408,16 +409,26 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
         self.assertEqual(qa19['Test Statistic Name'], "Kruskal-Wallis H")
         self.assertEqual(str(qa19['Spearman Rho (ρ)']), "N/A (Categorical test)",
                          "QA 19 must not have an ordinal Spearman Rho.")
-        # Verify category distribution of QA 19 among active users
+
+        # Verify QA 19 contains exactly expected codes 1..6 and all category groups are represented
+        qa19_unique_codes = sorted(curr_df['Items per Order'].unique())
+        self.assertEqual(qa19_unique_codes, list(range(1, 7)),
+                         "QA 19 active responses must contain exactly codes 1..6.")
         qa19_counts = curr_df['Items per Order'].value_counts().to_dict()
+        for code in range(1, 7):
+            self.assertGreater(qa19_counts.get(code, 0), 0, f"QA 19 Code {code} must be represented.")
         self.assertEqual(qa19_counts[6], 100, "Code 6 ('Varies considerably') must have n=100.")
         self.assertEqual(sum(qa19_counts.values()), 807, "QA 19 category sum must reconcile to 807.")
-        # Dynamically verify Kruskal-Wallis H and p-value
+
+        # Dynamically verify Kruskal-Wallis H, raw p-value, and adjusted p-value
         qa19_groups = [curr_df.loc[curr_df['Items per Order'] == c, 'Continue If Discounts Reduced'].values
-                       for c in sorted(curr_df['Items per Order'].unique())]
+                       for c in range(1, 7)]
         self.assertEqual(len(qa19_groups), 6, "QA 19 must have 6 categories (Codes 1–6).")
         h19, p19 = stats.kruskal(*qa19_groups)
-        self.assertAlmostEqual(float(qa19['Test Statistic Value']), round(h19, 3), places=2)
+        self.assertAlmostEqual(float(qa19['Test Statistic Value']), h19, places=3)
+        self.assertAlmostEqual(float(qa19['Raw p-value']), p19, places=4)
+        expected_adj_p19 = min(1.0, float(qa19['Raw p-value']) * 13)
+        self.assertAlmostEqual(float(qa19['Bonferroni Adjusted p-value']), expected_adj_p19, places=4)
 
         # 2. QA 26 (Monthly Spend) validation
         qa26_row = tdf[tdf['Predictor / Behavioral Factor'].str.contains('QA 26')]
@@ -429,16 +440,26 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
         self.assertEqual(qa26['Test Statistic Name'], "Kruskal-Wallis H")
         self.assertEqual(str(qa26['Spearman Rho (ρ)']), "N/A (Categorical test)",
                          "QA 26 must not have an ordinal Spearman Rho.")
-        # Verify category distribution of QA 26 among active users
+
+        # Verify QA 26 contains exactly expected codes 2..8 and all category groups are represented
+        qa26_unique_codes = sorted(curr_df['Monthly Spend'].unique())
+        self.assertEqual(qa26_unique_codes, list(range(2, 9)),
+                         "QA 26 active responses must contain exactly codes 2..8.")
         qa26_counts = curr_df['Monthly Spend'].value_counts().to_dict()
+        for code in range(2, 9):
+            self.assertGreater(qa26_counts.get(code, 0), 0, f"QA 26 Code {code} must be represented.")
         self.assertEqual(qa26_counts[8], 24, "Code 8 ('Not sure') must have n=24.")
         self.assertEqual(sum(qa26_counts.values()), 807, "QA 26 category sum must reconcile to 807.")
-        # Dynamically verify Kruskal-Wallis H and p-value
+
+        # Dynamically verify Kruskal-Wallis H, raw p-value, and adjusted p-value
         qa26_groups = [curr_df.loc[curr_df['Monthly Spend'] == c, 'Continue If Discounts Reduced'].values
-                       for c in sorted(curr_df['Monthly Spend'].unique())]
+                       for c in range(2, 9)]
         self.assertEqual(len(qa26_groups), 7, "QA 26 must have 7 active categories (Codes 2–8).")
         h26, p26 = stats.kruskal(*qa26_groups)
-        self.assertAlmostEqual(float(qa26['Test Statistic Value']), round(h26, 3), places=2)
+        self.assertAlmostEqual(float(qa26['Test Statistic Value']), h26, places=3)
+        self.assertAlmostEqual(float(qa26['Raw p-value']), p26, places=4)
+        expected_adj_p26 = min(1.0, float(qa26['Raw p-value']) * 13)
+        self.assertAlmostEqual(float(qa26['Bonferroni Adjusted p-value']), expected_adj_p26, places=4)
 
         # 3. Validate the 11 remaining ordered/continuous predictors retain valid Spearman treatment
         spearman_rows = tdf[~tdf['Predictor / Behavioral Factor'].str.contains('QA 19|QA 26')]
@@ -448,6 +469,11 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
             self.assertEqual(row['Test Statistic Name'], "Spearman Rho (ρ)")
             self.assertEqual(int(row['Analysis Sample Size (n)']), 807)
             self.assertEqual(row['Kruskal-Wallis H-stat'], "N/A (Spearman test)")
+            # Dynamically verify calculated Spearman rho and raw p-value
+            raw_p = float(row['Raw p-value'])
+            adj_p = float(row['Bonferroni Adjusted p-value'])
+            expected_adj = min(1.0, raw_p * 13)
+            self.assertAlmostEqual(adj_p, expected_adj, places=4)
             self.assertTrue(np.isfinite(float(row['Spearman Rho (ρ)'])))
 
         # 4. Validate consistent Bonferroni multiple testing adjustment across all 13 tests
@@ -458,6 +484,52 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
             self.assertAlmostEqual(adj_p, expected_adj_p, places=3)
             self.assertEqual(row['Significant after Multiple Testing?'], "No")
             self.assertIn("inconclusive", str(row['Substantive Interpretation']).lower())
+
+    def test_fig4_monthly_spend_configuration_and_palette(self):
+        """
+        Validates Figure 4 monthly spend visual configuration helper:
+        - Labels contain dynamic category counts directly calculated from data.
+        - Sum of category counts equals total current active users (807).
+        - Codes 2–7 represent ordered spend tiers (n=783).
+        - Code 8 ('Not sure', n=24) is strictly the final category in spend_order.
+        - Color mapping explicitly binds 'Not sure' to neutral grey (#9E9E9E).
+        - Ordered brackets use distinct blue gradient colors, guaranteed not grey.
+        """
+        df = load_and_preprocess_data(DEFAULT_SURVEY_PATH, "Data")
+        curr_df = df[df['user_subgroup'] == 'Current Active User'].copy()
+
+        cfg = get_fig4_monthly_spend_config(curr_df)
+
+        # 1. Verification of category order and count totals
+        self.assertEqual(len(cfg['spend_order']), 7, "Must contain exactly 7 active monthly spend categories.")
+        self.assertEqual(cfg['n_total'], 807, "Total sample across spend categories must equal 807.")
+        self.assertEqual(cfg['n_ordered'], 783, "Ordered spend categories (2–7) must sum to 783.")
+        self.assertEqual(cfg['n_not_sure'], 24, "Code 8 ('Not sure') must equal 24.")
+
+        # 2. 'Not sure' must be the final category in order
+        not_sure_lbl = cfg['not_sure_label']
+        self.assertEqual(cfg['spend_order'][-1], not_sure_lbl,
+                         "'Not sure' must be positioned as the final, separate category in spend_order.")
+        self.assertIn("Not sure", not_sure_lbl)
+        self.assertIn("(n=24)", not_sure_lbl)
+
+        # 3. Explicit palette mapping guarantees
+        palette = cfg['spend_palette']
+        self.assertEqual(len(palette), 7, "Palette must map all 7 spend categories.")
+        self.assertEqual(palette[not_sure_lbl], '#9E9E9E',
+                         "Neutral grey (#9E9E9E) must be strictly mapped to 'Not sure'.")
+
+        # 4. Verify ordered spend brackets use blue gradient, not grey
+        for lbl in cfg['spend_order'][:-1]:
+            color = palette[lbl]
+            self.assertNotEqual(color, '#9E9E9E', f"Ordered tier '{lbl}' must not use neutral grey.")
+            self.assertTrue(color.startswith('#'), f"Color '{color}' must be valid hex.")
+
+        # 5. Check each category count in labels agrees with value_counts()
+        actual_counts = curr_df['Monthly Spend'].value_counts().to_dict()
+        for code, lbl in cfg['spend_labels'].items():
+            expected_n = actual_counts[code]
+            self.assertIn(f"(n={expected_n})", lbl, f"Label '{lbl}' must embed actual count n={expected_n}.")
 
     def test_fig4_bivariate_figure_properties(self):
         """Validates that Figure 4 is properly regenerated and exists."""
