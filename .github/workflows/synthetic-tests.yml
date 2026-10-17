@@ -34,3 +34,6 @@ jobs:
 
       - name: Run clustering tests (synthetic fixture when local matrices are absent)
         run: python -m unittest discover -s tests -p "test_segmentation_experiments.py" -v
+
+      - name: Run lifecycle CRM analysis unit tests (synthetic-only fixtures)
+        run: python -m unittest discover -s tests -p "test_crm_analysis.py" -v
