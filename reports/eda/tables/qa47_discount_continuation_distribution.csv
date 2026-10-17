@@ -1,0 +1,12 @@
+Likert Code,Response Meaning,Count (n),Percentage (%),Cumulative Percentage (%)
+1,Definitely no (Severe Churn Risk),52,6.44,6.44
+2,Probably no (Discount-Sensitive),121,14.99,21.44
+3,Not sure (Neutral / Uncertain),217,26.89,48.33
+4,Probably yes (Discount-Resilient),250,30.98,79.31
+5,Definitely yes (Highly Resilient),167,20.69,100.0
+Summary: Mean,3.445,807,,
+Summary: Std Dev,1.161,807,,
+Summary: Median (IQR),4.0 (IQR=1.0),807,,
+Tier: Discount-Sensitive (1-2),Unlikely to continue without discounts,173,21.44,
+Tier: Neutral / Uncertain (3),Indifferent / threshold vulnerable,217,26.89,
+Tier: Discount-Resilient (4-5),Willing to continue without discounts,417,51.67,

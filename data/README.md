@@ -7,11 +7,11 @@ This document defines the data assets evaluated and governed during **Gate 0**, 
 ## 1. Approved Project Direction & Scope Status
 
 Under the controlling decisions of the Principal Project Lead:
-- **Approved Project Direction:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*
-- **Central Research Question:** *Which customer segments differ in their stated willingness to continue using quick commerce when discounts are reduced, and what retention or reactivation interventions should a platform prioritise for each segment?*
-- **Focal Company Application:** Blinkit
-- **Primary Competitor Benchmark (Qualitative / Contextual):** Zepto
-- **Secondary Comparative Context:** JioMart / Swiggy Instamart
+- **Approved Working Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
+- **Research Question:** *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+- **Problem Investigated:** Quick-commerce consumers may differ in the importance they place on discounts, shopping convenience, spending behaviour, service experience, and other factors. A single retention strategy may not suit every consumer. We investigate these differences using the survey data and determine whether defensible, interpretable customer segments can be developed.
+- **Proposed Business Value:** The eventual project should translate observed customer differences into evidence-based recommendations for customer acquisition, reactivation, and retention (intended applications, not established results).
+- **Scope:** General Indian Quick-Commerce Industry. (Earlier framing applied to Blinkit as a focal case has been formally superseded because the survey measures general quick-commerce behaviour, not firm-specific satisfaction or retention).
 - **Primary Exploratory Dataset:** The Mendeley Quick-Commerce Survey Dataset (`cw88nb7822/1`, Chandra 2026). Conditionally approved under Gate 0 lock.
 - **Superseded Dataset:** The customer app-review corpus (Candidate A, 4,290 common-window records) is formally **superseded for primary analysis** due to unresolved upstream data-rights and scraping provenance, but is retained as a secondary qualitative reference for complaint themes and service recovery taxonomies.
 

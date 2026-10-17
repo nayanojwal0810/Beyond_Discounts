@@ -1,10 +1,11 @@
 # GATE 0 — DECISION LOG (SURVEY VERIFICATION & PROJECT-DIRECTION LOCK)
 
-**Approved Project Title:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*  
-**Central Research Question:** *Which customer segments differ in their stated willingness to continue using quick commerce when discounts are reduced, and what retention or reactivation interventions should a platform prioritise for each segment?*  
-**Focal Business:** Blinkit  
-**Primary Competitor Benchmark (Qualitative / Contextual):** Zepto  
-**Secondary Comparative Context:** JioMart / Swiggy Instamart  
+**Canonical Approved Project Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
+*(Earlier provisional framing "A Blinkit Case Application" formally superseded at Gate 1 launch to reflect general quick-commerce survey scope)*
+**Canonical Research Question:** *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+**Problem Investigated:** Quick-commerce consumers may differ in the importance they place on discounts, shopping convenience, spending behaviour, service experience, and other factors. A single retention strategy may not suit every consumer. We investigate these differences using the survey data and determine whether defensible, interpretable customer segments can be developed.
+**Proposed Business Value:** The eventual project should translate observed customer differences into evidence-based recommendations for customer acquisition, reactivation, and retention (intended applications, not established results).
+**Industry Scope:** General Indian Quick-Commerce Industry (category-level; not firm-specific)
 **Assigned Role:** Implementation Engineer  
 **Decision Authority:** Principal Project Lead  
 **Audit Completion Date:** 2026-10-17  
@@ -17,13 +18,14 @@
 
 The Principal Project Lead reviewed the project repository and the candidate survey bundle (`A Large-Scale Survey Dataset on Quick-Commerce Ado.zip`), establishing the following binding determinations:
 
-1. **Approved Working Direction:** The project direction is locked as *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*.
-2. **Central Research Question:** Investigates which customer segments differ in stated willingness to continue using quick commerce under discount reductions, and what non-discount retention or reactivation interventions a platform should prioritise for each segment.
-3. **Focal Company Application:** Blinkit is the focal business application. Findings from industry-level consumer segmentation are translated into managerial retention playbooks for Blinkit's dark-store network and assortment mix.
-4. **General Quick-Commerce Category Scope:** The survey dataset measures general quick-commerce consumer behavior, not Blinkit-specific satisfaction. Firm-specific satisfaction benchmarks are strictly prohibited.
+1. **Approved Working Direction:** The project direction is locked as *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*.
+2. **Central Research Question:** Investigates how quick-commerce consumers differ in discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences.
+3. **General Category Scope:** The survey dataset measures general quick-commerce consumer behavior, not Blinkit-specific satisfaction or retention outcomes. Earlier provisional framing using Blinkit as a focal case is formally superseded; firm-specific satisfaction claims are strictly prohibited.
+4. **General Quick-Commerce Category Scope:** The survey dataset measures general quick-commerce consumer behavior, not platform-specific satisfaction. Platform-specific satisfaction benchmarks are strictly prohibited.
 5. **Conditional Approval of Survey Dataset:** The Mendeley survey dataset (`cw88nb7822/1`, Chandra 2026) is conditionally approved as an exploratory dataset for customer segmentation, discount dependency modeling, and non-use barrier analysis.
 6. **App-Review Corpus Superseded:** The earlier scraped app-review corpus (Candidate A, 4,290 common-window records) is superseded as the primary dataset due to unresolved upstream collection provenance and unlicenced raw review text.
-7. **Strict Gate 0 Boundary:** Execution is strictly restricted to Gate 0 verification, schema validation, and routing audit. Progression to Gate 1 (segmentation modeling, predictive analytics, or dashboard development) is deferred until formal Gate 1 opening.
+7. **Strict Gate 0 Boundary:** Execution of Gate 0 was strictly restricted to verification, schema validation, and routing audit.
+8. **Framing Correction at Gate 1 Launch:** Following completion of the Gate 0 audit, the Principal Project Lead directed that Blinkit must not be used as a focal case because the survey measures general quick commerce. The canonical project title is locked as *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*.
 
 ---
 

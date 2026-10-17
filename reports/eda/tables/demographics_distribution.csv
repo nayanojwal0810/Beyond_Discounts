@@ -1,0 +1,50 @@
+Demographic Variable,Code,Category Label,Total Count (N=1263),Total Percent (%),Never Users Count (n=376),Never Users Percent (%),Previous Users Count (n=80),Previous Users Percent (%),Current Users Count (n=807),Current Users Percent (%)
+Age Group,1,18–24 years,384,30.4,98,26.06,18,22.5,268,33.21
+Age Group,2,25–34 years,393,31.12,109,28.99,35,43.75,249,30.86
+Age Group,3,35–44 years,245,19.4,79,21.01,10,12.5,156,19.33
+Age Group,4,45–54 years,147,11.64,50,13.3,13,16.25,84,10.41
+Age Group,5,55–64 years,65,5.15,28,7.45,2,2.5,35,4.34
+Age Group,6,65 years or above,29,2.3,12,3.19,2,2.5,15,1.86
+Gender,1,Woman,595,47.11,181,48.14,42,52.5,372,46.1
+Gender,2,Man,636,50.36,180,47.87,37,46.25,419,51.92
+Gender,3,Non-binary / Other,14,1.11,4,1.06,0,0.0,10,1.24
+Gender,4,Prefer not to say,18,1.43,11,2.93,1,1.25,6,0.74
+Education,1,Up to Class 12 / Higher Secondary,113,8.95,34,9.04,8,10.0,71,8.8
+Education,2,Diploma / vocational qualification,70,5.54,25,6.65,2,2.5,43,5.33
+Education,3,Undergraduate degree,500,39.59,142,37.77,33,41.25,325,40.27
+Education,4,Postgraduate degree,460,36.42,131,34.84,28,35.0,301,37.3
+Education,5,Doctoral / professional degree,120,9.5,44,11.7,9,11.25,67,8.3
+Occupation,1,Student,190,15.04,56,14.89,13,16.25,121,14.99
+Occupation,2,Salaried employee – private,443,35.08,137,36.44,29,36.25,277,34.32
+Occupation,3,Salaried employee – public,108,8.55,34,9.04,5,6.25,69,8.55
+Occupation,4,Self-employed / business owner,181,14.33,46,12.23,9,11.25,126,15.61
+Occupation,5,Professional / consultant,122,9.66,38,10.11,10,12.5,74,9.17
+Occupation,6,Homemaker,96,7.6,31,8.24,7,8.75,58,7.19
+Occupation,7,Retired,47,3.72,10,2.66,2,2.5,35,4.34
+Occupation,8,Currently not employed,76,6.02,24,6.38,5,6.25,47,5.82
+Personal Income,1,No personal income,201,15.91,69,18.35,13,16.25,119,14.75
+Personal Income,2,"Below ₹25,000",283,22.41,83,22.07,14,17.5,186,23.05
+Personal Income,3,"₹25,000–₹49,999",287,22.72,81,21.54,12,15.0,194,24.04
+Personal Income,4,"₹50,000–₹74,999",185,14.65,53,14.1,12,15.0,120,14.87
+Personal Income,5,"₹75,000–₹99,999",140,11.08,43,11.44,13,16.25,84,10.41
+Personal Income,6,"₹1,00,000–₹1,49,999",100,7.92,29,7.71,9,11.25,62,7.68
+Personal Income,7,"₹1,50,000 or above",42,3.33,14,3.72,3,3.75,25,3.1
+Personal Income,8,Prefer not to say,25,1.98,4,1.06,4,5.0,17,2.11
+Area of Residence,1,Metro city,353,27.95,41,10.9,23,28.75,289,35.81
+Area of Residence,2,Tier-1 city,265,20.98,56,14.89,18,22.5,191,23.67
+Area of Residence,3,Tier-2 city,284,22.49,95,25.27,20,25.0,169,20.94
+Area of Residence,4,Tier-3 city / Small city,170,13.46,70,18.62,8,10.0,92,11.4
+Area of Residence,5,Town / Semi-urban,122,9.66,65,17.29,8,10.0,49,6.07
+Area of Residence,6,Rural area,69,5.46,49,13.03,3,3.75,17,2.11
+Region,1,North India,370,29.3,107,28.46,27,33.75,236,29.24
+Region,2,South India,273,21.62,83,22.07,20,25.0,170,21.07
+Region,3,East India,182,14.41,59,15.69,9,11.25,114,14.13
+Region,4,West India,235,18.61,71,18.88,8,10.0,156,19.33
+Region,5,Central India,138,10.93,40,10.64,11,13.75,87,10.78
+Region,6,North-East India,65,5.15,16,4.26,5,6.25,44,5.45
+Household Size,1,1 person,58,4.59,26,6.91,4,5.0,28,3.47
+Household Size,2,2 persons,145,11.48,41,10.9,8,10.0,96,11.9
+Household Size,3,3 persons,289,22.88,83,22.07,12,15.0,194,24.04
+Household Size,4,4 persons,386,30.56,116,30.85,30,37.5,240,29.74
+Household Size,5,5 persons,228,18.05,76,20.21,17,21.25,135,16.73
+Household Size,6,6 or more persons,157,12.43,34,9.04,9,11.25,114,14.13

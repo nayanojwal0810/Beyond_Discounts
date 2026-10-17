@@ -3,7 +3,7 @@
 **Document Type:** Formal Candidate Dataset Verification, Routing Audit & Project-Direction Lock  
 **Target Dataset:** *A Large-Scale Survey Dataset on Quick-Commerce Adoption, Ordering Patterns, Product Categories and Spending Behaviour among Indian Consumers*  
 **Primary Source:** Mendeley Data (`cw88nb7822/1`, DOI: `10.17632/cw88nb7822.1`, published 14 Oct 2026)  
-**Approved Working Direction:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*  
+**Historical Working Direction (Gate 0):** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application* *(Note: At Gate 1 launch, canonical title updated to: Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce)*
 **Central Research Question:** *Which customer segments differ in their stated willingness to continue using quick commerce when discounts are reduced, and what retention or reactivation interventions should a platform prioritise for each segment?*  
 **Assigned Role:** Implementation Engineer (operating under the Principal Project Lead)  
 **Audit Completion Date:** 2026-10-17  
@@ -14,14 +14,15 @@
 ## 1. Executive Assessment & Approved Scope Boundaries
 
 The Principal Project Lead has conditionally approved the Mendeley quick-commerce survey workbook as a candidate for exploratory CRM analysis, subject to documented provenance boundaries, questionnaire routing corrections, and strict scope limits.
+*(Framing Transition Note: While Gate 0 explored a Blinkit focal application, at Gate 1 launch the Principal Project Lead formally updated the canonical framing to general Indian Quick Commerce, removing firm-specific focal claims).*
 
-### Core Approved Working Direction
-- **Approved Project Title:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*
+### Core Approved Working Direction (Historical Gate 0)
+- **Historical Project Title:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application* (Canonical Gate 1 Title: *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*)
 - **Central Question:** Which customer segments differ in their stated willingness to continue using quick commerce when discounts are reduced, and what retention or reactivation interventions should a platform prioritise for each segment?
-- **Focal Platform:** Blinkit serves as the primary focal application context for translating findings into actionable CRM retention strategies.
+- **Focal Platform Transition:** Originally conceived with a Blinkit application lens; formally corrected at Gate 1 to general quick-commerce industry behavior because the survey measures category-level behavior.
 
 ### Binding Scope Boundaries
-1. **Blinkit is the Focal Business Application:** Strategic implications and playbooks are tailored for Blinkit's operational model.
+1. **Industry-Wide Category Application:** Strategic implications and customer segments apply to general Indian quick commerce (Blinkit focal case removed).
 2. **Category-Level Behaviour (No Platform-Specific Satisfaction):** The survey captures platform awareness and historical usage (QA 11, 12), but all service satisfaction (QA 37–40), operational complaints (QA 36), discount habits (QA 28, 29), and choice factors (QA 31, 32) are measured strictly at the general quick-commerce category level. The project must **not** claim platform-specific satisfaction benchmarks for Blinkit.
 3. **Exploratory Survey (Not Representative National Census):** The achieved sample of 1,263 respondents reflects an exploratory non-probability sample. Large sample size does not confer national demographic representativeness.
 4. **Stated Intention vs. Observed Behaviour:** Stated likelihood of future use (QA 46) and willingness to continue if discounts are reduced (QA 47) represent stated customer perceptions, **not** observed repeat purchases, actual customer retention, or proven transactional churn.
@@ -233,5 +234,5 @@ To protect academic credibility and scientific integrity, the following practice
 The Implementation Engineer submits this completed verification and routing audit to the Principal Project Lead with the following recommendation:
 
 - **Recommended Gate 0 Disposition:** **CLOSE GATE 0 (ACCEPT WITH DOCUMENTED CONDITIONAL SCOPE)**
-- **Approved Project Scope:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*.
-- **Next Phase Authorization:** With Gate 0 data verification, routing reconciliation, and schema locking complete, the project is technically prepared to proceed to **Gate 1 (Exploratory Data Analysis, Feature Engineering, and Consumer Segmentation Modeling)** upon formal direction from the Principal Project Lead.
+- **Approved Project Scope (Gate 0 Baseline):** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application* *(Formally updated at Gate 1 launch to canonical title: Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce)*.
+- **Next Phase Authorization:** With Gate 0 data verification, routing reconciliation, and schema locking complete, the project is technically prepared to proceed to **Gate 1A (Exploratory Data Analysis and Framing Correction)** upon formal direction from the Principal Project Lead.

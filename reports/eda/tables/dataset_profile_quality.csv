@@ -1,0 +1,15 @@
+Metric Category,Metric Name,Value,Denominator / Base,Notes
+Dimensions,Total Rows (Respondents),1263,Total Survey Manifest,Verified row count
+Dimensions,Total Columns (Features),130,Total Survey Manifest,Verified 130-column manifest
+Data Quality,Physical Missing Values (NaN),0 (0.0%),"164,190 cells (1263x130)",Zero physical nulls in sheet
+Data Quality,Duplicate Respondent Rows,0 (0.0%),"1,263 rows",Zero exact row duplicates
+Subgroup Partition,"Never-Users (Ever Ordered=0, Freq=1)",376 (29.77%),"Total N = 1,263",Never placed quick commerce order
+Subgroup Partition,"Previous Users (Ever Ordered=1, Freq=1)",80 (6.33%),"Total N = 1,263","Lapsed users, currently reporting 0 orders"
+Subgroup Partition,"Current Active Users (Ever Ordered=1, Freq>1)",807 (63.89%),"Total N = 1,263",Active regular or occasional shoppers
+Question Routing,QA 47 Substantive Likert (Codes 1-5),807 (100.0%),Current Active Users (n=807),Continuation if discounts reduced
+Question Routing,QA 47 Routing Not Applicable (Code 6),456 (100.0%),Non-Current Users (n=456),"Explicit skip code, NOT negative sentiment"
+Question Routing,QA 48 Non-Use Barrier Respondents,456 (100.0%),Non-Current Users (n=456),Reasons for non-use reported
+Question Routing,QA 48 Skip Flag for Current Users,807 (100.0%),Current Active Users (n=807),Reason Not Applicable Current User = 1
+Question Routing,QA 46 Next 3 Month Use (Universal),"1,263 (100.0%)","Total N = 1,263",Substantive Likert 1-5 across all respondents
+Question Routing,QA 49 Preferred Improvement (Universal),"1,263 (100.0%)","Total N = 1,263",Substantive choice 1-10 across all respondents
+Question Routing,QA 26 Monthly Spend ₹0 Code 1,456 (36.10%),"Total N = 1,263","Substantive ₹0 spend, not missing data"
