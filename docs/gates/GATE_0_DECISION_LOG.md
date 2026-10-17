@@ -2,7 +2,9 @@
 
 **Canonical Approved Project Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
 *(Earlier provisional framing "A Blinkit Case Application" formally superseded at Gate 1 launch to reflect general quick-commerce survey scope)*
-**Canonical Research Question:** *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+**Original Gate 0 Research Question (superseded 17 Oct 2026):** *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+**Current Research Question:** *Which lifecycle-based CRM actions are best supported by the observed sample's stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements? Do exploratory behavioral clusters add actionable differentiation beyond lifecycle cohorts?*
+**Current Decision:** Lifecycle-based CRM analysis is primary. Existing Gower/PAM/HAC clustering remains an exploratory benchmark only; no hard customer-persona targeting is approved.
 **Problem Investigated:** Quick-commerce consumers may differ in the importance they place on discounts, shopping convenience, spending behaviour, service experience, and other factors. A single retention strategy may not suit every consumer. We investigate these differences using the survey data and determine whether defensible, interpretable customer segments can be developed.
 **Proposed Business Value:** The eventual project should translate observed customer differences into evidence-based recommendations for customer acquisition, reactivation, and retention (intended applications, not established results).
 **Industry Scope:** General Indian Quick-Commerce Industry (category-level; not firm-specific)
