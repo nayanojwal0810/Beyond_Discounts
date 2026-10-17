@@ -59,7 +59,7 @@ Run locally with the untracked survey workbook and regenerated processed matrice
 1. Install the tested project environment and run the full test suite.
 2. Run the survey audit, EDA pipeline, feature preparation, and segmentation experiment in the documented order.
 3. Confirm the external-validation CSV retains high-precision raw p-values and adjusted values are computed from those raw values.
-4. Confirm `stability_runs.csv` has 160 rows when all eight PAM configurations complete (two feature specifications × four k values × 20 subsamples). Failed rows must be explicitly marked; if any fail, investigate them before interpreting stability.
+4. Confirm `stability_runs.csv` has 160 rows when all eight PAM configurations complete (two feature specifications × four k values × 20 subsamples). Failed rows must be explicitly marked; if any fail, investigate them before interpreting stability. Confirm `external_validation_summary.csv` contains QA49 Monte Carlo tests and `cluster_preferred_improvement_profile.csv` contains 10 option rows per cluster, for each Spec A/B PAM configuration.
 5. Reconcile all regenerated CSVs, figure outputs, and the segmentation decision report. Do not patch aggregate tables manually to match old prose.
 6. Ensure no raw workbook, processed matrix, respondent assignment, row identifier, or row-level survey response is committed.
 7. Record Python and package versions and the exact commands used. The clean-clone synthetic test path should not require access to the private/local raw workbook.
