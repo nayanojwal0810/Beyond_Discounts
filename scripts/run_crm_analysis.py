@@ -105,6 +105,7 @@ def parse_arguments(args=None):
 
 def derive_cohorts(df: pd.DataFrame, *, strict: bool = False) -> pd.DataFrame:
     """Derive the three source-defined cohorts and predeclared analysis variables."""
+    source_shape = df.shape
     required = [
         "Ever Ordered through a Quick-Commerce Platform", "Order Frequency",
         "Next 3 Month Use", "Continue If Discounts Reduced", "Improvement",
@@ -136,8 +137,8 @@ def derive_cohorts(df: pd.DataFrame, *, strict: bool = False) -> pd.DataFrame:
     out["user_subgroup"] = cohort
 
     if strict:
-        if out.shape != EXPECTED_SHAPE:
-            raise ValueError(f"Unexpected workbook shape {out.shape}; expected {EXPECTED_SHAPE}.")
+        if source_shape != EXPECTED_SHAPE:
+            raise ValueError(f"Unexpected source workbook shape {source_shape}; expected {EXPECTED_SHAPE}.")
         observed = out["user_subgroup"].value_counts().to_dict()
         if observed != EXPECTED_COHORTS:
             raise ValueError(f"Cohort counts do not match the audited baseline: {observed}")
@@ -771,6 +772,7 @@ def main(args=None) -> int:
     if parsed.mc_resamples < 999:
         raise ValueError("--mc-resamples must be >= 999.")
     df = pd.read_excel(parsed.file, sheet_name=parsed.sheet)
+    df.columns = [str(column).strip() for column in df.columns]
     if df.shape != EXPECTED_SHAPE:
         raise ValueError(f"Unexpected workbook shape {df.shape}; expected {EXPECTED_SHAPE}.")
     run_analysis(df, parsed.out_dir, mc_resamples=parsed.mc_resamples, seed=parsed.seed, strict=True,
