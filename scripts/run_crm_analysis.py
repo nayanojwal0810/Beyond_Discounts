@@ -547,6 +547,63 @@ def _coefficient_rows(result: Any, model_name: str) -> list[dict[str, Any]]:
     return rows
 
 
+def fit_multinomial_sensitivity(y: pd.Series, X: pd.DataFrame, model_name: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Fit multinomial logit as a sensitivity alternative when parallel slopes are rejected."""
+    try:
+        design = sm.add_constant(X.astype(float), has_constant="add")
+        observed_categories = sorted(pd.unique(y.astype(int)))
+        category_to_code = {category: code for code, category in enumerate(observed_categories)}
+        encoded_y = y.astype(int).map(category_to_code)
+        result = sm.MNLogit(encoded_y, design).fit(method="newton", maxiter=1000, disp=False)
+        converged = bool(result.mle_retvals.get("converged", False))
+        info = {
+            "model": model_name,
+            "distribution": "multinomial logit",
+            "status": "COMPLETED" if converged else "NON_CONVERGED",
+            "n": int(result.nobs),
+            "log_likelihood": float(result.llf),
+            "aic": float(result.aic),
+            "bic": float(result.bic),
+            "n_predictors": int(X.shape[1]),
+            "converged": converged,
+            "optimizer": str(result.mle_retvals.get("fopt", "")),
+            "detail": "Reference response category is QA47=" + str(observed_categories[0]) + ". Category-specific odds are not proportional-odds ratios.",
+        }
+        if not converged:
+            return info, []
+        params = np.asarray(result.params, dtype=float)
+        standard_errors = np.asarray(result.bse, dtype=float)
+        pvalues = np.asarray(result.pvalues, dtype=float)
+        exog_names = list(result.model.exog_names)
+        rows = []
+        for outcome_index in range(params.shape[1]):
+            category = observed_categories[outcome_index + 1]
+            for term_index, term in enumerate(exog_names):
+                coef = float(params[term_index, outcome_index])
+                se = float(standard_errors[term_index, outcome_index])
+                lo, hi = coef - 1.96 * se, coef + 1.96 * se
+                rows.append({
+                    "model": model_name,
+                    "response_category_vs_reference": f"QA47={category} vs QA47={observed_categories[0]}",
+                    "term": str(term),
+                    "coefficient": coef,
+                    "standard_error": se,
+                    "p_value": float(pvalues[term_index, outcome_index]),
+                    "relative_odds_ratio": float(np.exp(np.clip(coef, -30, 30))),
+                    "or_ci95_low": float(np.exp(np.clip(lo, -30, 30))),
+                    "or_ci95_high": float(np.exp(np.clip(hi, -30, 30))),
+                    "interpretation_limit": "Category-specific relative odds from a sensitivity model; adjusted association, not causal."
+                })
+        return info, rows
+    except Exception as exc:
+        return {
+            "model": model_name, "distribution": "multinomial logit", "status": "FAILED",
+            "n": int(len(y)), "log_likelihood": np.nan, "aic": np.nan, "bic": np.nan,
+            "n_predictors": int(X.shape[1]), "converged": False, "optimizer": "",
+            "detail": f"{type(exc).__name__}: {str(exc)[:240]}",
+        }, []
+
+
 def fit_qa47_models(df: pd.DataFrame, out_dir: str) -> None:
     """Fit pre-specified ordered-logit model and sensitivity checks on current-user respondents."""
     current = df[df["user_subgroup"] == "Current Active User"].copy()
@@ -559,15 +616,41 @@ def fit_qa47_models(df: pd.DataFrame, out_dir: str) -> None:
     if X.isna().any().any() or not np.isfinite(X.to_numpy(dtype=float)).all():
         raise ValueError("QA47 model features contain missing or non-finite values after documented preprocessing.")
     model_rows, coefficient_rows, diagnostic_rows, comparison_rows = [], [], [], []
+    multinomial_rows, multinomial_status_rows = [], []
     base_result, base_info = _fit_ordered_model(y, X, distribution="logit", model_name="QA47 ordered logit — prespecified trend model")
     model_rows.append(base_info)
+    base_diagnostic = {"status": "INCONCLUSIVE", "detail": "Main ordered-logit model did not converge."}
     if base_result is not None and base_info["converged"]:
         coefficient_rows.extend(_coefficient_rows(base_result, base_info["model"]))
-        diag = run_parallel_slopes_diagnostic(y.to_numpy(), X)
-        diagnostic_rows.append({"model": base_info["model"], "diagnostic": "Parallel-slopes assumption", **diag})
+        base_diagnostic = run_parallel_slopes_diagnostic(y.to_numpy(), X)
+        diagnostic_rows.append({"model": base_info["model"], "diagnostic": "Parallel-slopes assumption", **base_diagnostic})
     else:
         diagnostic_rows.append({"model": base_info["model"], "diagnostic": "Parallel-slopes assumption",
-                                "status": "INCONCLUSIVE", "detail": "Main ordered-logit model did not converge."})
+                                "status": "INCONCLUSIVE", "detail": base_diagnostic["detail"]})
+
+    # Pre-specified fallback: if the main model's parallel-slopes diagnostic rejects,
+    # fit a multinomial alternative rather than interpreting a violated PO model as definitive.
+    if base_diagnostic.get("status") == "COMPLETED" and base_diagnostic.get("p_value", 1.0) < 0.05:
+        mn_info, multinomial_rows = fit_multinomial_sensitivity(
+            y, X, model_name="QA47 multinomial logit — triggered by parallel-slopes diagnostic"
+        )
+        model_rows.append(mn_info)
+        multinomial_status_rows.append({
+            "status": mn_info["status"], "trigger": "Parallel-slopes diagnostic p < 0.05",
+            "diagnostic_p_value": float(base_diagnostic["p_value"]), "detail": mn_info["detail"]
+        })
+    elif base_diagnostic.get("status") == "COMPLETED":
+        multinomial_status_rows.append({
+            "status": "NOT_TRIGGERED", "trigger": "Parallel-slopes diagnostic did not reject at 0.05",
+            "diagnostic_p_value": float(base_diagnostic.get("p_value", np.nan)),
+            "detail": "The pre-specified multinomial fallback was not triggered; this is not proof that proportional odds is true."
+        })
+    else:
+        multinomial_status_rows.append({
+            "status": "NOT_RUN", "trigger": "Parallel-slopes diagnostic inconclusive",
+            "diagnostic_p_value": np.nan,
+            "detail": "Assumption status is unresolved; do not treat the ordered-logit interpretation as definitive."
+        })
 
     # Sensitivity model: categorical coding for ordinal predictors tests whether trend coding masks non-linear relationships.
     sensitivity_numeric = current[["platforms_used_count", "service_satisfaction_composite"]].apply(pd.to_numeric, errors="coerce")
@@ -621,6 +704,8 @@ def fit_qa47_models(df: pd.DataFrame, out_dir: str) -> None:
     pd.DataFrame(coefficient_rows).to_csv(os.path.join(out_dir, "qa47_model_coefficients.csv"), index=False)
     pd.DataFrame(diagnostic_rows).to_csv(os.path.join(out_dir, "qa47_model_diagnostics.csv"), index=False)
     pd.DataFrame(comparison_rows).to_csv(os.path.join(out_dir, "qa47_model_comparison.csv"), index=False)
+    pd.DataFrame(multinomial_status_rows).to_csv(os.path.join(out_dir, "qa47_multinomial_sensitivity_status.csv"), index=False)
+    pd.DataFrame(multinomial_rows).to_csv(os.path.join(out_dir, "qa47_multinomial_sensitivity.csv"), index=False)
 
 
 def run_analysis(df: pd.DataFrame, out_dir: str, *, mc_resamples: int = 10000, seed: int = 20261017,
