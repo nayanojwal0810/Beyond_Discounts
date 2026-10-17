@@ -85,7 +85,7 @@ Keep the initial model parsimonious. Encode nominal predictors as categories, in
 **Models and checks:**
 1. Fit an intercept-only ordinal-logit baseline.
 2. Fit the pre-specified ordered-logit model with documented reference categories.
-3. Report coefficients, odds ratios, 95% confidence intervals, p-values and model sample size; explain what the odds ratio means for higher stated response categories.
+3. Report coefficients, odds ratios, 95% confidence intervals, raw p-values and Holm-adjusted p-values across predictor coefficients within each fitted model; show model sample size and explain the odds ratio for higher stated response categories.
 4. Assess the proportional-odds/parallel-lines assumption. If it fails, use a defensible alternative (e.g. partial proportional odds if available and tested) or multinomial/threshold-specific sensitivity analysis rather than ignore the violation.
 5. Conduct a pre-defined sensitivity check, such as ordered probit or a defensible alternative coding of the QA47 tiers. Do not use multiple versions as a significance hunt.
 6. If a model includes QA49 preferred improvement, add it only as a clearly labeled second model to assess incremental association; QA49 is a stated preference, not a treatment assignment.
