@@ -11,7 +11,7 @@ Under the controlling decisions of the Principal Project Lead:
 - **Primary Competitor Benchmark:** Zepto
 - **Secondary Comparative Context:** JioMart (verified same-window records; retained strictly as secondary benchmark)
 - **Swiggy Instamart:** Not available in candidate review datasets; direct scraping is prohibited. Swiggy Instamart is contextualized exclusively via published secondary industry research (Financial Express, Datum Intelligence).
-- **Mendeley Survey Bundle (`cw88nb7822/1`):** Complete bundle (`Data.xlsx`, `Code Book.docx`, `Questionairre.docx`) located and audited under Gate 0. Evaluated for candidate scope change; disposition pending Principal Project Lead review (see `docs/gates/GATE_0_SURVEY_CANDIDATE_AUDIT.md`).
+- **Mendeley Survey Bundle (`cw88nb7822/1`):** Complete bundle (`Data.xlsx`, `Code Book.docx`, `Questionairre.docx`) located, verified, and audited under Gate 0. Conditionally approved as primary exploratory dataset under approved scope direction (see `docs/gates/GATE_0_SURVEY_CANDIDATE_AUDIT.md`).
 
 ### Candidate Evaluation Summary
 
@@ -21,7 +21,7 @@ Under the controlling decisions of the Principal Project Lead:
 | **Candidate B** | `AkeelFarooq/Quick-Commerce-Review-Insights-Blinkit-vs-Zepto-vs-JioMart` | 4,620 | 4,290 | Unlicenced | **Rejected as Redundant** (100% derivative copy of Candidate A row-for-row) |
 | **Candidate C** | `vaishSharma-15/BlinkitReviewAnalyzer` | 35,399 | N/A (Blinkit-only for app reviews; YouTube lacks ratings) | Unlicenced (explicit badge) | **Methodological Reference Only** (retained for validation procedures and scorecard architecture) |
 | **Candidate D** | Google Play Store Listings (`com.grofers.customerapp`, `com.zeptoconsumerapp`, `in.swiggy.android`) | Real-time | N/A | Proprietary / Google Terms of Service | **Live Scraping Prohibited** (Developer API uses `androidpublisher` scope requiring app ownership; Terms restrict automated access violating machine-readable rules; no scraping authorised) |
-| **Mendeley Survey Bundle** | `data.mendeley.com/datasets/cw88nb7822/1` (Chandra 2026) | 1,263 | N/A (Survey dataset; not app reviews) | CC BY 4.0 (declared) | **Candidate Survey Dataset Audited (Pending Lead Review)** (Full bundle inspected; 1,263 rows × 130 cols; 80-record previous-user routing defect identified; see `GATE_0_SURVEY_CANDIDATE_AUDIT.md`) |
+| **Mendeley Survey Bundle** | `data.mendeley.com/datasets/cw88nb7822/1` (Chandra 2026) | 1,263 | N/A (Survey dataset; not app reviews) | CC BY 4.0 (declared) | **Conditionally Approved Candidate Dataset** (Full bundle verified; 1,263 rows × 130 cols; 80-record previous-user routing reconciled; see `GATE_0_SURVEY_CANDIDATE_AUDIT.md`) |
 
 ---
 

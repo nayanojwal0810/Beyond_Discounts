@@ -1,7 +1,12 @@
 {
-  "status": "SUCCESS",
+  "status": "SUCCESS_WITH_WARNINGS",
+  "blocking_errors": [],
+  "warnings": [
+    "Detected 5 column headers with leading or trailing whitespace."
+  ],
   "total_rows": 1263,
   "total_columns": 130,
+  "dimension_discrepancy": null,
   "full_duplicate_rows": 0,
   "demographic_duplicate_rows": 5,
   "total_null_cells": 0,
@@ -13,6 +18,8 @@
     "Fast Delivery Importance ",
     " Problem No Major Problem"
   ],
+  "missing_mandatory_columns": [],
+  "duplicate_normalized_headers": [],
   "binary_column_violations": {},
   "range_violations": {},
   "logical_conflicts": {
@@ -49,6 +56,53 @@
       "Reason No Need Rapid": 23,
       "Reason Privacy Payment Concern": 18,
       "Reason Unfamiliar Apps": 15
+    },
+    "never_users_reasons_for_not_using": {
+      "Reason Service Unavailable": 102,
+      "Reason Prefer Physical": 183,
+      "Reason Prices High": 121,
+      "Reason Delivery Fees": 115,
+      "Reason Distrust Quality": 99,
+      "Reason Prefer Inspect": 151,
+      "Reason Impulsive Spending Concern": 74,
+      "Reason No Need Rapid": 95,
+      "Reason Privacy Payment Concern": 61,
+      "Reason Unfamiliar Apps": 48
+    }
+  },
+  "questionnaire_routing": {
+    "qa16_to_qa45_skip_coded_count": 456,
+    "qa46_future_use_intention": {
+      "substantive_total_1_to_5": 1263,
+      "never_users_substantive": 376,
+      "previous_users_substantive": 80,
+      "current_users_substantive": 807,
+      "na_count": 0
+    },
+    "qa47_discount_continuation": {
+      "current_users_substantive_1_to_5": 807,
+      "current_users_na_code_6": 0,
+      "non_current_users_na_code_6": 456,
+      "non_current_users_substantive": 0
+    },
+    "qa48_non_user_reasons_available_count": 456
+  },
+  "completeness_and_missingness": {
+    "physical_blank_cells": 0,
+    "physical_data_completeness_pct": 100.0,
+    "explicit_not_applicable_counts": {
+      "qa16_to_qa45_skip_coded_respondents": 456,
+      "qa37_to_qa40_satisfaction_code_6_not_applicable": 456,
+      "qa47_discount_reduction_code_6_not_applicable": 456,
+      "qa48_current_user_skip_flag_code_1": 807,
+      "category_not_applicable_code_1": 456,
+      "problem_not_applicable_code_1": 456
+    },
+    "substantive_observed_response_counts": {
+      "qa46_future_use_intention_substantive_1_to_5": 1263,
+      "qa47_discount_continuation_substantive_1_to_5": 807,
+      "qa48_non_user_reasons_active_respondents": 456,
+      "qa49_improvement_substantive_1_to_10": 1263
     }
   },
   "platform_usage_counts": {
@@ -90,8 +144,9 @@
     "mendeley_doi": "10.17632/cw88nb7822.1",
     "deposit_date": "14 October 2026",
     "input_file_path": "data\\raw\\survey\\Data.xlsx",
+    "input_worksheet": "Data",
     "input_file_sha256": "c6e92099b960f11472558b629e90b2926012061eac45b9051973c8fe79e1a73d",
     "input_file_size_bytes": 565344,
-    "audit_timestamp_utc": "2026-10-17T08:17:59.950156+00:00"
+    "audit_timestamp_utc": "2026-10-17T08:37:11.052448+00:00"
   }
 }

@@ -1,73 +1,86 @@
-# GATE 0 — DECISION LOG (FINAL REMEDIATION)
+# GATE 0 — DECISION LOG (SURVEY VERIFICATION & PROJECT-DIRECTION LOCK)
 
-**Project Title:** Evidence-Led CRM Service-Recovery Prioritisation for Indian Quick Commerce: A Public-Feedback-Based Customer Retention Decision Framework  
+**Approved Project Title:** *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*  
+**Central Research Question:** *Which customer segments differ in their stated willingness to continue using quick commerce when discounts are reduced, and what retention or reactivation interventions should a platform prioritise for each segment?*  
 **Focal Business:** Blinkit  
-**Primary Competitor Benchmark:** Zepto  
-**Secondary Comparative Context:** JioMart (same-window verified; secondary benchmark only)  
+**Primary Competitor Benchmark (Qualitative / Contextual):** Zepto  
+**Secondary Comparative Context:** JioMart / Swiggy Instamart  
 **Assigned Role:** Implementation Engineer  
 **Decision Authority:** Principal Project Lead  
-**Remediation Date:** 2026-10-17  
-**Gate Status:** **PENDING PRINCIPAL PROJECT LEAD APPROVAL (FINAL REMEDIATION SUBMITTED)**  
-**Recommended Disposition:** **PASS (UNDER AUTHORIZED CONDITIONAL SCOPE)**
+**Audit Completion Date:** 2026-10-17  
+**Gate 0 Status:** **CONDITIONALLY APPROVED BY PRINCIPAL PROJECT LEAD (FINAL AUDIT LOCK)**  
+**Recommended Disposition:** **PASS (UNDER AUTHORIZED CONDITIONAL SCOPE)**  
 
 ---
 
 ## 1. Controlling Decisions of the Principal Project Lead
 
-The Principal Project Lead reviewed the project repository and established the following binding determinations:
+The Principal Project Lead reviewed the project repository and the candidate survey bundle (`A Large-Scale Survey Dataset on Quick-Commerce Ado.zip`), establishing the following binding determinations:
 
-1. **Focal Company:** Blinkit is retained as the focal platform.
-2. **Primary Competitor:** Zepto is designated as the primary competitor benchmark for the review-data comparison.
-3. **JioMart Role:** JioMart is retained strictly as secondary comparative context (verified at remediation: 1,174 usable records in the common window).
-4. **No Scraping of Swiggy Instamart:** Do not scrape Swiggy Instamart reviews to compensate for missing data.
-5. **Common Review Window (Static Scope Only):** The common period, **14 August 2024 to 31 December 2024 (inclusive)**, is authorized for a limited, **STATIC complaint-theme and expressed-switching-signal analysis only**. It must **not** be used to claim temporal trends or seasonality.
-6. **Exploratory Status of Corpus:** The existing 4,620-record dataset is classified as a candidate exploratory corpus, **not** an approved representative sample of platform customers.
-7. **Gate Boundary:** Execution is strictly restricted to Gate 0 remediation, evidence validation, and Git synchronization. No progression to Gate 1.
+1. **Approved Working Direction:** The project direction is locked as *Beyond Discounts: Data-Driven Customer Segmentation and Retention Strategy for Indian Quick Commerce — A Blinkit Case Application*.
+2. **Central Research Question:** Investigates which customer segments differ in stated willingness to continue using quick commerce under discount reductions, and what non-discount retention or reactivation interventions a platform should prioritise for each segment.
+3. **Focal Company Application:** Blinkit is the focal business application. Findings from industry-level consumer segmentation are translated into managerial retention playbooks for Blinkit's dark-store network and assortment mix.
+4. **General Quick-Commerce Category Scope:** The survey dataset measures general quick-commerce consumer behavior, not Blinkit-specific satisfaction. Firm-specific satisfaction benchmarks are strictly prohibited.
+5. **Conditional Approval of Survey Dataset:** The Mendeley survey dataset (`cw88nb7822/1`, Chandra 2026) is conditionally approved as an exploratory dataset for customer segmentation, discount dependency modeling, and non-use barrier analysis.
+6. **App-Review Corpus Superseded:** The earlier scraped app-review corpus (Candidate A, 4,290 common-window records) is superseded as the primary dataset due to unresolved upstream collection provenance and unlicenced raw review text.
+7. **Strict Gate 0 Boundary:** Execution is strictly restricted to Gate 0 verification, schema validation, and routing audit. Progression to Gate 1 (segmentation modeling, predictive analytics, or dashboard development) is deferred until formal Gate 1 opening.
 
 ---
 
-## 2. Core Evaluation Questions & Remediation Findings
+## 2. Core Evaluation Questions & Resolution Status
 
-| # | Question Evaluated | Remediation Evidence & Direct Finding | Status |
+| # | Question Evaluated | Direct Evidence & Finding | Resolution Status |
 | :--- | :--- | :--- | :--- |
-| **Q1** | Does the common review window (14 Aug–31 Dec 2024) provide sufficient usable records for Blinkit and Zepto? | **Yes.** Programmatic re-audit via `scripts/audit_data.py` confirmed:<br/>- **Blinkit:** 1,376 usable records (138 days span, 2024-08-15 to 2024-12-31; 4 out-of-window exclusions). Exceeds 500 threshold.<br/>- **Zepto:** 1,740 usable records (139 days span, 2024-08-14 to 2024-12-31; 0 exclusions). Exceeds 500 threshold.<br/>- **JioMart:** 1,174 usable records (139 days span, 2024-08-14 to 2024-12-31; 326 exclusions). Exceeds 500 threshold.<br/>- **Total Window Volume:** 4,290 usable records (330 total exclusions; 0 in-window quality exclusions). Zero missing fields, zero blank text, zero invalid ratings.<br/>*Methodological Caveat:* Record-count thresholds demonstrate qualitative sample feasibility; they do **not** establish statistical power or population representativeness. | **PASSED (FEASIBILITY CONFIRMED)** |
-| **Q2** | Is Candidate B independent of Candidate A? | **No.** Direct row-for-row cross-examination and hash inspection confirmed Candidate B is a 100% derivative copy of Candidate A with reformatted dates and added columns (`month`, `sentiment`). Candidate B is permanently rejected as redundant. | **RESOLVED (REJECTED)** |
-| **Q3** | Can Swiggy Instamart reviews be acquired legally and reproducibly? | **No.** In accordance with controlling decision 4, direct scraping is prohibited. Reviews on `in.swiggy.android` conflate food delivery with Instamart, and Google Play terms restrict unauthorized bulk scraping. Swiggy Instamart is formally removed from empirical microdata scope; secondary macro data (Financial Express 2026, Datum Intelligence 2024) provides Instamart industry context. | **RESOLVED (REMOVED FROM MICRODATA)** |
-| **Q4** | Does the recently published Mendeley dataset (cw88nb7822/1) provide usable empirical consumer data? | **No.** Direct inspection of the Mendeley Data repository page (`10.17632/cw88nb7822.1`, Chandra 2026) revealed that only metadata and a 49-question reproduction methodology are displayed. The "Download All" button is disabled; zero raw data files (CSV, XLSX, SAV), questionnaire instruments, or codebooks are accessible. Formally classified as **UNAVAILABLE for empirical analysis**. | **RESOLVED (UNAVAILABLE)** |
-| **Q5** | Is the legal and policy assessment of Google Play access factually grounded? | **Yes.** Factually grounded distinctions established: (a) Google Play Developer API (`androidpublisher.reviews.list`) requires the `androidpublisher` authorization scope and app developer ownership, meaning third-party developers cannot query competitor reviews via this official API; (b) Google Terms of Service prohibit accessing services using methods other than provided interfaces or instructions (addressing automated access that violates machine-readable instructions); (c) automated crawling is subject to `robots.txt` disallows and rate-limiting. No live scraping is authorized for this project; candidate corpus is retained subject to provenance and unlicenced text limitations. | **CORRECTED & RESOLVED** |
-| **Q6** | Is statistical terminology properly constrained? | **Yes.** Enforced rigorous measurement distinctions throughout all documents:<br/>1. **Downloads-to-WAU ratio:** aggregate engagement ratio reported by external secondary sources (Financial Express May 19, 2026: Blinkit 24%, Zepto 23%; Oct 2, 2026 update reports revised figures); **not** cohort retention rates and **not** individual repeat purchase.<br/>2. **Ordering frequency:** aggregate orders-per-user metric from company disclosures.<br/>3. **Actual churn:** unobserved without customer-level transaction histories.<br/>4. **Cohort retention:** unavailable without customer transaction datasets.<br/>5. **Expressed switching intention:** text-based statement of intended defection, not an observed transaction outcome.<br/>Removed all claims of statistical representativeness or power. | **CORRECTED & RESOLVED** |
-| **Q7** | Is the novelty assessment properly framed against existing work (including Candidate C)? | **Yes.** Acknowledged Candidate C's validation methodology (gold-set classifier accuracy, inter-run stability, scorecard) and catalog adoption focus. Framed our contribution as an **intended applied contribution** (evidence-to-action decision chain linking failure severity and addressability to issue-specific CRM interventions, bounded economic trade-offs, and an A/B pilot plan), not a proven unique research invention. | **CORRECTED & RESOLVED** |
+| **Q1** | Does the common review window (14 Aug–31 Dec 2024) provide sufficient usable records? | Programmatic audit confirmed 4,290 usable records across Blinkit (1,376), Zepto (1,740), and JioMart (1,174). However, the corpus is superseded as the primary dataset by the structured survey dataset. | **SUPERSEDED BY SURVEY SCOPE** |
+| **Q2** | Is Candidate B independent of Candidate A? | No. Candidate B is a 100% derivative copy of Candidate A row-for-row. Permanently rejected. | **RESOLVED (REJECTED)** |
+| **Q3** | Can Swiggy Instamart reviews be acquired legally and reproducibly? | No. Google Play Terms restrict automated scraping, and reviews conflate food delivery with Instamart. Scraping is prohibited; Instamart is contextualized via published secondary research. | **RESOLVED (PROHIBITED)** |
+| **Q4** | Does the Mendeley dataset (`cw88nb7822/1`) provide usable empirical consumer data? | **Yes.** The complete candidate bundle (`Data.xlsx`, `Code Book.docx`, `Questionairre.docx`) was obtained, verified, and audited (`scripts/audit_survey_data.py`). 1,263 data rows $\times$ 130 columns, 0 null cells, valid codebook ranges. Previous metadata-only classification is formally updated to **Conditionally Approved Candidate Survey Dataset**. | **RESOLVED (CONDITIONALLY APPROVED)** |
+| **Q5** | What is the academic provenance and licence of the survey dataset? | Published on Mendeley Data (`10.17632/cw88nb7822.1`, 14 Oct 2026) under **CC BY 4.0** by Dr. Ashish Chandra (Amity University, Lucknow). Recruitment method, sampling frame, and fieldwork dates remain unrecorded. National representativeness is disclaimed. | **CORRECTED & RESOLVED** |
+| **Q6** | How does questionnaire routing affect the 80 previous users? | QA 15 = 1 (Never) routed all 456 non-current users past QA 16–45. The 80 previous users have satisfaction and problem fields skip-coded (Code 6). However, QA 46 (stated future intention), QA 48 (reasons for non-use), and QA 49 (improvements) are substantively preserved. | **CORRECTED & RESOLVED** |
+| **Q7** | How should QA 46 and QA 47 be interpreted? | QA 46 is stated future intention across all 1,263 respondents (not actual repurchase). QA 47 contains substantive values 1–5 for the 807 current users and Code 6 (Not applicable) for the 456 non-current users. Code 6 must **not** be interpreted as defection or unwillingness to continue. | **CORRECTED & RESOLVED** |
 
 ---
 
-## 3. Requirement Verification Summary
+## 3. Strict Analytical Prohibitions
 
-### Passed Requirements
-- **Usable Volume in Common Window:** Blinkit (1,376) and Zepto (1,740) both exceed the mandatory 500-record threshold within the synchronized 14 August–31 December 2024 window.
-- **Completeness & Integrity:** 0.00% missing fields across platform, review text, rating, and date in the common window.
-- **Code Audit & Test Suite:** Personal machine-specific scratch paths completely removed. Audit script (`scripts/audit_data.py`) enforces strict validation, disaggregates missing vs. blank vs. unparseable values, validates ratings (1-5), normalizes platforms safely, and exports aggregate summary JSON (`docs/gates/GATE_0_AUDIT_SUMMARY.json`). Fully validated by automated test suite (`tests/test_audit_data.py`).
-- **Pilot Annotation Remediation:** Re-evaluated 60-record pilot under a 6-category compact rubric distinguishing:
-  1. Explicit intention to leave reviewed platform (Blinkit: 1 [3.3%]; Zepto: 2 [6.7%]).
-  2. Explicit completed departure (Blinkit: 2 [6.7%]; Zepto: 1 [3.3%]).
-  3. Switching intention towards named competitor (Blinkit: 0; Zepto: 1 [3.3%]).
-  4. Positive competitive acquisition / conquesting (Blinkit: 1 [3.3%], switched *from* BigBasket *to* Blinkit; Zepto: 0).
-  5. General dissatisfaction without switching statement (Blinkit: 10 [33.3%]; Zepto: 23 [76.7%]).
-  6. Positive / neutral feedback (Blinkit: 16 [53.3%]; Zepto: 3 [10.0%]).
-  *Crucial Clarification:* Corrected the previous misclassification of Record 12 (acquisition mention for Blinkit conflated with defection) and established explicit departure/switching signals at 10.0% for Blinkit (3/30) and 13.3% for Zepto (4/30). Acknowledged single-coder limitation (cannot establish inter-rater reliability) and explained multi-label theme counts (summing to 75 across 60 reviews).
-- **Scope Restriction:** Analysis strictly bounded to a STATIC review-theme comparison for 14 August–31 December 2024. Monthly trends and seasonality claims are formally excluded.
+To ensure academic and methodological credibility, the following seven practices are strictly prohibited:
 
-### Excluded / Prohibited Actions
-- Scraping live platforms (Swiggy Instamart, Blinkit, Zepto) is prohibited.
-- Committing raw review text or reviewer identifiers to Git is prohibited.
-- Claiming temporal trends or seasonal shifts across the 4.5-month window is prohibited.
-- Treating public reviews as customer-level transaction or churn logs is prohibited.
+1. **PROHIBITED:** Treating generic satisfaction measures (QA 37–40) or problem rates (QA 36) as Blinkit-specific results.
+2. **PROHIBITED:** Treating platform-awareness or ever-used indicators (QA 11, 12) as proof of current platform-specific ordering.
+3. **PROHIBITED:** Treating stated future-use intention (QA 46) or post-discount continuation (QA 47) as observed repeat purchase or transactional retention.
+4. **PROHIBITED:** Treating QA 47 Not-Applicable codes (Code 6, $n=456$) as negative responses, churn, or unwillingness to continue.
+5. **PROHIBITED:** Treating the 80 previous users who currently report no orders as confirmed transactional churn events.
+6. **PROHIBITED:** Claiming national demographic representativeness based on sample size ($N=1,263$) alone.
+7. **PROHIBITED:** Claiming causal retention uplift from cross-sectional survey responses.
 
 ---
 
-## 4. Recommended Disposition & Gate Boundary Confirmation
+## 4. Multi-Tier Missingness & Data Completeness Architecture
 
-The Implementation Engineer has executed all Gate 0 remediation tasks, validated the quantitative evidence, and prepared verified Git synchronization.
+```
+Total Survey Cells: 164,190 (1,263 respondents x 130 columns)
+├── Physical Null / Blank Cells: 0 (100.0% physical data presence)
+└── Information Availability Tiers:
+    ├── Substantive Observed Responses:
+    │   ├── Demographics (QA 1-8): n=1,263
+    │   ├── Platform Footprint (QA 11-12): n=1,263
+    │   ├── Order Habits & Spending (QA 16-27): n=807 current users
+    │   ├── Service Satisfaction (QA 37-40): n=807 current users
+    │   ├── QA 46 Stated Future Intention: n=1,263 (100% of respondents)
+    │   ├── QA 47 Discount Reduction Continuation: n=807 current users
+    │   ├── QA 48 Non-Use Reasons: n=456 non-current users (376 never + 80 previous)
+    │   └── QA 49 Preferred Improvements: n=1,263 (100% of respondents)
+    └── Explicit Not-Applicable / Skip-Coded Responses:
+        ├── QA 16-45 Non-Current User Skips: n=456 respondents
+        ├── QA 37-40 Satisfaction Code 6: n=456 respondents
+        ├── QA 47 Discount Continuation Code 6: n=456 respondents
+        └── QA 48 Current-User Skip Flag (Code 1): n=807 current users
+```
 
-- **Gate Status:** **PENDING PRINCIPAL PROJECT LEAD APPROVAL**
+---
+
+## 5. Gate Boundary Confirmation & Recommended Disposition
+
+- **Gate Status:** **CONDITIONALLY APPROVED BY PRINCIPAL PROJECT LEAD (FINAL AUDIT LOCK)**
 - **Recommended Gate 0 Disposition:** **PASS (UNDER AUTHORIZED CONDITIONAL SCOPE)**
-- **Gate Boundary Confirmation:** Execution is strictly halted at Gate 0. No Gate 1 modeling, no sentiment classification pipeline, no CRM decision engine implementation, and no Power BI dashboard construction have commenced.
+- **Gate Boundary Confirmation:** All Gate 0 audit deliverables, schema validators, test suites, and documentation locks are fully in place. Work is halted; no Gate 1 exploratory analysis, segmentation modeling, or dashboard implementation has commenced.
