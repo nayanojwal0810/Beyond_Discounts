@@ -1,11 +1,11 @@
 {
-  "specification_name": "Specification A: Independent Discount-Sensitivity Evaluation",
+  "specification_name": "Specification A: Independent QA47 Holdout Evaluation",
   "specification_code": "SPEC_A",
   "purpose": "Constructs customer segments solely from shopping behavior, basket economics, delivery valuation, satisfaction, and routine integration, EXCLUDING QA 47. Allows rigorous, non-circular external validation of whether resulting clusters differ in stated discount resilience.",
   "qa47_status": "EXCLUDED from clustering inputs; reserved strictly as external validation holdout.",
   "qa46_status": "EXCLUDED from clustering inputs; reserved as stated future-use intention holdout.",
   "target_population": {
-    "name": "Current Active Quick-Commerce Users",
+    "name": "Current-User Quick-Commerce Cohort",
     "sample_size": 807,
     "filter_rule": "Ever Ordered == 1 and Order Frequency > 1",
     "excluded_groups": [
@@ -324,7 +324,7 @@
         6
       ],
       "special_codes": "None",
-      "description": "Multi-homing footprint count (1 to 6 apps ever used). Captures platform promiscuity vs single-app loyalty."
+      "description": "Count of platforms ever used. Measures historical platform-repertoire breadth; does not establish current multi-homing or loyalty."
     },
     {
       "feature_id": "feat_16",
