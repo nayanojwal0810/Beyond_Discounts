@@ -378,11 +378,14 @@ def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_b
         if median_value >= 0.70 and unstable_runs == 0 and failed_runs == 0:
             verdict = "HIGH_STABILITY"
         elif median_value >= 0.60:
-            verdict = "PROVISIONALLY_STABLE" if failed_runs == 0 else "PROVISIONALLY_STABLE_WITH_FAILED_RUNS"
+            if failed_runs > 0:
+                verdict = "PROVISIONALLY_STABLE_WITH_FAILED_RUNS"
+            else:
+                verdict = "PROVISIONALLY_STABLE" if unstable_runs > 0 else "STABLE"
         elif median_value >= 0.40:
-            verdict = "MODERATE" if failed_runs == 0 else "MODERATE_WITH_FAILED_RUNS"
+            verdict = "MODERATE_WITH_FAILED_RUNS" if failed_runs > 0 else "MODERATE"
         else:
-            verdict = "UNSTABLE" if failed_runs == 0 else "UNSTABLE_WITH_FAILED_RUNS"
+            verdict = "UNSTABLE_WITH_FAILED_RUNS" if failed_runs > 0 else "UNSTABLE"
 
     return {
         "n_subsamples": n_subsamples,
