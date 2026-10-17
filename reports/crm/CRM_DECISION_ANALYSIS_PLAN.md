@@ -182,7 +182,7 @@ Write after the analysis is frozen: research context, 15+ critically synthesised
 
 ## 9. Implementation status
 
-The initial implementation is in `scripts/run_crm_analysis.py`. It writes aggregate-only QA46 distributions and cohort comparison, QA48 barrier prevalence and Fisher/Holm comparisons, QA49 full-option/action-family distributions and fixed-margin Monte Carlo association tests, plus current-user QA47 ordered-logit models, categorical-coding/link sensitivity checks, and a respondent-clustered parallel-slopes diagnostic. No real-workbook outputs are accepted until the script is run locally after Gate 1C.1; the model's convergence and diagnostic results must be examined rather than assumed.
+The initial implementation is in `scripts/run_crm_analysis.py`. It writes aggregate-only QA46 distributions and cohort comparison, QA48 barrier prevalence and Fisher/Holm comparisons, QA49 full-option/action-family distributions and fixed-margin Monte Carlo association tests, plus current-user QA47 ordered-logit models, categorical-coding/link sensitivity checks, a parallel-slopes diagnostic, and a conditional multinomial sensitivity path if parallel slopes are rejected. No real-workbook outputs are accepted until the script is run locally after Gate 1C.1; convergence and diagnostic results must be examined rather than assumed.
 
 ## 9. Gate sequence and sign-off
 
