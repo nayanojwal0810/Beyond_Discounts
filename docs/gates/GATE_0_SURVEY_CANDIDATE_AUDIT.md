@@ -54,7 +54,7 @@ An audit of the public repository record ([Mendeley Data `cw88nb7822/1`](https:/
 | **DOI & Repository Record** | Published on Mendeley Data with DOI `10.17632/cw88nb7822.1` (Version 1, 14 October 2026). No associated peer-reviewed journal article, preprint, or working paper is cited or indexed. | **PARTIALLY VERIFIED** |
 | **Declared Licence** | Creative Commons Attribution 4.0 International (**CC BY 4.0**). Academic analysis permitted with proper attribution. Raw respondent rows withheld from Git. | **VERIFIED** |
 | **Target Population & Sampling Frame** | Target population described in preamble as Indian urban/semi-urban smartphone users. However, **no defined sampling frame, geographic sampling quotas, or city breakdown** is documented. | **UNVERIFIED** |
-| **Sampling & Recruitment Channel** | Convenience / snowball / non-probabilistic online administration. Recruitment channels (e.g., student pools, social media, paid panels) are unrecorded. | **UNVERIFIED** |
+| **Sampling & Recruitment Channel** | Undocumented and unverified in the public repository record. Recruitment channels (e.g., whether student pools, social media, commercial panels, or other mechanisms) are unrecorded. | **UNVERIFIED** |
 | **Fieldwork Dates & Mode** | Digital survey via Google Forms implied. However, the workbook contains **no respondent ID, no submission timestamp, and no fieldwork date field**. Fieldwork timing is unverified. | **UNRESOLVED / ABSENT** |
 | **Consent & Ethical Review (IRB)** | Preamble contains standard voluntary consent language (*"participation is entirely voluntary..."*), but **no formal IRB protocol or ethical clearance number** is provided. | **UNVERIFIED** |
 | **Data Cleaning & Exclusion Protocol** | Zero blank cells across 164,190 cells indicates forced-choice form validation. No screening log, completion dropoff rate, speeder filter, or straight-liner exclusions are recorded. | **UNRESOLVED** |
@@ -205,15 +205,16 @@ To protect academic credibility and scientific integrity, the following practice
 ## 8. Reproducible Verification Tooling & Deliverables
 
 1. **Audit Script ([`scripts/audit_survey_data.py`](file:///e:/FDA/Beyond_Discounts/scripts/audit_survey_data.py)):**
-   - Implements mandatory schema validation across 52 required analytical columns.
-   - Fully supports `--sheet` argument (defaults to `Data`).
-   - Detects leading/trailing whitespace and duplicate headers after normalization.
-   - Enforces safe numeric conversions, range bounds, and binary dummy checks.
-   - Categorizes multi-tier missingness (physical nulls vs explicit N/A vs substantive responses).
-   - Returns exit code 1 on blocking schema or validation failures.
+   - Implements full 130-column normalized schema manifest verification (`EXPECTED_COLUMN_MANIFEST_130`), detecting missing, unexpected, or replaced columns even when total column count remains 130.
+   - Enforces strict QA 47 routing: 807 current users strictly in $\{1..5\}$, 456 non-current users strictly Code 6; violations trigger status `FAILED` and exit code 1.
+   - Enforces QA 16–QA 45 skip logic against source codebook rules for all 456 non-current users (single-select N/A codes, multi-select N/A dummies, and 0 for substantive options).
+   - Enforces universal substantive coverage for QA 46 (1–5) and QA 49 (1–10) across all 1,263 respondents.
+   - Fully supports `--sheet` argument pass-through to `pd.read_excel`.
+   - Returns exit code 1 on blocking schema, routing, dimension, or code violations.
 2. **Test Suite ([`tests/test_audit_survey_data.py`](file:///e:/FDA/Beyond_Discounts/tests/test_audit_survey_data.py)):**
-   - 21 automated unit tests executing in 3.78s (`Ran 21 tests in 3.782s, OK`).
-   - Validates missing columns, duplicate normalized headers, sheet arguments, null vs N/A handling, subgroup derivation, and exit codes using synthetic fixtures.
+   - 25 automated unit tests repository-wide (15 in `test_audit_survey_data.py`), executing in ~5s (`Ran 25 tests in 5.067s, OK`).
+   - Validates missing mandatory columns, duplicate normalized headers, full 130-column manifest column replacement regression, sheet arguments, null vs N/A handling, subgroup derivation, and exit codes.
+   - Features comprehensive negative tests for QA 47 routing violations, QA 16–45 skip-logic violations, and QA 46/49 coverage violations using synthetic fixtures.
 3. **Machine-Readable Summary ([`docs/gates/GATE_0_SURVEY_AUDIT_SUMMARY.json`](file:///e:/FDA/Beyond_Discounts/docs/gates/GATE_0_SURVEY_AUDIT_SUMMARY.json)):**
    - Aggregate audit findings including source hashes, dimensions, subgroup counts, questionnaire routing metrics, and platform usage footprints (zero row-level PII).
 

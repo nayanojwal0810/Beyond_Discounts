@@ -7,6 +7,11 @@
   "total_rows": 1263,
   "total_columns": 130,
   "dimension_discrepancy": null,
+  "schema_manifest_validation": {
+    "manifest_columns_expected": 130,
+    "missing_manifest_columns": [],
+    "unexpected_extra_columns": []
+  },
   "full_duplicate_rows": 0,
   "demographic_duplicate_rows": 5,
   "total_null_cells": 0,
@@ -27,8 +32,7 @@
     "used_never_vs_used_platforms": 0,
     "ever_0_used_platforms_conflict": 0,
     "ever_1_used_never_conflict": 0,
-    "problem_no_major_conflict": 0,
-    "qa48_na_current_user_mismatch": 0
+    "problem_no_major_conflict": 0
   },
   "usage_status_audit": {
     "ever_ordered_yes": 887,
@@ -72,18 +76,28 @@
   },
   "questionnaire_routing": {
     "qa16_to_qa45_skip_coded_count": 456,
+    "qa16_to_qa45_skip_violations": {},
+    "qa47_discount_continuation": {
+      "current_users_substantive_1_to_5": 807,
+      "current_users_with_code_6_violation": 0,
+      "current_users_invalid_code": 0,
+      "non_current_users_with_code_6": 456,
+      "non_current_users_substantive_violation": 0,
+      "non_current_users_invalid_code": 0
+    },
     "qa46_future_use_intention": {
       "substantive_total_1_to_5": 1263,
       "never_users_substantive": 376,
       "previous_users_substantive": 80,
       "current_users_substantive": 807,
-      "na_count": 0
+      "invalid_or_missing_count": 0
     },
-    "qa47_discount_continuation": {
-      "current_users_substantive_1_to_5": 807,
-      "current_users_na_code_6": 0,
-      "non_current_users_na_code_6": 456,
-      "non_current_users_substantive": 0
+    "qa49_preferred_improvement": {
+      "substantive_total_1_to_10": 1263,
+      "never_users_substantive": 376,
+      "previous_users_substantive": 80,
+      "current_users_substantive": 807,
+      "invalid_or_missing_count": 0
     },
     "qa48_non_user_reasons_available_count": 456
   },
@@ -147,6 +161,6 @@
     "input_worksheet": "Data",
     "input_file_sha256": "c6e92099b960f11472558b629e90b2926012061eac45b9051973c8fe79e1a73d",
     "input_file_size_bytes": 565344,
-    "audit_timestamp_utc": "2026-10-17T08:37:11.052448+00:00"
+    "audit_timestamp_utc": "2026-10-17T09:34:18.075274+00:00"
   }
 }

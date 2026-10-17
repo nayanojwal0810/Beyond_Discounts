@@ -6,37 +6,36 @@ Reproducible quantitative audit script for the Mendeley Quick-Commerce Survey Da
 "A Large-Scale Survey Dataset on Quick-Commerce Adoption, Ordering Patterns,
 Product Categories and Spending Behaviour among Indian Consumers" (Chandra 2026).
 
-Audits the survey workbook (Data.xlsx) for:
-1. Workbook Structure & Dimensions:
+Enforces:
+1. Full 130-Column Schema Manifest & Dimension Integrity:
    - Configurable worksheet selection via --sheet (default: 'Data')
-   - Validates expected dimensions (1,263 data rows x 130 columns)
+   - Validates exact dimensions (1,263 data rows x 130 columns)
+   - Enforces full 130-column normalized header manifest (detects removed or replaced columns)
    - Mandatory schema columns validation (no silent skipping)
    - Duplicate header detection after whitespace normalization
    - Detection of leading/trailing whitespace in headers
-2. Completeness & Multi-Tier Missingness Breakdown:
+2. Strict Questionnaire Routing & Skip-Logic Enforcement (Source Codebook Compliant):
+   - QA 47 (Continue If Discounts Reduced):
+       * ALL 807 current active users (Ever=1, Freq>1) must have substantive values in {1..5}
+       * ALL 456 non-current users (Freq=1) must have code 6 (Not applicable)
+       * Any violation (current user with code 6, non-current with 1..5, invalid values, ambiguous) fails audit
+   - QA 16 - QA 45 Skip Logic for 456 Non-Current Respondents:
+       * Validates specific source codebook N/A values across single-select variables
+       * Validates multi-select N/A indicators (Reason Not Applicable=1, Category Not Applicable=1, Problem Not Applicable=1)
+       * Validates that specific option indicators are strictly 0 for non-current respondents
+       * Validates satisfaction battery (QA 37-40) equals Code 6 for all 456 non-current respondents
+       * Validates QA 48 current-user skip flag (0 for non-current, 1 for current) and non-user reason dummies
+   - QA 46 (Next 3 Month Use):
+       * Validates substantive Likert values in {1..5} across ALL 1,263 respondents
+   - QA 49 (Improvement Most Likely to Increase Use):
+       * Validates substantive values in {1..10} across ALL 1,263 respondents
+3. Completeness & Multi-Tier Missingness Breakdown:
    - Physical blank/null cells (isna)
-   - Explicit Not-Applicable / Skip-coded responses (e.g. Code 6 in QA16-45, QA47)
-   - Substantive observed responses (QA46 across all 1,263; QA47 across 807 current users)
-3. Coding Validity & Range Conformance:
-   - Single-select variables validated against codebook integer ranges
-   - Multi-select indicator variables validated against binary {0, 1}
-   - Safe type handling (handles strings, nulls, decimals without unhandled exceptions)
-4. Logical Consistency & Questionnaire Routing:
-   - Awareness vs. Aware None
-   - Usage vs. Used Never Used
-   - Ever-ordered vs. platform usage indicators
-   - Problem No Major Problem vs. specific defects
-   - QA48 Reason Not Applicable Current User vs. Order Frequency
-5. Usage-Status Triangulation & The 80-Record Previous-User Routing:
-   - Triangulates Never Users (n=376), Previous Users currently reporting Never ordering (n=80),
-     and Current Active Users (n=807)
-   - Documents skip-coded satisfaction (QA37-40) and problems (QA36) for all 456 non-current users
-   - Verifies that QA46 (stated future intention) has substantive values (1-5) for ALL 1,263 respondents
-   - Verifies that QA47 (continue if discounts reduced) has substantive values (1-5) ONLY for 807 current users,
-     and value 6 (Not applicable) for all 456 non-current users (prohibits conflating code 6 with defection)
-6. Real Audit Status & Error Handling:
-   - Returns status 'FAILED' and non-zero exit code (1) if blocking schema, dimension, null, or code violations occur
-   - Returns status 'SUCCESS' or 'SUCCESS_WITH_WARNINGS' only when validation checks pass cleanly
+   - Explicit Not-Applicable / Skip-coded responses
+   - Substantive observed responses
+4. Real Audit Status & Error Handling:
+   - Returns status 'FAILED' and non-zero exit code (1) on ANY blocking schema, dimension, null, or routing error
+   - Returns status 'SUCCESS' or 'SUCCESS_WITH_WARNINGS' only when all validation checks pass cleanly
 
 Usage:
     python scripts/audit_survey_data.py [--file PATH_TO_XLSX] [--sheet SHEET] [--output PATH_TO_JSON] [--no-output]
@@ -63,6 +62,62 @@ DEFAULT_OUTPUT_JSON = os.path.join("docs", "gates", "GATE_0_SURVEY_AUDIT_SUMMARY
 EXPECTED_ROWS = 1263
 EXPECTED_COLS = 130
 EXPECTED_SHEET = "Data"
+
+# Full 130-column normalized expected header manifest (in original workbook column order)
+EXPECTED_COLUMN_MANIFEST_130 = [
+    'Age Group', 'Gender', 'Education', 'Occupation', 'Personal Income',
+    'Area of Residence', 'Region', 'Household Size',
+    'Awareness of Quick Commerce Services',
+    'Ever Ordered through a Quick-Commerce Platform',
+    'Aware Blinkit', 'Aware Zepto', 'Aware Swiggy Instamart',
+    'Aware BigBasket BBNow', 'Aware Flipkart Minutes', 'Aware Amazon Rapid',
+    'Aware Other', 'Aware None',
+    'Used Blinkit', 'Used Zepto', 'Used Swiggy Instamart',
+    'Used BigBasket BBNow', 'Used Flipkart Minutes', 'Used Amazon Rapid',
+    'Used Never Used',
+    'Usage Duration', 'First Trial Reason', 'Order Frequency',
+    'Common Days', 'Common Time',
+    'Reason Forgotten Item', 'Reason Urgent Need', 'Reason Grocery Topup',
+    'Reason Snacks Beverages', 'Reason Planned Convenience', 'Reason Late Night',
+    'Reason Hosting Guests', 'Reason Avoid Travel Queues', 'Reason Promotion Discount',
+    'Reason Not Applicable',
+    'Items per Order', 'Expected Delivery', 'Spontaneous Frequency',
+    'Category Fresh Fruit Veg', 'Category Milk Dairy', 'Category Bread Eggs Breakfast',
+    'Category Packaged Groceries', 'Category Snacks Confectionery', 'Category Beverages',
+    'Category Personal Care', 'Category Beauty Grooming', 'Category Household Cleaning',
+    'Category Baby Care', 'Category Pet Care', 'Category OTC Health Wellness',
+    'Category Stationery', 'Category Mobile Electronic Accessories',
+    'Category Small Household Kitchen', 'Category Ready Eat Cook',
+    'Category Festival Occasion', 'Category Not Applicable',
+    'Most Frequent Category',
+    'Physical Fresh Fruit Veg', 'Physical Dairy Breakfast',
+    'Physical Packaged Groceries', 'Physical Snacks Beverages',
+    'Physical Personal Care Beauty', 'Physical Household Cleaning',
+    'Physical Electronic Accessories', 'Physical No Clear Preference',
+    'Order Spend', 'Monthly Spend', 'Total Spending Change',
+    'Discount Overspend', 'Threshold Extra Items', 'Payment Method',
+    'Factor Delivery Speed', 'Factor Product Availability', 'Factor Lower Prices',
+    'Factor Discounts Coupon', 'Factor Low Delivery Fee', 'Factor Low Min Order',
+    'Factor App Usability', 'Factor Past Experience', 'Factor Product Quality',
+    'Factor Brand Trust', 'Factor Payment Options', 'Factor Customer Support',
+    'Factor Return Refund', 'Most Important Factor',
+    'Compare Platform Prices', 'Compare Physical Prices', 'Fast Delivery Importance',
+    'Problem Out of Stock', 'Problem Wrong Item', 'Problem Damaged Product',
+    'Problem Poor Fresh Produce', 'Problem Late Delivery', 'Problem Higher Price',
+    'Problem Unexpected Fees', 'Problem Order Cancellation', 'Problem Refund Delay',
+    'Problem Payment Issue', 'Problem App Technical', 'Problem Customer Service',
+    'Problem No Major Problem', 'Problem Not Applicable',
+    'Overall Satisfaction', 'Product Quality Satisfaction',
+    'Delivery Reliability Satisfaction', 'Value Money Satisfaction',
+    'Kirana Visit Change', 'Supermarket Visit Change', 'Shopping Routine Role',
+    'Unplanned Purchase', 'New Brand Trial', 'Next 3 Month Use',
+    'Continue If Discounts Reduced',
+    'Reason Service Unavailable', 'Reason Prefer Physical', 'Reason Prices High',
+    'Reason Delivery Fees', 'Reason Distrust Quality', 'Reason Prefer Inspect',
+    'Reason Impulsive Spending Concern', 'Reason No Need Rapid',
+    'Reason Privacy Payment Concern', 'Reason Unfamiliar Apps',
+    'Reason Not Applicable Current User', 'Improvement'
+]
 
 # Mandatory columns essential for usage-status triangulation and principal CRM analyses
 MANDATORY_COLUMNS = [
@@ -207,15 +262,15 @@ def resolve_survey_path(file_arg):
     sys.exit(1)
 
 
-def audit_survey_dataframe(df, enforce_dimensions=True):
+def audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=True):
     """
-    Performs comprehensive structural, schema, completeness, coding validity,
-    logical consistency, and usage-status routing audits on the survey DataFrame.
+    Performs comprehensive structural, schema manifest, completeness, coding validity,
+    logical consistency, and strict skip-logic / questionnaire routing enforcement.
     
     Returns a dict containing all audit metrics and an overall 'status' of:
     - 'SUCCESS': all checks passed without any errors or warnings
     - 'SUCCESS_WITH_WARNINGS': passed with non-blocking warnings (e.g. whitespace in headers)
-    - 'FAILED': blocking schema, missing required columns, dimensions, nulls, or code violations
+    - 'FAILED': blocking schema, missing required columns, dimensions, nulls, or routing violations
     """
     total_rows = len(df)
     total_cols = len(df.columns)
@@ -273,7 +328,18 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
                 f"found ({total_rows} rows, {total_cols} cols)."
             )
 
-    # 3. Mandatory columns validation
+    # 3. Full 130-Column Schema Manifest Validation
+    missing_manifest_columns = []
+    unexpected_extra_columns = []
+    if enforce_full_manifest:
+        missing_manifest_columns = [c for c in EXPECTED_COLUMN_MANIFEST_130 if c not in work_df.columns]
+        unexpected_extra_columns = [c for c in work_df.columns if c not in EXPECTED_COLUMN_MANIFEST_130]
+        if missing_manifest_columns:
+            blocking_errors.append(f"Full schema manifest failed: missing {len(missing_manifest_columns)} expected columns: {missing_manifest_columns}")
+        if unexpected_extra_columns:
+            blocking_errors.append(f"Full schema manifest failed: detected {len(unexpected_extra_columns)} unexpected columns: {unexpected_extra_columns}")
+
+    # Mandatory columns validation
     missing_mandatory_columns = [c for c in MANDATORY_COLUMNS if c not in work_df.columns]
     if missing_mandatory_columns:
         blocking_errors.append(f"Missing mandatory required columns: {missing_mandatory_columns}")
@@ -305,7 +371,6 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
     binary_violations = {}
     for c in binary_cols:
         series = work_df[c]
-        # Robustly handle non-numeric or non-binary
         numeric_series = pd.to_numeric(series, errors='coerce')
         nan_count = int(numeric_series.isna().sum())
         non_binary_mask = ~numeric_series.isin([0, 1])
@@ -322,17 +387,12 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
     range_violations = {}
     for col, (min_val, max_val) in SINGLE_SELECT_RANGES.items():
         if col not in work_df.columns:
-            # If col is missing, report missing check
             blocking_errors.append(f"Expected single-select column '{col}' is missing from DataFrame.")
             continue
 
         series = work_df[col]
         numeric_series = pd.to_numeric(series, errors='coerce')
-        coerced_nans = int(numeric_series.isna().sum()) - int(series.isna().sum())
-
-        # Check bounds and integer constraint
         out_of_bounds_mask = (numeric_series < min_val) | (numeric_series > max_val) | (numeric_series.isna())
-        # Check decimals / floats
         non_integer_mask = numeric_series.apply(lambda x: False if pd.isna(x) else not float(x).is_integer())
 
         invalid_mask = out_of_bounds_mask | non_integer_mask
@@ -384,45 +444,290 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
         if problem_no_major_conflict > 0:
             blocking_errors.append(f"Logical conflict: 'Problem No Major Problem' == 1 while specific problems marked in {problem_no_major_conflict} rows.")
 
-    col_freq = 'Order Frequency'
-    col_na_current = 'Reason Not Applicable Current User'
-    if col_freq in work_df.columns and col_na_current in work_df.columns:
-        qa48_na_vs_order_freq_1 = int(((work_df[col_freq] == 1) & (work_df[col_na_current] == 1)).sum())
-        qa48_non_na_vs_order_freq_gt_1 = int(((work_df[col_freq] > 1) & (work_df[col_na_current] == 0)).sum())
-        logical_conflicts['qa48_na_current_user_mismatch'] = qa48_na_vs_order_freq_1 + qa48_non_na_vs_order_freq_gt_1
-        if (qa48_na_vs_order_freq_1 + qa48_non_na_vs_order_freq_gt_1) > 0:
-            blocking_errors.append(
-                f"Logical conflict: QA48 current-user skip flag mismatch in "
-                f"{qa48_na_vs_order_freq_1 + qa48_non_na_vs_order_freq_gt_1} rows."
-            )
-
-    # 8. Triangulation of Usage Status & The 80-Record Previous-User Routing
+    # 8. Strict Usage-Status & Questionnaire Routing Enforcement
     usage_status_audit = {}
     routing_breakdown = {}
+    routing_violations = {}
+
+    col_freq = 'Order Frequency'
+    col_qa47 = 'Continue If Discounts Reduced'
+    col_qa46 = 'Next 3 Month Use'
+    col_qa49 = 'Improvement'
+
     if col_ever in work_df.columns and col_freq in work_df.columns:
-        ever_series = pd.to_numeric(work_df[col_ever], errors='coerce')
-        freq_series = pd.to_numeric(work_df[col_freq], errors='coerce')
+        s_ever = pd.to_numeric(work_df[col_ever], errors='coerce')
+        s_freq = pd.to_numeric(work_df[col_freq], errors='coerce')
 
-        ever_yes = int((ever_series == 1).sum())
-        ever_no = int((ever_series == 0).sum())
-        freq_never = int((freq_series == 1).sum())
-        freq_current = int((freq_series > 1).sum())
+        ever_yes = int((s_ever == 1).sum())
+        ever_no = int((s_ever == 0).sum())
+        freq_never = int((s_freq == 1).sum())
+        freq_current = int((s_freq > 1).sum())
 
-        never_users_mask = (ever_series == 0) & (freq_series == 1)
-        prev_users_mask = (ever_series == 1) & (freq_series == 1)
-        current_users_mask = (ever_series == 1) & (freq_series > 1)
-        inconsistent_never_mask = (ever_series == 0) & (freq_series > 1)
+        never_users_mask = (s_ever == 0) & (s_freq == 1)
+        prev_users_mask = (s_ever == 1) & (s_freq == 1)
+        current_users_mask = (s_ever == 1) & (s_freq > 1)
+        non_current_users_mask = (s_freq == 1)
+        inconsistent_never_mask = (s_ever == 0) & (s_freq > 1)
+        ambiguous_classification_mask = s_ever.isna() | s_freq.isna() | inconsistent_never_mask
 
         never_users_count = int(never_users_mask.sum())
         prev_users_count = int(prev_users_mask.sum())
         current_users_count = int(current_users_mask.sum())
         inconsistent_never_count = int(inconsistent_never_mask.sum())
+        ambiguous_count = int(ambiguous_classification_mask.sum())
 
         if inconsistent_never_count > 0:
-            blocking_errors.append(f"Inconsistent respondents: Ever Ordered == 0 but Order Frequency > Never in {inconsistent_never_count} rows.")
+            err_msg = f"Inconsistent respondents: Ever Ordered == 0 but Order Frequency > Never in {inconsistent_never_count} rows."
+            blocking_errors.append(err_msg)
+            routing_violations['inconsistent_never_users'] = inconsistent_never_count
 
-        # Skip-logic routing verification for QA16-45:
-        # All 456 respondents with Order Frequency == 1 (Never) skip QA16-45
+        if ambiguous_count > 0 and ambiguous_count != inconsistent_never_count:
+            err_msg = f"Ambiguous usage-status classification in {ambiguous_count} rows."
+            blocking_errors.append(err_msg)
+            routing_violations['ambiguous_classification'] = ambiguous_count
+
+        # -------------------------------------------------------------
+        # ENFORCE QA 47 ROUTING RULES (Continue If Discounts Reduced)
+        # -------------------------------------------------------------
+        qa47_stats = {}
+        if col_qa47 in work_df.columns:
+            s_qa47 = pd.to_numeric(work_df[col_qa47], errors='coerce')
+
+            # Rule A: Current active users must have substantive values 1-5
+            curr_substantive_mask = s_qa47[current_users_mask].isin([1, 2, 3, 4, 5])
+            curr_code6_mask = (s_qa47[current_users_mask] == 6)
+            curr_invalid_mask = (~curr_substantive_mask) & (~curr_code6_mask)
+
+            curr_substantive_cnt = int(curr_substantive_mask.sum())
+            curr_code6_cnt = int(curr_code6_mask.sum())
+            curr_invalid_cnt = int(curr_invalid_mask.sum())
+
+            # Rule B: Non-current users must have Code 6 (Not applicable)
+            non_curr_code6_mask = (s_qa47[non_current_users_mask] == 6)
+            non_curr_substantive_mask = s_qa47[non_current_users_mask].isin([1, 2, 3, 4, 5])
+            non_curr_invalid_mask = (~non_curr_code6_mask) & (~non_curr_substantive_mask)
+
+            non_curr_code6_cnt = int(non_curr_code6_mask.sum())
+            non_curr_substantive_cnt = int(non_curr_substantive_mask.sum())
+            non_curr_invalid_cnt = int(non_curr_invalid_mask.sum())
+
+            qa47_stats = {
+                'current_users_substantive_1_to_5': curr_substantive_cnt,
+                'current_users_with_code_6_violation': curr_code6_cnt,
+                'current_users_invalid_code': curr_invalid_cnt,
+                'non_current_users_with_code_6': non_curr_code6_cnt,
+                'non_current_users_substantive_violation': non_curr_substantive_cnt,
+                'non_current_users_invalid_code': non_curr_invalid_cnt
+            }
+
+            if curr_code6_cnt > 0:
+                err_msg = f"QA47 Routing Violation: {curr_code6_cnt} current active users have Code 6 (N/A) instead of substantive 1-5."
+                blocking_errors.append(err_msg)
+                routing_violations['qa47_current_users_code_6'] = curr_code6_cnt
+
+            if curr_invalid_cnt > 0:
+                err_msg = f"QA47 Value Violation: {curr_invalid_cnt} current active users have invalid/missing values."
+                blocking_errors.append(err_msg)
+                routing_violations['qa47_current_users_invalid'] = curr_invalid_cnt
+
+            if non_curr_substantive_cnt > 0:
+                err_msg = f"QA47 Routing Violation: {non_curr_substantive_cnt} non-current users have substantive values (1-5) instead of Code 6."
+                blocking_errors.append(err_msg)
+                routing_violations['qa47_non_current_users_substantive'] = non_curr_substantive_cnt
+
+            if non_curr_invalid_cnt > 0:
+                err_msg = f"QA47 Value Violation: {non_curr_invalid_cnt} non-current users have invalid/missing values."
+                blocking_errors.append(err_msg)
+                routing_violations['qa47_non_current_users_invalid'] = non_curr_invalid_cnt
+        else:
+            blocking_errors.append(f"Required routing column '{col_qa47}' is missing.")
+
+        # -------------------------------------------------------------
+        # ENFORCE QA 16 - QA 45 SKIP LOGIC AGAINST SOURCE CODEBOOK
+        # -------------------------------------------------------------
+        # Source codebook defines exact expected skip values for non-current respondents (Freq == 1):
+        qa16_45_single_select_rules = {
+            'Common Days': 5,
+            'Common Time': 7,
+            'Items per Order': 7,
+            'Expected Delivery': 7,
+            'Spontaneous Frequency': 6,
+            'Most Frequent Category': 8,
+            'Order Spend': 8,
+            'Monthly Spend': 1,
+            'Total Spending Change': 6,
+            'Discount Overspend': 6,
+            'Threshold Extra Items': 6,
+            'Payment Method': 7,
+            'Most Important Factor': 9,
+            'Compare Platform Prices': 6,
+            'Compare Physical Prices': 6,
+            'Fast Delivery Importance': 6,
+            'Overall Satisfaction': 6,
+            'Product Quality Satisfaction': 6,
+            'Delivery Reliability Satisfaction': 6,
+            'Value Money Satisfaction': 6,
+            'Kirana Visit Change': 7,
+            'Supermarket Visit Change': 7,
+            'Shopping Routine Role': 6,
+            'Unplanned Purchase': 6,
+            'New Brand Trial': 6
+        }
+
+        qa16_45_skip_violations = {}
+        for field, expected_skip_code in qa16_45_single_select_rules.items():
+            if field in work_df.columns:
+                s_field = pd.to_numeric(work_df.loc[non_current_users_mask, field], errors='coerce')
+                mismatches = int((s_field != expected_skip_code).sum())
+                if mismatches > 0:
+                    qa16_45_skip_violations[field] = mismatches
+                    blocking_errors.append(
+                        f"QA16-45 Skip Violation in '{field}': {mismatches} non-current users do not have expected skip code {expected_skip_code}."
+                    )
+
+        # Multi-select skip logic checks for non-current users:
+        # QA 18: Reason Not Applicable must be 1, substantive reasons must be 0
+        if 'Reason Not Applicable' in work_df.columns:
+            rna = pd.to_numeric(work_df.loc[non_current_users_mask, 'Reason Not Applicable'], errors='coerce')
+            mismatches = int((rna != 1).sum())
+            if mismatches > 0:
+                qa16_45_skip_violations['Reason Not Applicable != 1'] = mismatches
+                blocking_errors.append(f"QA18 Skip Violation: {mismatches} non-current users have 'Reason Not Applicable' != 1.")
+
+        reason_substantive_cols = [
+            'Reason Forgotten Item', 'Reason Urgent Need', 'Reason Grocery Topup',
+            'Reason Snacks Beverages', 'Reason Planned Convenience', 'Reason Late Night',
+            'Reason Hosting Guests', 'Reason Avoid Travel Queues', 'Reason Promotion Discount'
+        ]
+        present_reason_sub = [c for c in reason_substantive_cols if c in work_df.columns]
+        if present_reason_sub:
+            sub_reason_sum = work_df.loc[non_current_users_mask, present_reason_sub].apply(pd.to_numeric, errors='coerce').sum(axis=1)
+            violations = int((sub_reason_sum > 0).sum())
+            if violations > 0:
+                qa16_45_skip_violations['Substantive Reasons > 0 for non-current'] = violations
+                blocking_errors.append(f"QA18 Skip Violation: {violations} non-current users marked substantive order reasons.")
+
+        # QA 22: Category Not Applicable must be 1, substantive categories must be 0
+        if 'Category Not Applicable' in work_df.columns:
+            cna = pd.to_numeric(work_df.loc[non_current_users_mask, 'Category Not Applicable'], errors='coerce')
+            mismatches = int((cna != 1).sum())
+            if mismatches > 0:
+                qa16_45_skip_violations['Category Not Applicable != 1'] = mismatches
+                blocking_errors.append(f"QA22 Skip Violation: {mismatches} non-current users have 'Category Not Applicable' != 1.")
+
+        category_substantive_cols = [c for c in work_df.columns if c.startswith('Category ') and c != 'Category Not Applicable']
+        if category_substantive_cols:
+            sub_cat_sum = work_df.loc[non_current_users_mask, category_substantive_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1)
+            violations = int((sub_cat_sum > 0).sum())
+            if violations > 0:
+                qa16_45_skip_violations['Substantive Categories > 0 for non-current'] = violations
+                blocking_errors.append(f"QA22 Skip Violation: {violations} non-current users marked substantive purchased categories.")
+
+        # QA 31: Factor dummies must all be 0 for non-current users
+        factor_cols = [c for c in work_df.columns if c.startswith('Factor ')]
+        if factor_cols:
+            factor_sum = work_df.loc[non_current_users_mask, factor_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1)
+            violations = int((factor_sum > 0).sum())
+            if violations > 0:
+                qa16_45_skip_violations['Factor Dummies > 0 for non-current'] = violations
+                blocking_errors.append(f"QA31 Skip Violation: {violations} non-current users marked choice factors.")
+
+        # QA 36: Problem Not Applicable must be 1, Problem No Major Problem must be 0, specific problems must be 0
+        if 'Problem Not Applicable' in work_df.columns:
+            pna = pd.to_numeric(work_df.loc[non_current_users_mask, 'Problem Not Applicable'], errors='coerce')
+            mismatches = int((pna != 1).sum())
+            if mismatches > 0:
+                qa16_45_skip_violations['Problem Not Applicable != 1'] = mismatches
+                blocking_errors.append(f"QA36 Skip Violation: {mismatches} non-current users have 'Problem Not Applicable' != 1.")
+
+        if 'Problem No Major Problem' in work_df.columns:
+            pnmp = pd.to_numeric(work_df.loc[non_current_users_mask, 'Problem No Major Problem'], errors='coerce')
+            mismatches = int((pnmp != 0).sum())
+            if mismatches > 0:
+                qa16_45_skip_violations['Problem No Major Problem != 0 for non-current'] = mismatches
+                blocking_errors.append(f"QA36 Skip Violation: {mismatches} non-current users marked 'Problem No Major Problem'.")
+
+        problem_substantive_cols = [c for c in work_df.columns if c.startswith('Problem ') and c not in ['Problem Not Applicable', 'Problem No Major Problem']]
+        if problem_substantive_cols:
+            sub_prob_sum = work_df.loc[non_current_users_mask, problem_substantive_cols].apply(pd.to_numeric, errors='coerce').sum(axis=1)
+            violations = int((sub_prob_sum > 0).sum())
+            if violations > 0:
+                qa16_45_skip_violations['Substantive Problems > 0 for non-current'] = violations
+                blocking_errors.append(f"QA36 Skip Violation: {violations} non-current users marked specific problem experiences.")
+
+        # QA 48 Skip Flag Routing:
+        # Non-current users must have 'Reason Not Applicable Current User' == 0
+        # Current users must have 'Reason Not Applicable Current User' == 1, and 0 on all 10 non-user reasons
+        col_na_curr = 'Reason Not Applicable Current User'
+        if col_na_curr in work_df.columns:
+            s_nac = pd.to_numeric(work_df[col_na_curr], errors='coerce')
+            non_curr_flag_viol = int((s_nac[non_current_users_mask] != 0).sum())
+            curr_flag_viol = int((s_nac[current_users_mask] != 1).sum())
+            if non_curr_flag_viol > 0:
+                qa16_45_skip_violations['QA48 current-user flag != 0 for non-current'] = non_curr_flag_viol
+                blocking_errors.append(f"QA48 Routing Violation: {non_curr_flag_viol} non-current users have '{col_na_curr}' != 0.")
+            if curr_flag_viol > 0:
+                qa16_45_skip_violations['QA48 current-user flag != 1 for current'] = curr_flag_viol
+                blocking_errors.append(f"QA48 Routing Violation: {curr_flag_viol} current users have '{col_na_curr}' != 1.")
+
+        reason_non_user_cols = [
+            'Reason Service Unavailable', 'Reason Prefer Physical', 'Reason Prices High',
+            'Reason Delivery Fees', 'Reason Distrust Quality', 'Reason Prefer Inspect',
+            'Reason Impulsive Spending Concern', 'Reason No Need Rapid',
+            'Reason Privacy Payment Concern', 'Reason Unfamiliar Apps'
+        ]
+        present_non_user_reasons = [c for c in reason_non_user_cols if c in work_df.columns]
+        if present_non_user_reasons:
+            curr_non_user_reasons_sum = work_df.loc[current_users_mask, present_non_user_reasons].apply(pd.to_numeric, errors='coerce').sum(axis=1)
+            violations = int((curr_non_user_reasons_sum > 0).sum())
+            if violations > 0:
+                qa16_45_skip_violations['Non-User Reasons marked by Current Users'] = violations
+                blocking_errors.append(f"QA48 Routing Violation: {violations} current active users marked non-user reasons.")
+
+        # -------------------------------------------------------------
+        # VALIDATE QA 46 & QA 49 COVERAGE ACROSS ALL RESPONDENTS
+        # -------------------------------------------------------------
+        qa46_stats = {}
+        if col_qa46 in work_df.columns:
+            s_qa46 = pd.to_numeric(work_df[col_qa46], errors='coerce')
+            qa46_substantive = s_qa46.isin([1, 2, 3, 4, 5])
+            qa46_invalid_cnt = int((~qa46_substantive).sum())
+            qa46_stats = {
+                'substantive_total_1_to_5': int(qa46_substantive.sum()),
+                'never_users_substantive': int(s_qa46[never_users_mask].isin([1, 2, 3, 4, 5]).sum()),
+                'previous_users_substantive': int(s_qa46[prev_users_mask].isin([1, 2, 3, 4, 5]).sum()),
+                'current_users_substantive': int(s_qa46[current_users_mask].isin([1, 2, 3, 4, 5]).sum()),
+                'invalid_or_missing_count': qa46_invalid_cnt
+            }
+            if qa46_invalid_cnt > 0:
+                blocking_errors.append(f"QA46 Coverage Violation: {qa46_invalid_cnt} respondents do not have substantive Likert values (1-5).")
+        else:
+            blocking_errors.append(f"Required column '{col_qa46}' is missing.")
+
+        qa49_stats = {}
+        if col_qa49 in work_df.columns:
+            s_qa49 = pd.to_numeric(work_df[col_qa49], errors='coerce')
+            qa49_substantive = s_qa49.isin(range(1, 11))
+            qa49_invalid_cnt = int((~qa49_substantive).sum())
+            qa49_stats = {
+                'substantive_total_1_to_10': int(qa49_substantive.sum()),
+                'never_users_substantive': int(s_qa49[never_users_mask].isin(range(1, 11)).sum()),
+                'previous_users_substantive': int(s_qa49[prev_users_mask].isin(range(1, 11)).sum()),
+                'current_users_substantive': int(s_qa49[current_users_mask].isin(range(1, 11)).sum()),
+                'invalid_or_missing_count': qa49_invalid_cnt
+            }
+            if qa49_invalid_cnt > 0:
+                blocking_errors.append(f"QA49 Coverage Violation: {qa49_invalid_cnt} respondents do not have valid codebook improvement values (1-10).")
+        else:
+            blocking_errors.append(f"Required column '{col_qa49}' is missing.")
+
+        # Reasons for non-use preserved distributions
+        prev_user_qa48_reasons = {}
+        never_user_qa48_reasons = {}
+        for rc in present_non_user_reasons:
+            prev_user_qa48_reasons[rc] = int(pd.to_numeric(work_df.loc[prev_users_mask, rc], errors='coerce').sum())
+            never_user_qa48_reasons[rc] = int(pd.to_numeric(work_df.loc[never_users_mask, rc], errors='coerce').sum())
+
         skipped_satisfaction_fields = [
             'Overall Satisfaction', 'Product Quality Satisfaction',
             'Delivery Reliability Satisfaction', 'Value Money Satisfaction'
@@ -430,47 +735,7 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
         prev_user_satisfaction_na = {}
         for sf in skipped_satisfaction_fields:
             if sf in work_df.columns:
-                na_cnt = int((pd.to_numeric(work_df.loc[prev_users_mask, sf], errors='coerce') == 6).sum())
-                prev_user_satisfaction_na[sf] = na_cnt
-
-        # QA46: Future-use intention (Next 3 Month Use)
-        # Verify substantive values 1-5 across all groups
-        qa46_stats = {}
-        if 'Next 3 Month Use' in work_df.columns:
-            s_qa46 = pd.to_numeric(work_df['Next 3 Month Use'], errors='coerce')
-            qa46_stats = {
-                'substantive_total_1_to_5': int(s_qa46.isin([1, 2, 3, 4, 5]).sum()),
-                'never_users_substantive': int(s_qa46[never_users_mask].isin([1, 2, 3, 4, 5]).sum()),
-                'previous_users_substantive': int(s_qa46[prev_users_mask].isin([1, 2, 3, 4, 5]).sum()),
-                'current_users_substantive': int(s_qa46[current_users_mask].isin([1, 2, 3, 4, 5]).sum()),
-                'na_count': int((s_qa46 == 6).sum())
-            }
-
-        # QA47: Continue if discounts reduced
-        # Verify substantive 1-5 for 807 current users, and code 6 (Not applicable) for 456 non-current users
-        qa47_stats = {}
-        if 'Continue If Discounts Reduced' in work_df.columns:
-            s_qa47 = pd.to_numeric(work_df['Continue If Discounts Reduced'], errors='coerce')
-            qa47_stats = {
-                'current_users_substantive_1_to_5': int(s_qa47[current_users_mask].isin([1, 2, 3, 4, 5]).sum()),
-                'current_users_na_code_6': int((s_qa47[current_users_mask] == 6).sum()),
-                'non_current_users_na_code_6': int((s_qa47[freq_series == 1] == 6).sum()),
-                'non_current_users_substantive': int(s_qa47[freq_series == 1].isin([1, 2, 3, 4, 5]).sum())
-            }
-
-        # QA48: Reasons for not currently using
-        prev_user_qa48_reasons = {}
-        never_user_qa48_reasons = {}
-        reason_non_user_cols = [
-            'Reason Service Unavailable', 'Reason Prefer Physical', 'Reason Prices High',
-            'Reason Delivery Fees', 'Reason Distrust Quality', 'Reason Prefer Inspect',
-            'Reason Impulsive Spending Concern', 'Reason No Need Rapid',
-            'Reason Privacy Payment Concern', 'Reason Unfamiliar Apps'
-        ]
-        for rc in reason_non_user_cols:
-            if rc in work_df.columns:
-                prev_user_qa48_reasons[rc] = int(pd.to_numeric(work_df.loc[prev_users_mask, rc], errors='coerce').sum())
-                never_user_qa48_reasons[rc] = int(pd.to_numeric(work_df.loc[never_users_mask, rc], errors='coerce').sum())
+                prev_user_satisfaction_na[sf] = int((pd.to_numeric(work_df.loc[prev_users_mask, sf], errors='coerce') == 6).sum())
 
         usage_status_audit = {
             'ever_ordered_yes': ever_yes,
@@ -488,8 +753,10 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
 
         routing_breakdown = {
             'qa16_to_qa45_skip_coded_count': freq_never,
-            'qa46_future_use_intention': qa46_stats,
+            'qa16_to_qa45_skip_violations': qa16_45_skip_violations,
             'qa47_discount_continuation': qa47_stats,
+            'qa46_future_use_intention': qa46_stats,
+            'qa49_preferred_improvement': qa49_stats,
             'qa48_non_user_reasons_available_count': freq_never
         }
 
@@ -509,7 +776,7 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
             'qa46_future_use_intention_substantive_1_to_5': routing_breakdown.get('qa46_future_use_intention', {}).get('substantive_total_1_to_5', 0),
             'qa47_discount_continuation_substantive_1_to_5': routing_breakdown.get('qa47_discount_continuation', {}).get('current_users_substantive_1_to_5', 0),
             'qa48_non_user_reasons_active_respondents': usage_status_audit.get('current_order_frequency_never', 0),
-            'qa49_improvement_substantive_1_to_10': int(pd.to_numeric(work_df.get('Improvement', pd.Series()), errors='coerce').isin(range(1, 11)).sum())
+            'qa49_improvement_substantive_1_to_10': routing_breakdown.get('qa49_preferred_improvement', {}).get('substantive_total_1_to_10', 0)
         }
     }
 
@@ -539,6 +806,11 @@ def audit_survey_dataframe(df, enforce_dimensions=True):
         'total_rows': total_rows,
         'total_columns': total_cols,
         'dimension_discrepancy': dimension_discrepancy,
+        'schema_manifest_validation': {
+            'manifest_columns_expected': len(EXPECTED_COLUMN_MANIFEST_130),
+            'missing_manifest_columns': missing_manifest_columns,
+            'unexpected_extra_columns': unexpected_extra_columns
+        },
         'full_duplicate_rows': full_duplicate_rows,
         'demographic_duplicate_rows': demographic_duplicate_rows,
         'total_null_cells': total_null_cells,
@@ -579,10 +851,11 @@ def print_survey_audit_report(file_path, sheet_name, file_sha256, file_size, aud
             print(f"  [!] {warn}")
 
     print("\n" + "-" * 60)
-    print("PART 1: STRUCTURAL INTEGRITY, SCHEMA & CONFORMANCE")
+    print("PART 1: STRUCTURAL INTEGRITY, SCHEMA MANIFEST & CONFORMANCE")
     print("-" * 60)
     print(f"  - Total Data Rows Loaded   : {audit_results['total_rows']:,} (Expected: {EXPECTED_ROWS})")
     print(f"  - Total Columns Loaded     : {audit_results['total_columns']} (Expected: {EXPECTED_COLS})")
+    print(f"  - 130-Col Manifest Status  : {'PASSED' if not audit_results['schema_manifest_validation']['missing_manifest_columns'] and not audit_results['schema_manifest_validation']['unexpected_extra_columns'] else 'FAILED'}")
     print(f"  - Missing Mandatory Columns: {len(audit_results['missing_mandatory_columns'])}")
     print(f"  - Duplicate Column Headers : {len(audit_results['duplicate_normalized_headers'])}")
     print(f"  - Full Duplicate Rows      : {audit_results['full_duplicate_rows']}")
@@ -627,6 +900,7 @@ def print_survey_audit_report(file_path, sheet_name, file_sha256, file_size, aud
 
     print("\nQuestionnaire Routing & Variable Availability Breakdown:")
     print(f"  * QA 16 - QA 45 Skip-Coded Modules for Non-Current Users: {rt.get('qa16_to_qa45_skip_coded_count', 0)} respondents")
+    print(f"      - Single-Select & Dummy Skip Violations: {len(rt.get('qa16_to_qa45_skip_violations', {}))}")
     print("    - Service Satisfaction (QA 37-40) coded as 'Not applicable - never used' (Code 6):")
     for sf, cnt in us.get('previous_users_satisfaction_mislabeled_as_never_used', {}).items():
         print(f"        * {sf:<33}: {cnt} / 80 previous users mislabeled")
@@ -638,7 +912,9 @@ def print_survey_audit_report(file_path, sheet_name, file_sha256, file_size, aud
     q47 = rt.get('qa47_discount_continuation', {})
     print(f"  * QA 47 Willingness to Continue if Discounts Reduced:")
     print(f"      - Current Users Substantive (1-5): {q47.get('current_users_substantive_1_to_5', 0):>4} / {cu}")
-    print(f"      - Non-Current Users N/A (Code 6) : {q47.get('non_current_users_na_code_6', 0):>4} / {us.get('current_order_frequency_never', 0)} (Explicit N/A; NOT defection)")
+    print(f"      - Non-Current Users N/A (Code 6) : {q47.get('non_current_users_with_code_6', 0):>4} / {us.get('current_order_frequency_never', 0)} (Explicit N/A; NOT defection)")
+    q49 = rt.get('qa49_preferred_improvement', {})
+    print(f"  * QA 49 Preferred Improvement: Substantive (1-10) across ALL {fmt_num(q49.get('substantive_total_1_to_10', 0))} respondents")
     print(f"  * QA 48 Reasons for Not Currently Using Quick Commerce:")
     print(f"      - Available for all {rt.get('qa48_non_user_reasons_available_count', 0)} non-current users (376 never-users + 80 previous users)")
 
@@ -674,7 +950,7 @@ def run_survey_audit(file_path, sheet_name=EXPECTED_SHEET, output_json=None, no_
         sys.stderr.write(f"\n[FATAL ERROR] Could not read Excel workbook '{file_path}' (sheet: '{sheet_name}'): {e}\n")
         sys.exit(1)
 
-    results = audit_survey_dataframe(df, enforce_dimensions=True)
+    results = audit_survey_dataframe(df, enforce_dimensions=True, enforce_full_manifest=True)
 
     try:
         rel_input_path = os.path.relpath(file_path, os.getcwd()) if os.path.isabs(file_path) else file_path
@@ -705,7 +981,7 @@ def run_survey_audit(file_path, sheet_name=EXPECTED_SHEET, output_json=None, no_
         print(f"[OUTPUT] Saved aggregate machine-readable survey audit summary to: {output_json}")
 
     if results['status'] == 'FAILED':
-        sys.stderr.write("\n[FATAL ERROR] Survey audit FAILED due to blocking schema or validation errors.\n")
+        sys.stderr.write("\n[FATAL ERROR] Survey audit FAILED due to blocking schema, routing, or validation errors.\n")
         sys.exit(1)
 
     return results

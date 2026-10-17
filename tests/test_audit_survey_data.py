@@ -3,11 +3,12 @@
 tests/test_audit_survey_data.py
 
 Unit and integration tests for scripts/audit_survey_data.py.
-Verifies survey schema validation, dimension checks, mandatory columns,
-duplicate normalized headers, sheet parameter pass-through, binary indicator constraints,
-codebook range validation, handling of null cells vs explicit not-applicable codes,
-subgroup derivation (never-users, previous-users, current-users),
-QA46 universal availability, QA47 current-user exclusivity, QA48/QA49 non-current availability,
+Verifies survey schema validation, full 130-column manifest checking, dimension checks,
+mandatory columns, duplicate normalized headers, sheet parameter pass-through,
+binary indicator constraints, codebook range validation, handling of null cells vs
+explicit not-applicable codes, subgroup derivation (never-users, previous-users, current-users),
+QA46 universal availability, QA47 current-user exclusivity with negative routing tests,
+QA16-QA45 skip-logic negative tests against codebook rules, QA49 improvement coverage,
 and error exit codes on audit failure.
 
 CRITICAL NOTICE:
@@ -34,6 +35,7 @@ from scripts.audit_survey_data import (
     run_survey_audit,
     SINGLE_SELECT_RANGES,
     MANDATORY_COLUMNS,
+    EXPECTED_COLUMN_MANIFEST_130,
     EXPECTED_ROWS,
     EXPECTED_COLS
 )
@@ -43,7 +45,7 @@ class TestAuditSurveyData(unittest.TestCase):
     """Test suite validating survey data audit behavior on synthetic fixtures."""
 
     def setUp(self):
-        """Builds a minimal synthetic baseline dictionary adhering to survey schema."""
+        """Builds a minimal synthetic baseline dictionary adhering strictly to the 130-column survey schema."""
         self.base_row = {
             'Age Group': 2,
             'Gender': 1,
@@ -71,8 +73,8 @@ class TestAuditSurveyData(unittest.TestCase):
             'Used Amazon Rapid': 0,
             'Used Never Used': 0,
             'Usage Duration': 5,
-            ' First Trial Reason': 2,  # Header with leading space
-            ' Order Frequency': 4,     # Header with leading space
+            ' First Trial Reason': 2,  # Header with leading space (tested for whitespace detection)
+            ' Order Frequency': 4,     # Header with leading space (active current user)
             'Common Days': 2,
             'Common Time': 3,
             'Reason Forgotten Item': 1,
@@ -186,9 +188,8 @@ class TestAuditSurveyData(unittest.TestCase):
     def test_missing_mandatory_columns_triggers_failure(self):
         """Verifies that dropping a mandatory column reports blocking error and sets status FAILED."""
         synthetic_df = pd.DataFrame([self.base_row])
-        # Drop mandatory columns
         synthetic_df = synthetic_df.drop(columns=['Overall Satisfaction', 'Continue If Discounts Reduced'])
-        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False)
+        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False, enforce_full_manifest=False)
 
         self.assertEqual(result['status'], 'FAILED')
         self.assertIn('Overall Satisfaction', result['missing_mandatory_columns'])
@@ -197,43 +198,61 @@ class TestAuditSurveyData(unittest.TestCase):
 
     def test_duplicate_headers_after_normalization_triggers_failure(self):
         """Verifies that duplicate column headers after whitespace trimming are caught as blocking error."""
-        # Create a DataFrame with two columns that become identical after strip()
         df = pd.DataFrame([[1, 2]], columns=['Age Group', ' Age Group '])
-        result = audit_survey_dataframe(df, enforce_dimensions=False)
+        result = audit_survey_dataframe(df, enforce_dimensions=False, enforce_full_manifest=False)
 
         self.assertEqual(result['status'], 'FAILED')
         self.assertIn('Age Group', result['duplicate_normalized_headers'])
         self.assertTrue(any("Duplicate column headers after normalization" in err for err in result['blocking_errors']))
 
     def test_whitespace_header_detection(self):
-        """Verifies that columns with leading or trailing whitespaces are flagged."""
+        """Verifies that columns with leading or trailing whitespaces are flagged in warnings."""
         synthetic_df = pd.DataFrame([self.base_row])
-        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False)
+        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False, enforce_full_manifest=False)
         ws_cols = result['whitespace_column_names']
 
         self.assertIn(' First Trial Reason', ws_cols)
         self.assertIn(' Order Frequency', ws_cols)
         self.assertIn('Fast Delivery Importance ', ws_cols)
 
+    def test_schema_manifest_unexpected_column_replacement(self):
+        """
+        Regression test: Verifies that removing an expected non-mandatory column and
+        replacing it with an unrelated column (keeping total columns at 130) fails the audit.
+        """
+        # Create a dictionary with all 130 manifest columns
+        full_row = {c: 1 for c in EXPECTED_COLUMN_MANIFEST_130}
+        # Replace non-mandatory column 'Aware Other' with 'Unrelated_Replacement_Col'
+        del full_row['Aware Other']
+        full_row['Unrelated_Replacement_Col'] = 99
+
+        df = pd.DataFrame([full_row])
+        self.assertEqual(len(df.columns), 130, "Total column count must remain exactly 130")
+
+        result = audit_survey_dataframe(df, enforce_dimensions=False, enforce_full_manifest=True)
+        self.assertEqual(result['status'], 'FAILED')
+        manifest_res = result['schema_manifest_validation']
+        self.assertIn('Aware Other', manifest_res['missing_manifest_columns'])
+        self.assertIn('Unrelated_Replacement_Col', manifest_res['unexpected_extra_columns'])
+        self.assertTrue(any("Full schema manifest failed" in err for err in result['blocking_errors']))
+
     def test_physical_null_cells_vs_explicit_na_codes(self):
         """
         Verifies distinction between physical blank/null cells (which fail the audit)
         and legitimate skip/not-applicable codes (e.g. Code 6 in satisfaction or QA47).
         """
-        # Baseline with explicit N/A codes (Code 6) should not count as physical nulls
         na_code_row = dict(self.base_row)
         na_code_row['Overall Satisfaction'] = 6
         na_code_row['Continue If Discounts Reduced'] = 6
         df_na = pd.DataFrame([na_code_row])
-        res_na = audit_survey_dataframe(df_na, enforce_dimensions=False)
+        res_na = audit_survey_dataframe(df_na, enforce_dimensions=False, enforce_full_manifest=False)
         self.assertEqual(res_na['total_null_cells'], 0)
         self.assertEqual(res_na['completeness_and_missingness']['physical_blank_cells'], 0)
 
-        # Baseline with actual NaN/null should trigger physical null count and FAILED status
         null_row = dict(self.base_row)
         null_row['Overall Satisfaction'] = np.nan
         df_null = pd.DataFrame([null_row])
-        res_null = audit_survey_dataframe(df_null, enforce_dimensions=False)
+        res_null = audit_survey_dataframe(df_null, enforce_dimensions=False, enforce_full_manifest=False)
         self.assertEqual(res_null['total_null_cells'], 1)
         self.assertEqual(res_null['status'], 'FAILED')
 
@@ -244,7 +263,7 @@ class TestAuditSurveyData(unittest.TestCase):
         bad_row['Aware Zepto'] = -1  # Invalid dummy code
 
         synthetic_df = pd.DataFrame([bad_row])
-        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False)
+        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False, enforce_full_manifest=False)
         violations = result['binary_column_violations']
 
         self.assertIn('Used Blinkit', violations)
@@ -254,12 +273,12 @@ class TestAuditSurveyData(unittest.TestCase):
     def test_range_violations_on_single_select(self):
         """Verifies that single-select questions flag codes outside the codebook range or non-integers."""
         bad_row = dict(self.base_row)
-        bad_row['Age Group'] = 9       # Max allowed is 6
+        bad_row['Age Group'] = 9           # Max allowed is 6
         bad_row['Overall Satisfaction'] = 0  # Min allowed is 1
-        bad_row[' Order Frequency'] = 2.5     # Non-integer float (updates existing key)
+        bad_row[' Order Frequency'] = 2.5   # Non-integer float
 
         synthetic_df = pd.DataFrame([bad_row])
-        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False)
+        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False, enforce_full_manifest=False)
         rv = result['range_violations']
 
         self.assertIn('Age Group', rv)
@@ -284,7 +303,7 @@ class TestAuditSurveyData(unittest.TestCase):
         conflict_row['Problem Late Delivery'] = 1  # Conflict!
 
         synthetic_df = pd.DataFrame([conflict_row])
-        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False)
+        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False, enforce_full_manifest=False)
         lc = result['logical_conflicts']
 
         self.assertEqual(lc['aware_none_conflict'], 1)
@@ -292,24 +311,13 @@ class TestAuditSurveyData(unittest.TestCase):
         self.assertEqual(lc['problem_no_major_conflict'], 1)
         self.assertEqual(result['status'], 'FAILED')
 
-    def test_subgroups_and_qa46_qa47_routing(self):
+    def test_subgroups_and_qa46_qa47_positive_routing(self):
         """
-        Verifies usage-status triangulation and routing logic:
-        1. Never User (Ever=0, Freq=1):
-           - QA46 is substantive (1-5)
-           - QA47 is explicit N/A (Code 6)
-           - QA48 reasons for non-use are available
-        2. Previous User (Ever=1, Freq=1):
-           - QA46 is substantive (1-5)
-           - QA47 is explicit N/A (Code 6)
-           - QA48 reasons for non-use are available
-           - Satisfaction fields (QA37-40) are mislabeled as Code 6
-        3. Current Active User (Ever=1, Freq>1):
-           - QA46 is substantive (1-5)
-           - QA47 is substantive (1-5)
-           - QA48 Reason Not Applicable Current User == 1
+        Positive test: Verifies correct usage-status derivation and routing across the 3 subgroups:
+        1. Never User (Ever=0, Freq=1): QA46 substantive, QA47=6 (N/A), QA48 available
+        2. Previous User (Ever=1, Freq=1): QA46 substantive, QA47=6 (N/A), QA48 available, QA37-40=6
+        3. Current Active User (Ever=1, Freq>1): QA46 substantive, QA47 substantive (1-5), QA48 flag=1
         """
-        # 1. Never user
         never_row = dict(self.base_row)
         never_row['Ever Ordered through a Quick-Commerce Platform'] = 0
         never_row['Used Blinkit'] = 0
@@ -317,29 +325,57 @@ class TestAuditSurveyData(unittest.TestCase):
         never_row['Usage Duration'] = 1
         never_row[' First Trial Reason'] = 8
         never_row[' Order Frequency'] = 1     # Current frequency: Never
+        never_row['Common Days'] = 5
+        never_row['Common Time'] = 7
+        never_row['Reason Not Applicable'] = 1
+        never_row['Reason Forgotten Item'] = 0
+        never_row['Reason Urgent Need'] = 0
+        never_row['Items per Order'] = 7
+        never_row['Expected Delivery'] = 7
+        never_row['Spontaneous Frequency'] = 6
+        never_row['Category Not Applicable'] = 1
+        never_row['Category Fresh Fruit Veg'] = 0
+        never_row['Category Milk Dairy'] = 0
+        never_row['Most Frequent Category'] = 8
+        never_row['Order Spend'] = 8
+        never_row['Monthly Spend'] = 1
+        never_row['Total Spending Change'] = 6
+        never_row['Discount Overspend'] = 6
+        never_row['Threshold Extra Items'] = 6
+        never_row['Payment Method'] = 7
+        never_row['Factor Delivery Speed'] = 0
+        never_row['Factor Product Availability'] = 0
+        never_row['Most Important Factor'] = 9
+        never_row['Compare Platform Prices'] = 6
+        never_row['Compare Physical Prices'] = 6
+        never_row['Fast Delivery Importance '] = 6
+        never_row[' Problem No Major Problem'] = 0
+        never_row['Problem Not Applicable'] = 1
         never_row['Overall Satisfaction'] = 6
-        never_row['Next 3 Month Use'] = 2     # QA46 substantive intention!
-        never_row['Continue If Discounts Reduced'] = 6  # QA47 explicit N/A!
+        never_row['Product Quality Satisfaction'] = 6
+        never_row['Delivery Reliability Satisfaction'] = 6
+        never_row['Value Money Satisfaction'] = 6
+        never_row['Kirana Visit Change'] = 7
+        never_row['Supermarket Visit Change'] = 7
+        never_row['Shopping Routine Role'] = 6
+        never_row['Unplanned Purchase'] = 6
+        never_row['New Brand Trial'] = 6
+        never_row['Next 3 Month Use'] = 2     # QA46 substantive intention
+        never_row['Continue If Discounts Reduced'] = 6  # QA47 explicit N/A
         never_row['Reason Not Applicable Current User'] = 0
         never_row['Reason Prefer Physical'] = 1
         never_row['Improvement'] = 1
 
-        # 2. Previous user (The 80-record scenario)
-        prev_row = dict(self.base_row)
+        prev_row = dict(never_row)
         prev_row['Ever Ordered through a Quick-Commerce Platform'] = 1
         prev_row['Used Blinkit'] = 1
         prev_row['Used Never Used'] = 0
         prev_row['Usage Duration'] = 5
         prev_row[' First Trial Reason'] = 2
-        prev_row[' Order Frequency'] = 1     # Current frequency: Never
-        prev_row['Overall Satisfaction'] = 6  # Mislabeled as never used!
-        prev_row['Next 3 Month Use'] = 3     # QA46 substantive intention!
-        prev_row['Continue If Discounts Reduced'] = 6  # QA47 explicit N/A!
-        prev_row['Reason Not Applicable Current User'] = 0
-        prev_row['Reason Delivery Fees'] = 1  # Lapsed user reason!
+        prev_row['Next 3 Month Use'] = 3
+        prev_row['Reason Delivery Fees'] = 1
         prev_row['Improvement'] = 4
 
-        # 3. Current active user
         current_row = dict(self.base_row)
         current_row['Ever Ordered through a Quick-Commerce Platform'] = 1
         current_row['Used Blinkit'] = 1
@@ -348,34 +384,161 @@ class TestAuditSurveyData(unittest.TestCase):
         current_row[' First Trial Reason'] = 4
         current_row[' Order Frequency'] = 5   # Current frequency: Active
         current_row['Overall Satisfaction'] = 4
-        current_row['Next 3 Month Use'] = 5   # QA46 substantive intention!
-        current_row['Continue If Discounts Reduced'] = 4  # QA47 substantive continuation!
+        current_row['Next 3 Month Use'] = 5   # QA46 substantive intention
+        current_row['Continue If Discounts Reduced'] = 4  # QA47 substantive continuation
         current_row['Reason Not Applicable Current User'] = 1
         current_row['Improvement'] = 2
 
         synthetic_df = pd.DataFrame([never_row, prev_row, current_row])
-        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False)
+        result = audit_survey_dataframe(synthetic_df, enforce_dimensions=False, enforce_full_manifest=False)
         us = result['usage_status_audit']
         rt = result['questionnaire_routing']
 
-        # Subgroup counts
         self.assertEqual(us['never_users_count'], 1)
         self.assertEqual(us['previous_users_count'], 1)
         self.assertEqual(us['current_users_count'], 1)
-
-        # QA46: All 3 have substantive (1-5) responses
         self.assertEqual(rt['qa46_future_use_intention']['substantive_total_1_to_5'], 3)
-        self.assertEqual(rt['qa46_future_use_intention']['never_users_substantive'], 1)
-        self.assertEqual(rt['qa46_future_use_intention']['previous_users_substantive'], 1)
-        self.assertEqual(rt['qa46_future_use_intention']['current_users_substantive'], 1)
-
-        # QA47: Current user has substantive 1-5; non-current users have N/A (Code 6)
         self.assertEqual(rt['qa47_discount_continuation']['current_users_substantive_1_to_5'], 1)
-        self.assertEqual(rt['qa47_discount_continuation']['non_current_users_na_code_6'], 2)
+        self.assertEqual(rt['qa47_discount_continuation']['non_current_users_with_code_6'], 2)
+        self.assertEqual(len(rt['qa16_to_qa45_skip_violations']), 0)
+        self.assertEqual(result['status'], 'SUCCESS_WITH_WARNINGS')
 
-        # QA48: Both never-user and previous-user provided substantive non-use reasons
-        self.assertEqual(us['previous_users_reasons_for_not_using']['Reason Delivery Fees'], 1)
-        self.assertEqual(us['never_users_reasons_for_not_using']['Reason Prefer Physical'], 1)
+    def test_qa47_routing_violations_fail_audit(self):
+        """
+        Negative tests for QA47 (Continue If Discounts Reduced):
+        - Current active user with Code 6 fails validation.
+        - Non-current user with substantive value (1-5) fails validation.
+        - Ambiguous usage status (Ever=0, Freq>1) fails validation.
+        """
+        # Case A: Current active user with Code 6
+        bad_curr = dict(self.base_row)
+        bad_curr['Continue If Discounts Reduced'] = 6  # VIOLATION: Current user cannot have Code 6
+        df_a = pd.DataFrame([bad_curr])
+        res_a = audit_survey_dataframe(df_a, enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_a['status'], 'FAILED')
+        self.assertTrue(any("QA47 Routing Violation" in err for err in res_a['blocking_errors']))
+        self.assertEqual(res_a['questionnaire_routing']['qa47_discount_continuation']['current_users_with_code_6_violation'], 1)
+
+        # Case B: Non-current user with substantive Likert response (e.g. 4)
+        bad_non_curr = dict(self.base_row)
+        bad_non_curr[' Order Frequency'] = 1
+        bad_non_curr['Continue If Discounts Reduced'] = 4  # VIOLATION: Non-current user must be Code 6
+        df_b = pd.DataFrame([bad_non_curr])
+        res_b = audit_survey_dataframe(df_b, enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_b['status'], 'FAILED')
+        self.assertTrue(any("QA47 Routing Violation" in err for err in res_b['blocking_errors']))
+        self.assertEqual(res_b['questionnaire_routing']['qa47_discount_continuation']['non_current_users_substantive_violation'], 1)
+
+        # Case C: Ambiguous usage status (Ever=0 but Order Frequency=4)
+        ambiguous_row = dict(self.base_row)
+        ambiguous_row['Ever Ordered through a Quick-Commerce Platform'] = 0
+        ambiguous_row[' Order Frequency'] = 4  # INCONSISTENCY: Never ordered but orders 4 times/week!
+        df_c = pd.DataFrame([ambiguous_row])
+        res_c = audit_survey_dataframe(df_c, enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_c['status'], 'FAILED')
+        self.assertTrue(any("Inconsistent respondents" in err for err in res_c['blocking_errors']))
+
+    def test_qa16_to_qa45_skip_logic_negative_violations(self):
+        """
+        Negative tests for QA16-QA45 skip logic:
+        - Non-current respondent with substantive satisfaction score (e.g. 4 instead of 6) fails.
+        - Non-current respondent with substantive category indicator (instead of Category Not Applicable=1) fails.
+        - Non-current respondent with substantive problem indicator (instead of Problem Not Applicable=1) fails.
+        - Current user with Reason Not Applicable Current User != 1 fails.
+        """
+        # Baseline non-current row
+        non_curr = dict(self.base_row)
+        non_curr[' Order Frequency'] = 1
+        non_curr['Common Days'] = 5
+        non_curr['Common Time'] = 7
+        non_curr['Reason Not Applicable'] = 1
+        non_curr['Reason Forgotten Item'] = 0
+        non_curr['Reason Urgent Need'] = 0
+        non_curr['Items per Order'] = 7
+        non_curr['Expected Delivery'] = 7
+        non_curr['Spontaneous Frequency'] = 6
+        non_curr['Category Not Applicable'] = 1
+        non_curr['Category Fresh Fruit Veg'] = 0
+        non_curr['Category Milk Dairy'] = 0
+        non_curr['Most Frequent Category'] = 8
+        non_curr['Order Spend'] = 8
+        non_curr['Monthly Spend'] = 1
+        non_curr['Total Spending Change'] = 6
+        non_curr['Discount Overspend'] = 6
+        non_curr['Threshold Extra Items'] = 6
+        non_curr['Payment Method'] = 7
+        non_curr['Factor Delivery Speed'] = 0
+        non_curr['Factor Product Availability'] = 0
+        non_curr['Most Important Factor'] = 9
+        non_curr['Compare Platform Prices'] = 6
+        non_curr['Compare Physical Prices'] = 6
+        non_curr['Fast Delivery Importance '] = 6
+        non_curr[' Problem No Major Problem'] = 0
+        non_curr['Problem Not Applicable'] = 1
+        non_curr['Overall Satisfaction'] = 6
+        non_curr['Product Quality Satisfaction'] = 6
+        non_curr['Delivery Reliability Satisfaction'] = 6
+        non_curr['Value Money Satisfaction'] = 6
+        non_curr['Kirana Visit Change'] = 7
+        non_curr['Supermarket Visit Change'] = 7
+        non_curr['Shopping Routine Role'] = 6
+        non_curr['Unplanned Purchase'] = 6
+        non_curr['New Brand Trial'] = 6
+        non_curr['Continue If Discounts Reduced'] = 6
+        non_curr['Reason Not Applicable Current User'] = 0
+
+        # Sub-test 1: Non-current user with substantive satisfaction (4 instead of 6)
+        viol_sat = dict(non_curr)
+        viol_sat['Overall Satisfaction'] = 4  # VIOLATION: Non-current must be 6
+        res_sat = audit_survey_dataframe(pd.DataFrame([viol_sat]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_sat['status'], 'FAILED')
+        self.assertTrue(any("QA16-45 Skip Violation in 'Overall Satisfaction'" in err for err in res_sat['blocking_errors']))
+
+        # Sub-test 2: Non-current user with substantive category marked (Fresh Fruit Veg = 1)
+        viol_cat = dict(non_curr)
+        viol_cat['Category Fresh Fruit Veg'] = 1  # VIOLATION: Non-current cannot purchase categories
+        res_cat = audit_survey_dataframe(pd.DataFrame([viol_cat]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_cat['status'], 'FAILED')
+        self.assertTrue(any("QA22 Skip Violation" in err for err in res_cat['blocking_errors']))
+
+        # Sub-test 3: Non-current user with substantive problem marked (Problem Out of Stock = 1)
+        viol_prob = dict(non_curr)
+        viol_prob['Problem Out of Stock'] = 1  # VIOLATION: Non-current cannot experience service problems
+        res_prob = audit_survey_dataframe(pd.DataFrame([viol_prob]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_prob['status'], 'FAILED')
+        self.assertTrue(any("QA36 Skip Violation" in err for err in res_prob['blocking_errors']))
+
+        # Sub-test 4: Current active user with Reason Not Applicable Current User == 0
+        viol_curr_flag = dict(self.base_row)
+        viol_curr_flag['Reason Not Applicable Current User'] = 0  # VIOLATION: Current user must have flag=1
+        res_curr_flag = audit_survey_dataframe(pd.DataFrame([viol_curr_flag]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_curr_flag['status'], 'FAILED')
+        self.assertTrue(any("QA48 Routing Violation" in err for err in res_curr_flag['blocking_errors']))
+
+    def test_qa46_and_qa49_universal_coverage_validation(self):
+        """
+        Verifies that QA46 (stated future intention, 1-5) and QA49 (improvement, 1-10)
+        enforce valid substantive codebook values across all respondents, and fail on invalid codes.
+        """
+        # Baseline valid row
+        valid_df = pd.DataFrame([self.base_row])
+        res_valid = audit_survey_dataframe(valid_df, enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertNotIn('QA46 Coverage Violation', str(res_valid['blocking_errors']))
+        self.assertNotIn('QA49 Coverage Violation', str(res_valid['blocking_errors']))
+
+        # Negative test for QA46: Out-of-bounds code (e.g. 6 or 0)
+        bad_qa46 = dict(self.base_row)
+        bad_qa46['Next 3 Month Use'] = 6  # Codebook allows 1-5; 6 is invalid
+        res_qa46 = audit_survey_dataframe(pd.DataFrame([bad_qa46]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_qa46['status'], 'FAILED')
+        self.assertTrue(any("QA46 Coverage Violation" in err for err in res_qa46['blocking_errors']))
+
+        # Negative test for QA49: Out-of-bounds code (e.g. 11 or 0)
+        bad_qa49 = dict(self.base_row)
+        bad_qa49['Improvement'] = 11  # Codebook allows 1-10; 11 is invalid
+        res_qa49 = audit_survey_dataframe(pd.DataFrame([bad_qa49]), enforce_dimensions=False, enforce_full_manifest=False)
+        self.assertEqual(res_qa49['status'], 'FAILED')
+        self.assertTrue(any("QA49 Coverage Violation" in err for err in res_qa49['blocking_errors']))
 
     def test_functional_sheet_argument(self):
         """Verifies that the --sheet argument is properly passed through to read_excel."""
@@ -383,7 +546,6 @@ class TestAuditSurveyData(unittest.TestCase):
             tmp_path = tmp.name
 
         try:
-            # Write two distinct sheets
             with pd.ExcelWriter(tmp_path, engine='openpyxl') as writer:
                 df1 = pd.DataFrame({'Sheet1_Col': [1, 2]})
                 df2 = pd.DataFrame([self.base_row])
@@ -409,7 +571,6 @@ class TestAuditSurveyData(unittest.TestCase):
             tmp_path = tmp.name
 
         try:
-            # Create a workbook with blocking errors (out of range code)
             bad_row = dict(self.base_row)
             bad_row['Age Group'] = 999
             df = pd.DataFrame([bad_row])
