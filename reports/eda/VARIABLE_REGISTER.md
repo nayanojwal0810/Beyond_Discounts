@@ -1,6 +1,6 @@
 # Variable & Question Register: Indian Quick-Commerce Survey
 
-> **Stage / interpretation note (17 Oct 2026):** This is the Gate 1A EDA artifact, retained as the historical descriptive-data stage. Its early research-question wording and conceptual persona/action hypotheses are not final findings. Gate 1C's later exploratory clustering results do not justify hard persona targeting; the current controlling decision is the lifecycle-first CRM analysis in [Gate 1D plan](../crm/CRM_DECISION_ANALYSIS_PLAN.md) (from this report's directory; adjust relative path when rendered) and the technical gate record in [Gate 1C.1](../../docs/gates/GATE_1C1_TECHNICAL_REVIEW.md). Interpret QA46/QA47 as stated intentions, not behavior or price elasticity.
+> **Stage / interpretation note (17 Oct 2026):** This is the Gate 1A EDA artifact, retained as the historical descriptive-data stage. Its early research-question wording and conceptual persona/action hypotheses are not final findings. Gate 1C's later exploratory clustering results do not justify hard persona targeting; the current controlling decision is the lifecycle-first CRM analysis in [Gate 1D plan](../crm/CRM_DECISION_ANALYSIS_PLAN.md) and the technical gate record in [Gate 1C.1](../../docs/gates/GATE_1C1_TECHNICAL_REVIEW.md). Interpret QA46/QA47 as stated intentions, not behavior or price elasticity.
 
 
 **Canonical Project Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
