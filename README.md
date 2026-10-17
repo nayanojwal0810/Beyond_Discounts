@@ -1,7 +1,7 @@
 # Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce
 
 [![Gate Status](https://img.shields.io/badge/Gate%200-Closed%20%26%20Locked-success)](docs/gates/GATE_0_DECISION_LOG.md)
-[![Current Gate](https://img.shields.io/badge/Current%20Gate-1A%20EDA%20In%20Progress-blue)](reports/eda/EDA_REPORT.md)
+[![Current Gate](https://img.shields.io/badge/Current%20Gate-1C.1%20Technical%20QA-orange)](docs/gates/GATE_1C1_TECHNICAL_REVIEW.md)
 [![License: CC BY 4.0](https://img.shields.io/badge/Data%20License-CC%20BY%204.0-lightgrey)](https://creativecommons.org/licenses/by/4.0/)
 
 ---
@@ -12,20 +12,20 @@
 **Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce**
 
 ### Research Question
-> *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+> *Which lifecycle-based CRM actions are best supported by the observed sample's stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements?*
+>
+> *Do exploratory behavioral clusters add actionable differentiation beyond lifecycle cohorts?*
 
-### Problem We Are Investigating
-Quick-commerce consumers in India may differ significantly in the importance they place on promotional discounts, delivery speed, shopping convenience, spending levels, service experience, and operational reliability. A one-size-fits-all retention or reactivation strategy cannot suit every consumer type. 
-
-This project investigates these behavioral and attitudinal differences using empirical survey microdata ($N=1,263$) to evaluate whether defensible, interpretable customer segments can be developed across Indian quick-commerce consumers.
+### Project Approach
+This is an evidence-led CRM decision project, not a contest to produce visually attractive clusters. The primary decision framework compares never-users, previous users and the survey-defined current-user cohort. Unsupervised clustering remains a bounded methodological experiment: it will be retained as an actionable segmentation method only if separation, reproducibility and independent outcome profiling justify it. If not, lifecycle cohort analysis is the more defensible result.
 
 ### Proposed Business Value
-The ultimate objective is to translate observed, data-grounded consumer differences into actionable, evidence-based CRM strategies for:
-1. **Adoption & Acquisition:** Overcoming specific barriers among non-users ($n=376$).
-2. **Reactivation:** Re-engaging lapsed users who previously ordered but currently report no orders ($n=80$).
-3. **Non-Discount Retention:** Designing targeted value propositions (delivery reliability, assortment depth, product quality) that preserve active customer retention ($n=807$) even when promotional discounts and coupons are scaled back.
+The final deliverable will translate measured differences into evidence-tagged candidate CRM actions for:
+1. **Adoption:** understand barriers and future-use intention among never-users ($n=376$).
+2. **Reactivation research:** describe previous users who currently report no orders ($n=80$) without claiming observed churn or knowing why they stopped.
+3. **Retention hypothesis design:** understand current users' stated intention to continue at the same frequency if discounts/promotions are reduced ($n=807$), then use their stated improvement preferences to formulate pilot candidates.
 
-*(Note: These represent intended applications and hypotheses to test, not results that have already been established).*
+These are hypotheses for a real-world experiment, not established intervention effects. The survey cannot prove campaign uplift, actual repeat purchase, transactional churn or customer lifetime value.
 
 ---
 
@@ -49,12 +49,12 @@ The 1,263 respondents are partitioned into three mutually exclusive, verified su
 | :--- | :--- | :---: | :---: | :--- |
 | **Never-Users** | `Ever Ordered == 0` AND `Order Frequency == 1 (Never)` | 376 | 29.8% | Routed to QA 48 (reasons for non-use); QA 47 coded 6 (Not Applicable). QA 46 & 49 substantive. |
 | **Previous Users** | `Ever Ordered == 1` AND `Order Frequency == 1 (Never)` | 80 | 6.3% | Lapsed users reporting no current orders. Routed to QA 48; QA 47 coded 6 (Not Applicable). Historical satisfaction unobserved. QA 46 & 49 substantive. |
-| **Current Active Users** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.9% | Active shoppers. QA 47 substantive (1–5 scale: Definitely no to Definitely yes). QA 48 holds binary indicator `Reason Not Applicable Current User == 1`. QA 46 & 49 substantive. |
+| **Current Users (survey-defined cohort)** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.9% | Questionnaire-defined current users; includes respondents selecting “less than once a month.” QA 47 substantive (1–5 scale: Definitely no to Definitely yes). QA 48 holds binary indicator `Reason Not Applicable Current User == 1`. QA 46 & 49 substantive. |
 | **Total Sample** | Full workbook manifest | **1,263** | **100.0%** | **Physical nulls = 0; duplicate rows = 0.** |
 
 ### Mandatory Questionnaire Semantics
 - **QA 46 (Next 3 Month Use):** Measures stated future-use intention across all 1,263 respondents (1 = Definitely will not, 5 = Definitely will).
-- **QA 47 (Continue If Discounts Reduced):** Evaluates post-promotional resilience strictly among the 807 current active users (1 = Definitely no, 5 = Definitely yes). Code 6 is an explicit questionnaire routing code ("Not Applicable") for the 456 non-current users; it must **never** be coded as churn or negative sentiment.
+- **QA 47 (Continue If Discounts Reduced):** Measures stated continuation intention under a hypothetical discount/promotion reduction among the 807 current users (1 = Definitely no, 5 = Definitely yes). Code 6 is an explicit questionnaire routing code ("Not Applicable") for the 456 non-current users; it must **never** be coded as churn or negative sentiment.
 - **QA 48 (Reasons for Non-Use):** Multi-response binary flags for non-current users ($n=456$), analyzed with never-users ($n=376$) and previous users ($n=80$) distinguished.
 - **QA 49 (Preferred Improvement):** Substantive single-choice preference across all 1,263 respondents (1–10 scale).
 - **QA 24 (Physical Store Preferences):** Substantive across all 1,263 respondents (no N/A option in codebook).
@@ -131,3 +131,5 @@ python -m unittest discover tests
 1. **Role of Implementation Worker:** Code implementation, automated verification, reproducible documentation, and evidence generation.
 2. **Role of Principal Project Lead:** Analytical authority, methodological decisions, and gate approvals. Code execution alone does not constitute gate approval.
 3. **Privacy & Data Security:** No raw survey rows, individual respondent answers, or personally identifiable information are committed to version control. All committed outputs are aggregate statistical summaries.
+4. **Interpretation Discipline:** Survey outcomes are stated intentions and preferences, not observed purchase, churn, loyalty, price elasticity or causal treatment effects.
+5. **Current Decision:** Complete Gate 1C.1 technical verification, then run the lifecycle-based Gate 1D CRM analyses before building the dashboard. See [Gate 1C.1 review](docs/gates/GATE_1C1_TECHNICAL_REVIEW.md) and [Gate 1D plan](reports/crm/CRM_DECISION_ANALYSIS_PLAN.md).
