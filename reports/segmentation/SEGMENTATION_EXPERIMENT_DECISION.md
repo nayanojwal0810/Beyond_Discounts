@@ -167,12 +167,12 @@ Before any further interpretation, the team must (a) regenerate these aggregate 
 ### Limitations
 1. **Weak separation and uncertain reproducibility:** Spec A PAM k=4's prior mean silhouette is 0.0500; 20.20% of observations have negative silhouettes. Eight of 20 subsamples had ARI below 0.50. These metrics do not support hard CRM targeting.
 2. **Independent outcome differentiation has not been established:** In the previous run, Spec A k=4 showed no detectable difference in QA47 after the chosen test; QA46 did not survive the family correction. Non-significance is not equivalence.
-3. **QA49 is a missing clustering deliverable:** The feature specification reserves QA49 for post-cluster CRM profiling, but the current committed cluster-profile output does not include QA49. That gap must be closed before any segment-level action claim.
+3. **QA49 was missing from the earlier committed clustering outputs:** This branch now adds held-out QA49 cluster profiles and fixed-margin Monte Carlo association tests in the generator. The previous CSVs and decision table have not yet been regenerated, so no QA49 cluster conclusion is available until the real-workbook rerun is reviewed.
 4. **No platform attribution or transactional outcomes:** The data are category-level self-report. It contains no verified platform-specific churn, repeat-purchase logs, customer-level transaction RFM/CLV, or causal campaign-uplift outcome.
 5. **Sampling limitations:** The documented sampling frame and recruitment method are unresolved. Interpret estimates as the observed sample, not a nationally representative Indian customer population.
 
 ### Required technical sign-off (Gate 1C.1)
-The revised code now preserves p-value precision through corrections and separates failed subsamples from measured ARI. A regression test and per-seed stability output were added. **Neither the complete suite nor the real-workbook end-to-end rerun has been independently executed by the project lead yet.** Treat all metrics in this report as prior-run output until regenerated.
+The revised code now preserves p-value precision through corrections, separates failed subsamples from measured ARI, writes per-seed stability diagnostics, and adds independent QA49 preference profiling with Monte Carlo association testing. These new outputs are not yet available from a verified real-workbook rerun. **Neither the complete suite nor the real-workbook end-to-end rerun has been independently executed by the project lead yet.** Treat all metrics in this report as prior-run output until regenerated.
 
 Gate 1C.1 closes only when tests pass; the regenerated run writes and validates stability run diagnostics; p-values and corrections reconcile; all aggregate reports and text reconcile; the QA49 omission is decided/resolved; and raw/row-level data remain outside Git.
 
