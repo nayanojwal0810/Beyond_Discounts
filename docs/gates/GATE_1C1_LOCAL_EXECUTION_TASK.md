@@ -67,7 +67,7 @@ After Step 3 passes:
 - [ ] Inspect all QA46 response-category distributions, cohort test and uncertainty estimates.
 - [ ] Inspect QA48 counts, prevalence intervals, Fisher tests and Holm corrections; preserve the distinction between current non-use barriers and the reason someone historically stopped ordering.
 - [ ] Inspect QA49 full 10-option distributions, planned action-family distributions and all four Monte Carlo omnibus comparisons with Holm-adjusted p-values, denominators, Cramér's V and minimum expected count.
-- [ ] Inspect `qa47_model_fit_summary.csv`: primary ordered-logit convergence, sensitivity model convergence, sample size and fit metrics.
+- [ ] Inspect `qa47_model_fit_summary.csv`: primary ordered-logit convergence, sensitivity-model convergence, sample size and fit metrics. Confirm `qa47_model_coefficients.csv` includes raw and Holm-adjusted p-values for predictor terms.
 - [ ] Inspect `qa47_model_diagnostics.csv` and `qa47_multinomial_sensitivity_status.csv`: if parallel slopes are rejected, confirm the conditional multinomial model is fit; if diagnostic status is inconclusive, label the ordered-logit interpretation unresolved rather than assume the assumption holds.
 - [ ] Inspect QA49-added model comparison; interpret it as concurrent associational evidence only.
 - [ ] Confirm generated output contains no respondent identifiers or row-level values.
