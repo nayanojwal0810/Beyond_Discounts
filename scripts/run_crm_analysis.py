@@ -27,6 +27,13 @@ DEFAULT_OUT = os.path.join("reports", "crm", "tables")
 EXPECTED_SHAPE = (1263, 130)
 EXPECTED_COHORTS = {"Never User": 376, "Previous User": 80, "Current Active User": 807}
 
+QA46_LABELS = {
+    1: "Very unlikely",
+    2: "Unlikely",
+    3: "Not sure",
+    4: "Likely",
+    5: "Very likely",
+}
 QA49_LABELS = {
     1: "Lower product prices",
     2: "More discounts and coupons",
@@ -146,11 +153,34 @@ def derive_cohorts(df: pd.DataFrame, *, strict: bool = False) -> pd.DataFrame:
     if not out.loc[noncurrent, "Continue If Discounts Reduced"].eq(6).all():
         raise ValueError("QA47 routing failed: non-current respondents should have source-defined code 6.")
 
+    current_mask = out["user_subgroup"] == "Current Active User"
+    current_domains = {
+        "Order Frequency": set(range(2, 8)),
+        "Shopping Routine Role": set(range(1, 6)),
+        "Discount Overspend": set(range(1, 6)),
+        "Threshold Extra Items": set(range(1, 6)),
+        "Compare Platform Prices": set(range(1, 6)),
+        "Compare Physical Prices": set(range(1, 6)),
+        "Fast Delivery Importance": set(range(1, 6)),
+    }
+    for column, allowed in current_domains.items():
+        if not out.loc[current_mask, column].isin(allowed).all():
+            raise ValueError(f"Current-user predictor {column!r} contains an out-of-domain or skip-coded value.")
+    for column in PLATFORM_COLS:
+        if not out[column].isin([0, 1]).all():
+            raise ValueError(f"Platform footprint column {column!r} must be binary.")
+    for column, _ in QA48_BARRIERS:
+        if not out[column].isin([0, 1]).all():
+            raise ValueError(f"QA48 barrier column {column!r} must be binary.")
+
     out["platforms_used_count"] = out[PLATFORM_COLS].apply(pd.to_numeric, errors="coerce").sum(axis=1)
     satisfaction_cols = [
         "Overall Satisfaction", "Product Quality Satisfaction",
         "Delivery Reliability Satisfaction", "Value Money Satisfaction",
     ]
+    for column in satisfaction_cols:
+        if not out.loc[current_mask, column].isin([1, 2, 3, 4, 5]).all():
+            raise ValueError(f"Current-user satisfaction item {column!r} contains an out-of-domain or skip-coded value.")
     out["service_satisfaction_composite"] = out[satisfaction_cols].apply(
         pd.to_numeric, errors="coerce"
     ).mean(axis=1)
@@ -191,7 +221,7 @@ def _distribution_rows(df: pd.DataFrame, *, group_name: str, column: str, labels
 
 
 def build_qa46_distribution(df: pd.DataFrame) -> pd.DataFrame:
-    labels = {i: f"QA46 response {i}" for i in range(1, 6)}
+    labels = QA46_LABELS
     groups = [
         ("All respondents", df),
         ("Never users", df[df["user_subgroup"] == "Never User"]),
