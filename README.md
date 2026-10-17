@@ -49,12 +49,12 @@ The 1,263 respondents are partitioned into three mutually exclusive, verified su
 | :--- | :--- | :---: | :---: | :--- |
 | **Never-Users** | `Ever Ordered == 0` AND `Order Frequency == 1 (Never)` | 376 | 29.8% | Routed to QA 48 (reasons for non-use); QA 47 coded 6 (Not Applicable). QA 46 & 49 substantive. |
 | **Previous Users** | `Ever Ordered == 1` AND `Order Frequency == 1 (Never)` | 80 | 6.3% | Lapsed users reporting no current orders. Routed to QA 48; QA 47 coded 6 (Not Applicable). Historical satisfaction unobserved. QA 46 & 49 substantive. |
-| **Current Active Users** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.9% | Active shoppers. QA 47 substantive (1–5 scale: continuation if discounts reduced). QA 48 coded skip flag (1). QA 46 & 49 substantive. |
+| **Current Active Users** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.9% | Active shoppers. QA 47 substantive (1–5 scale: Definitely no to Definitely yes). QA 48 holds binary indicator `Reason Not Applicable Current User == 1`. QA 46 & 49 substantive. |
 | **Total Sample** | Full workbook manifest | **1,263** | **100.0%** | **Physical nulls = 0; duplicate rows = 0.** |
 
 ### Mandatory Questionnaire Semantics
 - **QA 46 (Next 3 Month Use):** Measures stated future-use intention across all 1,263 respondents (1 = Definitely will not, 5 = Definitely will).
-- **QA 47 (Continue If Discounts Reduced):** Evaluates post-promotional resilience strictly among the 807 current active users (1 = Strongly disagree, 5 = Strongly agree). Code 6 is an explicit questionnaire routing code ("Not Applicable") for the 456 non-current users; it must **never** be coded as churn or negative sentiment.
+- **QA 47 (Continue If Discounts Reduced):** Evaluates post-promotional resilience strictly among the 807 current active users (1 = Definitely no, 5 = Definitely yes). Code 6 is an explicit questionnaire routing code ("Not Applicable") for the 456 non-current users; it must **never** be coded as churn or negative sentiment.
 - **QA 48 (Reasons for Non-Use):** Multi-response binary flags for non-current users ($n=456$), analyzed with never-users ($n=376$) and previous users ($n=80$) distinguished.
 - **QA 49 (Preferred Improvement):** Substantive single-choice preference across all 1,263 respondents (1–10 scale).
 - **QA 24 (Physical Store Preferences):** Substantive across all 1,263 respondents (no N/A option in codebook).

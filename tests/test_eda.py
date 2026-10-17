@@ -120,6 +120,40 @@ class TestSubgroupDerivationsAndRouting(unittest.TestCase):
         self.assertTrue((qa43_non_curr == 6).all(),
                         "All 456 non-current respondents must have QA 43 Shopping Routine == 6 (Non-use).")
 
+    def test_qa14_first_trial_reason_routing_and_codes(self):
+        """
+        Enforces QA 14 (First Trial Reason) source codebook consistency and routing:
+        - Source codebook defines exactly 8 codes: 1..7 (substantive reasons) and 8 (Not applicable – never used).
+        - No code 9 or any value outside {1..8} may exist.
+        - Ever-users (n=887: 807 current active + 80 previous users) must strictly hold substantive codes in {1..7}.
+        - Never-users (n=376) must strictly hold Code 8 (Not applicable – never used).
+        - No ever-user may hold Code 8, and no never-user may hold codes 1..7.
+        """
+        qa14 = self.df['First Trial Reason']
+
+        # 1. Global domain check: values must be in {1..8}, absolutely no code 9
+        self.assertTrue(qa14.isin(range(1, 9)).all(),
+                        "QA 14 (First Trial Reason) values must fall strictly within {1..8}.")
+        self.assertFalse((qa14 == 9).any(),
+                         "Code 9 does not exist in source codebook or dataset and must not appear in QA 14.")
+
+        never_mask = self.df['user_subgroup'] == 'Never User'
+        ever_mask = self.df['user_subgroup'].isin(['Current Active User', 'Previous User'])
+
+        # 2. Never-users (n=376) must strictly hold Code 8
+        never_qa14 = self.df.loc[never_mask, 'First Trial Reason']
+        self.assertEqual(len(never_qa14), 376, "Never-users must total exactly 376.")
+        self.assertTrue((never_qa14 == 8).all(),
+                        "All 376 never-users must have QA 14 coded 8 ('Not applicable – never used').")
+
+        # 3. Ever-users (n=887) must strictly hold substantive trial codes {1..7}
+        ever_qa14 = self.df.loc[ever_mask, 'First Trial Reason']
+        self.assertEqual(len(ever_qa14), 887, "Ever-users (807 current + 80 previous) must total exactly 887.")
+        self.assertTrue(ever_qa14.isin(range(1, 8)).all(),
+                        "All 887 ever-users must have QA 14 substantive trial codes in {1..7}.")
+        self.assertFalse((ever_qa14 == 8).any(),
+                         "Code 8 ('Not applicable') must never appear among ever-users.")
+
 
 class TestAggregateOutputIntegrity(unittest.TestCase):
     """Test suite validating that all aggregate analytical tables and figures exist and meet standards."""

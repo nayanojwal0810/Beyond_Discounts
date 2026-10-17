@@ -40,10 +40,15 @@
    *Analytical Implication:* In this sample, high ordering frequency or higher spend does not monotonically track stated discount continuation intention. However, lack of linear correlation does not prove mathematical orthogonality, establish a latent factor, or rule out non-linear relationships. Exploratory multi-dimensional segmentation remains an appropriate next step to examine whether multivariate profiles reveal meaningful customer patterns.
 4. **Adoption vs Non-Use Barrier Endorsements (QA 48, $n = 456$):**
    Never-users ($n=376$) and previous users ($n=80$) endorse similar barrier rankings: physical store preference ($48.67\%$ vs $41.25\%$), preference for physical product inspection ($40.16\%$ vs $35.00\%$), and perceived high pricing ($32.18\%$ vs $38.75\%$). While Fisher's exact tests show no statistically significant divergence ($p > 0.15$), the small sample size of the previous-user cohort ($n=80$) confers low statistical power; non-significance cannot be taken as proof of group equivalence. Furthermore, QA 48 records descriptive barriers to current use, which cannot be assumed to represent the historical causal triggers of a user's initial lapse.
-5. **Beyond Discounts Roadmap (QA 49, $N = 1,263$):**
-   While lower prices ($17.42\%$) and discounts ($13.78\%$) are prominent, **over $60\%$** of all respondents identify non-discount improvements—delivery fee reduction ($14.33\%$), product freshness/quality ($12.11\%$), inventory availability ($9.74\%$), and delivery speed ($7.28\%$)—as their primary trigger for increased adoption.
-6. **Sampling and Representativeness Disclosure:**
-   Fieldwork dates, the sampling frame, and respondent recruitment mechanisms remain unverified in the local source bundle. The observed sample represents an urban, educated, digitally connected respondent group. National representativeness cannot be claimed.
+5. **Preferred Improvement Priorities (QA 49, $N = 1,263$):**
+   Across the full sample, $31.20\%$ of respondents ($n = 394$) select direct price or promotional reductions as their single preferred improvement (Option 1 lower product prices: $17.42\%$, $n = 220$; Option 2 more discounts/coupons: $13.78\%$, $n = 174$).
+   The remaining majority—approximately $64.29\%$ ($n = 812$)—select options other than product price discounts (Options 3–9):
+   - **Cost-Related Delivery Fee Reductions (Option 3):** $14.33\%$ ($n = 181$) prefer lower or waived delivery fees.
+   - **Purely Service and Operational Enhancements (Options 4–9):** $49.96\%$ ($n = 631$) prioritize non-price service factors, led by better product quality and freshness ($12.11\%$, $n = 153$), more reliable product availability / less stockouts ($9.74\%$, $n = 123$), expanded local service availability ($7.44\%$, $n = 94$), faster delivery times ($7.28\%$, $n = 92$), wider assortment ($7.13\%$, $n = 90$), and improved customer support/refunds ($6.25\%$, $n = 79$).
+   - *(Option 10: None / no intention to use accounts for $4.51\%$, $n = 57$).*
+   These figures reflect respondents' stated preferred improvement options, not proven causal triggers of increased adoption or retention.
+6. **Sampling Frame and Representativeness Disclosure:**
+   The recruitment method, sampling frame, and survey fieldwork dates remain unverified in the local source bundle. The observed sample composition is heavily degree-educated ($86.86\%$) and concentrated in urban centers ($71.81\%$ Metro/Tier-1 cities). Because the sampling design cannot be verified from source documentation, neither a probability nor a non-probability sampling design can be asserted. National representativeness has not been established.
 
 ---
 
@@ -88,7 +93,7 @@ Demographic variables were analyzed across the entire survey manifest ($N = 1,26
   Geographically concentrated in urban hubs: Metro cities account for $44.73\%$ ($n=565$), Tier-1 cities $27.08\%$ ($n=342$), Tier-2 cities $17.34\%$ ($n=219$), and Tier-3/Rural $10.85\%$ ($n=137$). Regionally, North India ($36.82\%$, $n=465$) and South India ($31.67\%$, $n=400$) dominate, followed by West India ($16.31\%$, $n=206$) and East India ($10.29\%$, $n=130$).
 
 > [!WARNING]
-> **Representativeness Boundary:** The demographic composition reflects an educated, urban, digitally literate non-probability sample. These findings must **not** be extrapolated as a nationally representative census of the Indian population.
+> **Sample Composition and Provenance Boundary:** The observed sample is heavily educated ($86.86\%$ holding undergraduate, postgraduate, or doctoral degrees) and concentrated in urban centers ($71.81\%$ residing in metro or Tier-1 cities). However, the underlying recruitment method, sampling frame, and survey fieldwork dates remain unverified in the source bundle. Because the sampling methodology cannot be independently verified from the source documentation, neither a probability nor a non-probability sampling design can be asserted without evidence. National representativeness has not been established, and findings must not be extrapolated as a representative census of the Indian population.
 
 ![Figure 2: Demographics Overview](figures/fig2_demographics_overview.png)
 
@@ -284,21 +289,61 @@ Evaluated across all 10 non-use barrier dimensions ([`qa48_non_user_barriers_com
 ![Figure 6: QA 48 Barriers](figures/fig6_qa48_non_use_barriers.png)
 
 ### C. Preferred Improvements (QA 49, $N = 1,263$)
-Evaluated across all respondents ([`qa49_improvements_by_subgroup.csv`](tables/qa49_improvements_by_subgroup.csv)):
-- Top 3 improvements for **Current Active Users ($n=807$)**:
+Evaluated across all 1,263 respondents using the verified aggregate distributions in [`qa49_improvements_by_subgroup.csv`](tables/qa49_improvements_by_subgroup.csv):
+
+#### Transparent Full-Sample Calculation ($N = 1,263$)
+QA 49 records each respondent's single preferred improvement. The choices partition into distinct value propositions:
+1. **Direct Product Price & Coupon Discounts (Options 1–2):** $31.20\%$ ($n = 394$)
+   - Option 1 (Lower product prices): $17.42\%$ ($n = 220$)
+   - Option 2 (More discounts and coupons): $13.78\%$ ($n = 174$)
+2. **Choices Other Than Product Price & Coupon Discounts (Options 3–9):** $64.29\%$ ($n = 812$)
+   This category includes both cost-related delivery fee reductions and non-price service/operational enhancements:
+   - **Cost-Related Delivery Fee Reductions (Option 3):** $14.33\%$ ($n = 181$) select lower or no delivery fees.
+   - **Purely Service & Operational Enhancements (Options 4–9):** $49.96\%$ ($n = 631$) prioritize non-price service dimensions:
+     * Option 4 (Better product quality and freshness): $12.11\%$ ($n = 153$)
+     * Option 6 (More reliable product availability / less out-of-stock): $9.74\%$ ($n = 123$)
+     * Option 9 (Service availability in my area): $7.44\%$ ($n = 94$)
+     * Option 7 (Faster delivery times): $7.28\%$ ($n = 92$)
+     * Option 5 (Wider product range / assortment): $7.13\%$ ($n = 90$)
+     * Option 8 (Better refunds / customer support): $6.25\%$ ($n = 79$)
+3. **No Intention to Use / None (Option 10):** $4.51\%$ ($n = 57$)
+
+*Analytical Interpretation:* While $64.29\%$ of respondents select choices other than lower product prices and coupons (Options 3–9), this group includes lower delivery fees ($14.33\%$), which is itself a cost-related consideration. When evaluating purely operational and service enhancements (Options 4–9: quality/freshness, assortment, availability, speed, customer support, service availability) separately from delivery fees, they account for $49.96\%$ of all respondents ($n = 631$), rather than exceeding $60\%$. These distributions capture respondents' stated single preferred improvement options, not proven causal triggers of adoption or retention.
+
+#### Subgroup Preference Rankings
+- **Current Active Users ($n=807$)**:
   1. Lower product prices: $17.97\%$ ($n=145$)
   2. More discounts and coupons: $14.87\%$ ($n=120$)
   3. Lower / no delivery fees: $12.89\%$ ($n=104$)
   4. Better product quality & freshness: $11.52\%$ ($n=93$)
-  5. Reliable product availability (no stockout): $10.90\%$ ($n=88$)
-- Top 3 improvements for **Previous Users ($n=80$)**:
+  5. More reliable product availability: $10.90\%$ ($n=88$)
+  6. Service availability in my area: $8.30\%$ ($n=67$)
+  7. Wider product range / assortment: $6.94\%$ ($n=56$)
+  8. Faster delivery times: $6.82\%$ ($n=55$)
+  9. Better refunds / customer support: $5.70\%$ ($n=46$)
+  10. None / no intention to use: $4.09\%$ ($n=33$)
+- **Previous Users ($n=80$)**:
   1. Lower product prices: $18.75\%$ ($n=15$)
   2. Lower / no delivery fees: $18.75\%$ ($n=15$)
-  3. Reliable availability: $10.00\%$ ($n=8$)
-- Top 3 improvements for **Never-Users ($n=376$)**:
+  3. More reliable product availability: $10.00\%$ ($n=8$)
+  4. More discounts and coupons: $8.75\%$ ($n=7$)
+  5. Better product quality & freshness: $8.75\%$ ($n=7$)
+  6. Wider product range: $8.75\%$ ($n=7$)
+  7. Faster delivery times: $8.75\%$ ($n=7$)
+  8. Better refunds / support: $7.50\%$ ($n=6$)
+  9. Service availability: $5.00\%$ ($n=4$)
+  10. None / no intention to use: $5.00\%$ ($n=4$)
+- **Never-Users ($n=376$)**:
   1. Lower / no delivery fees: $16.49\%$ ($n=62$)
   2. Lower product prices: $15.96\%$ ($n=60$)
-  3. Better product quality: $14.10\%$ ($n=53$)
+  3. Better product quality & freshness: $14.10\%$ ($n=53$)
+  4. More discounts and coupons: $12.50\%$ ($n=47$)
+  5. Faster delivery times: $7.98\%$ ($n=30$)
+  6. Wider product range: $7.18\%$ ($n=27$)
+  7. More reliable product availability: $7.18\%$ ($n=27$)
+  8. Better refunds / support: $7.18\%$ ($n=27$)
+  9. Service availability in area: $6.12\%$ ($n=23$)
+  10. None / no intention to use: $5.32\%$ ($n=20$)
 
 ![Figure 7: QA 49 Improvement Priorities](figures/fig7_qa49_improvement_priorities.png)
 
@@ -306,21 +351,26 @@ Evaluated across all respondents ([`qa49_improvements_by_subgroup.csv`](tables/q
 
 ## 9. Customer Segmentation Feasibility Assessment
 
-### Core Feasibility Determination: **FEASIBLE WITH MULTI-STAGE STRATIFICATION**
+### Feasibility Determination: **CANDIDATE FOR EMPIRICAL TESTING (SUBJECT TO PRINCIPAL APPROVAL)**
 
-Customer segmentation is **empirically feasible**, but cannot be executed as a naive one-step clustering across all 1,263 rows. The dataset exhibits distinct structural partitions that require a disciplined analytical architecture:
+Customer segmentation has **not** been performed at Gate 1A. However, exploratory data analysis indicates that the 807 current active users provide a viable candidate population for a separately approved empirical segmentation experiment.
+
+The dataset exhibits distinct questionnaire routing and eligibility partitions that require a disciplined two-step architecture if segmentation modeling is subsequently approved:
 
 ```mermaid
 graph TD
-    A["Total Survey Sample (N = 1,263)"] --> B["Never-Users (n = 376, 29.8%)<br>Strategic Acquisition Segment"]
-    A --> C["Previous Users (n = 80, 6.3%)<br>Strategic Reactivation Segment"]
-    A --> D["Current Active Users (n = 807, 63.9%)<br>Core Empirical CRM Clustering Base"]
-    D --> E["Cluster Model (LCA / FAMD + HAC)"]
-    E --> F["Segment 1: Convenience-Anchored Inelastics"]
-    E --> G["Segment 2: Value-Seeking Threshold Optimizers"]
-    E --> H["Segment 3: Emergency / Occasional Top-Up Users"]
-    E --> I["Segment 4: Subsidy-Dependent Churn Vulnerables"]
+    A["Total Survey Sample (N = 1,263)"] --> B["Never-Users (n = 376, 29.8%)<br>Non-User Subgroup (Descriptive Profile)"]
+    A --> C["Previous Users (n = 80, 6.3%)<br>Previous User Subgroup (Descriptive Profile)"]
+    A --> D["Current Active Users (n = 807, 63.9%)<br>Candidate Base for Empirical Segmentation Testing"]
+    D --> E["Proposed Future Clustering Model<br>(Requires Principal Gate 1B Approval)"]
+    E --> F["Hypothesized Profile A<br>(High continuation resilience / convenience focus)"]
+    E --> G["Hypothesized Profile B<br>(Moderate resilience / basket optimizer)"]
+    E --> H["Hypothesized Profile C<br>(Occasional / top-up need-driven)"]
+    E --> I["Hypothesized Profile D<br>(Lower continuation resilience / price-sensitive)"]
 ```
+
+> [!NOTE]
+> **Status of Segment Profiles:** The four candidate profiles shown above represent *conceptual hypotheses* to guide feature selection and future empirical testing. They are **not** discovered customer segments, nor have cluster models been fitted to the data. Whether managerially useful, statistically distinct customer segments exist within the 807 current active users must be established through subsequent modeling and cluster validation, subject to Principal Project Lead approval.
 
 ### Strategic Segmentation Perspectives & Candidate Features
 Evaluated in [`segmentation_feature_candidates.csv`](tables/segmentation_feature_candidates.csv) and visualized in [`fig8_segmentation_feature_landscape.png`](figures/fig8_segmentation_feature_landscape.png):
@@ -340,9 +390,9 @@ Evaluated in [`segmentation_feature_candidates.csv`](tables/segmentation_feature
 
 ![Figure 8: Segmentation Feature Landscape](figures/fig8_segmentation_feature_landscape.png)
 
-### Methodological Justification: Why Two-Step Stratification is Mandatory
+### Methodological Justification: Why Two-Step Stratification is Recommended
 1. **Avoiding Sparsity / Routing Artifacts:** Pooling non-current users ($n=456$) into a single clustering algorithm would create artificial clusters driven entirely by questionnaire skip codes (e.g., Code 6 on QA 47, Code 6 on satisfaction, skip flags on QA 48) rather than genuine consumer attitudes.
-2. **Distinct Decision Horizons:** Never-users represent an **Acquisition / Top-of-Funnel** problem (overcoming touch/feel barriers). Lapsed users represent a **Win-Back / Fee Transparency** problem. Active users represent a **Non-Discount Retention / Lifetime Value** problem. Conflating them into a single segmentation obscures the business application.
+2. **Distinct Business Contexts:** Never-users represent an acquisition and category trial problem (overcoming touch/feel barriers). Previous users represent a lapsed reactivation and transparency problem. Active users represent a retention and post-promotional engagement problem. Treating the 807 current active users as the primary base for segmentation testing isolates genuine attitudinal and behavioral heterogeneity without conflating routing codes.
 
 ---
 
@@ -350,10 +400,10 @@ Evaluated in [`segmentation_feature_candidates.csv`](tables/segmentation_feature
 
 ### Material Methodological Limitations
 1. **Stated Perceptions vs Observed Behavior:** QA 46 and QA 47 measure self-reported future intentions. They do not constitute transactional repeat purchase, measured cohort retention, or observed platform churn.
-2. **Exploratory Survey Provenance:** The 1,263 respondents form an educated, urban non-probability sample. Findings cannot be claimed as nationally representative benchmarks.
+2. **Unverified Recruitment and Sampling Frame:** The recruitment method, sampling frame, and survey fieldwork dates are not documented or verified in the local source bundle. Observed descriptive statistics indicate a cohort that is largely degree-educated ($86.86\%$) and urban ($71.81\%$ Metro/Tier-1), but neither a probability nor a non-probability sampling design can be asserted without supporting evidence. National representativeness has not been established; findings describe the observed cross-sectional survey sample and cannot be generalized as a national census.
 3. **Absence of Historical Satisfaction for Lapsed Cohort:** Previous users ($n=80$) skipped satisfaction questions (QA 37–40); reasons for their lapse must be inferred from QA 48 barriers and QA 26 spend history, not measured dissatisfaction scores.
 4. **Industry-Wide Scope:** Findings apply to the Indian quick-commerce category in aggregate; no claims can be made regarding platform-specific retention for Blinkit, Zepto, or Instamart.
-5. **Unverified Fieldwork & Sampling Frame:** Recruitment mechanisms and sampling frames remain unverified in the local source bundle. Descriptive claims apply strictly to the observed dataset.
+5. **Exploratory Status of Segmentation:** Customer segmentation has not yet been executed. The feasibility findings indicate that the 807 current active users provide an eligible population for potential empirical segmentation, but the existence, validity, and operational value of customer segments remain hypotheses to be tested.
 
 ### Formal Decisions Requiring Principal Project Lead Approval
 

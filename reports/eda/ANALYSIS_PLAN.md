@@ -30,8 +30,8 @@ The EDA pipeline must reproducibly compute and report the following empirical ba
   * Previous Users (no current orders): $n = 80$ ($6.33\%$)
   * Current Active Users: $n = 807$ ($63.89\%$)
 - Questionnaire routing audits:
-  * QA 47: Exactly 807 current users in $\{1..5\}$, exactly 456 non-current users coded 6.
-  * QA 48: Exactly 456 non-current users reporting reasons, 807 current users holding skip flag 11.
+  * QA 47: Exactly 807 current users in {1..5}, exactly 456 non-current users coded 6.
+  * QA 48: Exactly 456 non-current users reporting reasons, 807 current users holding binary indicator `Reason Not Applicable Current User == 1`.
   * QA 46 & QA 49: Universal coverage ($1,263$ substantive responses).
   * QA 26: $456$ respondents at Code 1 (₹0 monthly spend).
 
