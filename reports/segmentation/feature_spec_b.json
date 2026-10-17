@@ -100,26 +100,26 @@
         1.0,
         6.0
       ],
-      "special_codes": "Source codes 2\u20137 map monotonically to ranks 1.0\u20136.0. Code 8 ('Not sure', n=24) is structurally undefined on the ordinal spend scale and encoded as NaN. It must NOT be assigned an arbitrary ordinal rank or imputed median. Uncertainty is captured separately by monthly_spend_not_sure.",
-      "description": "Typical monthly quick-commerce spend brackets 2\u20137 mapped monotonically to ranks 1.0\u20136.0. Special response Code 8 ('Not sure') has no ordinal rank (NaN)."
+      "special_codes": "Source codes 2\u20137 map monotonically to ranks 1.0\u20136.0. Code 8 ('Not sure', n=24) is structurally undefined on the ordinal spend scale and encoded as NaN. In pairwise Gower distance, if either respondent has Code 8, omit the QA26 ordinal component from the distance denominator (delta_ijk=0). Uncertainty is captured separately by asymmetric binary feature monthly_spend_not_sure.",
+      "description": "Typical monthly quick-commerce spend brackets 2\u20137 mapped monotonically to ranks 1.0\u20136.0. Special response Code 8 ('Not sure') has no ordinal rank (NaN) and is omitted from pairwise comparison."
     },
     {
       "feature_id": "feat_05",
       "name": "monthly_spend_not_sure",
       "question_id": "QA 26",
       "source_column": "Monthly Spend",
-      "data_type": "binary_indicator",
+      "data_type": "asymmetric_binary",
       "active_domain": [
         0,
         1
       ],
-      "encoding": "binary_flag",
+      "encoding": "asymmetric_binary_flag",
       "range": [
         0,
         1
       ],
-      "special_codes": "1 if Monthly Spend == 8 ('Not sure', n=24), 0 otherwise.",
-      "description": "Explicit non-ordinal indicator preserving spending uncertainty without distorting distance metrics."
+      "special_codes": "1 if Monthly Spend == 8 ('Not sure', n=24), 0 otherwise. Evaluated as an asymmetric binary variable in Gower distance: (0, 0) pairs are omitted from the distance denominator (delta_ijk=0); (1, 1) pairs match (delta_ijk=1, s_ijk=1); (1, 0) or (0, 1) pairs differ (delta_ijk=1, s_ijk=0).",
+      "description": "Asymmetric binary indicator for spending uncertainty. Joint absence (0, 0) is omitted from the distance denominator, ensuring ordinary spenders are compared solely on spend magnitude without artificial similarity inflation."
     },
     {
       "feature_id": "feat_06",
@@ -139,26 +139,26 @@
         1.0,
         5.0
       ],
-      "special_codes": "Codes 1\u20135 map to ordinal ranks 1.0\u20135.0. Code 6 ('Varies considerably', n=100) is structurally undefined on the ordinal basket-size scale and encoded as NaN. It must NOT be assigned an arbitrary ordinal rank or imputed median. Volatility is captured separately by items_varies_considerably.",
-      "description": "Typical items per order from 1 item (rank 1.0) to >10 items (rank 5.0). Special response Code 6 ('Varies considerably') has no ordinal rank (NaN)."
+      "special_codes": "Codes 1\u20135 map to ordinal ranks 1.0\u20135.0. Code 6 ('Varies considerably', n=100) is structurally undefined on the ordinal basket-size scale and encoded as NaN. In pairwise Gower distance, if either respondent has Code 6, omit the QA19 ordinal component from the distance denominator (delta_ijk=0). Volatility is captured separately by asymmetric binary feature items_varies_considerably.",
+      "description": "Typical items per order from 1 item (rank 1.0) to >10 items (rank 5.0). Special response Code 6 ('Varies considerably') has no ordinal rank (NaN) and is omitted from pairwise comparison."
     },
     {
       "feature_id": "feat_07",
       "name": "items_varies_considerably",
       "question_id": "QA 19",
       "source_column": "Items per Order",
-      "data_type": "binary_indicator",
+      "data_type": "asymmetric_binary",
       "active_domain": [
         0,
         1
       ],
-      "encoding": "binary_flag",
+      "encoding": "asymmetric_binary_flag",
       "range": [
         0,
         1
       ],
-      "special_codes": "1 if Items per Order == 6 ('Varies considerably', n=100), 0 otherwise.",
-      "description": "Explicit non-ordinal indicator capturing basket size volatility."
+      "special_codes": "1 if Items per Order == 6 ('Varies considerably', n=100), 0 otherwise. Evaluated as an asymmetric binary variable in Gower distance: (0, 0) pairs are omitted from the distance denominator (delta_ijk=0); (1, 1) pairs match (delta_ijk=1, s_ijk=1); (1, 0) or (0, 1) pairs differ (delta_ijk=1, s_ijk=0).",
+      "description": "Asymmetric binary indicator capturing basket size volatility. Joint absence (0, 0) is omitted from the distance denominator, ensuring ordinary basket-size respondents are compared solely on basket rank without artificial similarity inflation."
     },
     {
       "feature_id": "feat_08",
@@ -462,7 +462,22 @@
   "recommended_clustering_methodology": {
     "method": "Gower Distance Matrix + Partitioning Around Medoids (PAM)",
     "alternative": "Hierarchical Agglomerative Clustering (HAC) with Gower Distance",
-    "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating binary indicators (s_ijk) for volatility/uncertainty.",
-    "rationale": "Respects mixed ordinal, nominal, and binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
+    "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating asymmetric binary indicators (items_varies_considerably, monthly_spend_not_sure) to avoid inflating similarity for ordinary (0, 0) pairs.",
+    "pairwise_gower_contract": {
+      "distance_formula": "D_ij = 1 - (sum_k w_k * s_ijk * delta_ijk) / (sum_k w_k * delta_ijk)",
+      "denominator_rule": "Sum only feature weights for components eligible to contribute to that respondent pair. Jointly absent asymmetric binary flags (0, 0) and undefined ordinal components must not enter the denominator. If a pair has no comparable features at all (denominator == 0), fail clearly with ValueError rather than silently returning a misleading distance.",
+      "qa19_basket_size_contract": {
+        "ordinary_ordinary": "If both respondents have defined QA19 ordinal ranks (source codes 1-5), compare those ranks using documented ordinal distance (range=4.0). items_varies_considerably is (0, 0), omitted from denominator (delta=0). Effective construct weight = 1.0.",
+        "special_special": "If both respondents have Code 6 ('Varies considerably'), ordinal rank is NaN for both, omitted from denominator (delta=0). items_varies_considerably is (1, 1), included as match (delta=1, s=1). Effective construct weight = 1.0.",
+        "ordinary_special": "If either respondent has Code 6 while the other has Code 1-5, ordinal rank is omitted (delta=0). items_varies_considerably is (1, 0) or (0, 1), included as mismatch (delta=1, s=0). Effective construct weight = 1.0."
+      },
+      "qa26_monthly_spend_contract": {
+        "ordinary_ordinary": "If both respondents have defined spend responses (source codes 2-7), compare ordinal spend ranks (1-6, range=5.0). monthly_spend_not_sure is (0, 0), omitted from denominator (delta=0). Effective construct weight = 1.0.",
+        "special_special": "If both respondents have Code 8 ('Not sure'), ordinal spend rank is NaN for both, omitted from denominator (delta=0). monthly_spend_not_sure is (1, 1), included as match (delta=1, s=1). Effective construct weight = 1.0.",
+        "ordinary_special": "If either respondent has Code 8 while the other has Code 2-7, ordinal spend rank is omitted (delta=0). monthly_spend_not_sure is (1, 0) or (0, 1), included as mismatch (delta=1, s=0). Effective construct weight = 1.0."
+      },
+      "construct_weight_invariance": "For every respondent pair, the QA19 construct contributes exactly 1.0 to the denominator weight, and the QA26 construct contributes exactly 1.0 to the denominator weight. Special-response flags are prevented from redundantly increasing similarity for ordinary (0, 0) pairs."
+    },
+    "rationale": "Respects mixed ordinal, nominal, and asymmetric binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
   }
 }

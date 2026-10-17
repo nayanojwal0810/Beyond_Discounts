@@ -38,6 +38,7 @@ from scripts.prepare_segmentation_features import (
     get_column_metadata_mapping,
     get_codebook_domains,
     validate_survey_domains,
+    compute_pairwise_gower_distance,
     DEFAULT_SURVEY_PATH,
     DEFAULT_SHEET,
     EXPECTED_TOTAL_ROWS,
@@ -345,6 +346,222 @@ class TestSegmentationFeatures(unittest.TestCase):
             self.assertIn('active', codebook_domains[col])
             self.assertGreater(len(codebook_domains[col]['source']), 0)
             self.assertGreater(len(codebook_domains[col]['active']), 0)
+
+
+class TestPairwiseGowerContract(unittest.TestCase):
+    """
+    Focused unit tests for Gate 1C Gower pairwise feature-weighting and distance contract.
+    Tests verify:
+    - QA19 basket size: ordinary/ordinary, special/special, ordinary/special.
+    - QA26 monthly spend: ordinary/ordinary, special/special, ordinary/special.
+    - Asymmetric binary rules: (0, 0) omitted from denominator, (1, 1) match, (1, 0) mismatch.
+    - Construct weight invariance across all respondent pair combinations.
+    - Symmetry, identity, boundedness [0, 1].
+    - Zero denominator failure with clear ValueError.
+    - Machine-readable specification typing as asymmetric_binary.
+    """
+
+    def setUp(self):
+        self.qa19_ord = {
+            "name": "items_per_order_ordinal",
+            "feature_id": "feat_06",
+            "data_type": "ordinal",
+            "range": [1.0, 5.0]  # R = 4.0
+        }
+        self.qa19_asym = {
+            "name": "items_varies_considerably",
+            "feature_id": "feat_07",
+            "data_type": "asymmetric_binary",
+            "range": [0, 1]
+        }
+        self.qa26_ord = {
+            "name": "monthly_spend_ordinal",
+            "feature_id": "feat_04",
+            "data_type": "ordinal",
+            "range": [1.0, 6.0]  # R = 5.0
+        }
+        self.qa26_asym = {
+            "name": "monthly_spend_not_sure",
+            "feature_id": "feat_05",
+            "data_type": "asymmetric_binary",
+            "range": [0, 1]
+        }
+        self.baseline_ord = {
+            "name": "order_spend",
+            "feature_id": "feat_03",
+            "data_type": "ordinal",
+            "range": [1.0, 7.0]  # R = 6.0
+        }
+
+    def test_01_qa19_ordinary_ordinary_pair(self):
+        """Ordinary/Ordinary QA19: ordinal ranks compared, (0, 0) flag omitted from denominator."""
+        r1 = {"items_per_order_ordinal": 2.0, "items_varies_considerably": 0}
+        r2 = {"items_per_order_ordinal": 4.0, "items_varies_considerably": 0}
+
+        dist, num, den = compute_pairwise_gower_distance(
+            r1, r2, [self.qa19_ord, self.qa19_asym], return_details=True
+        )
+        # Denominator must ONLY sum eligible feature weights: 1.0 (ordinal), flag (0,0) is omitted (0.0)
+        self.assertEqual(den, 1.0, "QA19 Ordinary/Ordinary pair must have denominator = 1.0, NOT 2.0")
+        # Ordinal distance: |2 - 4| / 4.0 = 0.5 -> similarity = 0.5 -> distance = 0.5
+        self.assertAlmostEqual(num, 0.5)
+        self.assertAlmostEqual(dist, 0.5)
+
+    def test_02_qa19_special_special_pair(self):
+        """Special/Special QA19: ordinal omitted (NaN), (1, 1) flag included as match."""
+        r1 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 1}
+        r2 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 1}
+
+        dist, num, den = compute_pairwise_gower_distance(
+            r1, r2, [self.qa19_ord, self.qa19_asym], return_details=True
+        )
+        self.assertEqual(den, 1.0, "QA19 Special/Special pair must have denominator = 1.0")
+        self.assertAlmostEqual(num, 1.0, "Special/Special flag match must have numerator = 1.0")
+        self.assertAlmostEqual(dist, 0.0, "Identical special volatility must have distance = 0.0")
+
+    def test_03_qa19_ordinary_special_pair(self):
+        """Ordinary/Special QA19: ordinal omitted (one NaN), (0, 1) flag included as mismatch."""
+        r1 = {"items_per_order_ordinal": 3.0, "items_varies_considerably": 0}
+        r2 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 1}
+
+        dist, num, den = compute_pairwise_gower_distance(
+            r1, r2, [self.qa19_ord, self.qa19_asym], return_details=True
+        )
+        self.assertEqual(den, 1.0, "QA19 Ordinary/Special pair must have denominator = 1.0")
+        self.assertAlmostEqual(num, 0.0, "Ordinary/Special mismatch must have numerator = 0.0")
+        self.assertAlmostEqual(dist, 1.0, "Ordinary vs Special volatility must have distance = 1.0")
+
+    def test_04_qa26_ordinary_ordinary_pair(self):
+        """Ordinary/Ordinary QA26: ordinal spend ranks compared, (0, 0) flag omitted from denominator."""
+        r1 = {"monthly_spend_ordinal": 2.0, "monthly_spend_not_sure": 0}
+        r2 = {"monthly_spend_ordinal": 5.0, "monthly_spend_not_sure": 0}
+
+        dist, num, den = compute_pairwise_gower_distance(
+            r1, r2, [self.qa26_ord, self.qa26_asym], return_details=True
+        )
+        self.assertEqual(den, 1.0, "QA26 Ordinary/Ordinary pair must have denominator = 1.0, NOT 2.0")
+        # Ordinal distance: |2 - 5| / 5.0 = 0.6 -> similarity = 0.4 -> distance = 0.6
+        self.assertAlmostEqual(num, 0.4)
+        self.assertAlmostEqual(dist, 0.6)
+
+    def test_05_qa26_special_special_pair(self):
+        """Special/Special QA26: ordinal omitted (NaN), (1, 1) flag included as match."""
+        r1 = {"monthly_spend_ordinal": np.nan, "monthly_spend_not_sure": 1}
+        r2 = {"monthly_spend_ordinal": np.nan, "monthly_spend_not_sure": 1}
+
+        dist, num, den = compute_pairwise_gower_distance(
+            r1, r2, [self.qa26_ord, self.qa26_asym], return_details=True
+        )
+        self.assertEqual(den, 1.0, "QA26 Special/Special pair must have denominator = 1.0")
+        self.assertAlmostEqual(num, 1.0, "Special/Special uncertainty match must have numerator = 1.0")
+        self.assertAlmostEqual(dist, 0.0, "Identical uncertainty must have distance = 0.0")
+
+    def test_06_qa26_ordinary_special_pair(self):
+        """Ordinary/Special QA26: ordinal omitted (one NaN), (1, 0) flag included as mismatch."""
+        r1 = {"monthly_spend_ordinal": np.nan, "monthly_spend_not_sure": 1}
+        r2 = {"monthly_spend_ordinal": 4.0, "monthly_spend_not_sure": 0}
+
+        dist, num, den = compute_pairwise_gower_distance(
+            r1, r2, [self.qa26_ord, self.qa26_asym], return_details=True
+        )
+        self.assertEqual(den, 1.0, "QA26 Ordinary/Special pair must have denominator = 1.0")
+        self.assertAlmostEqual(num, 0.0, "Ordinary/Special uncertainty mismatch must have numerator = 0.0")
+        self.assertAlmostEqual(dist, 1.0, "Defined spend vs uncertain spend must have distance = 1.0")
+
+    def test_07_construct_weight_invariance_across_all_pair_types(self):
+        """Verify that across all 9 combinations of ordinary/special across QA19 and QA26, denominator weight is constant."""
+        specs = [self.qa19_ord, self.qa19_asym, self.qa26_ord, self.qa26_asym, self.baseline_ord]
+
+        # 3 candidate respondent profiles:
+        # P1: Ordinary basket (rank 1), Ordinary spend (rank 2), Baseline spend (rank 3)
+        p1 = {"items_per_order_ordinal": 1.0, "items_varies_considerably": 0,
+              "monthly_spend_ordinal": 2.0, "monthly_spend_not_sure": 0, "order_spend": 3.0}
+        # P2: Special basket (Code 6), Ordinary spend (rank 5), Baseline spend (rank 3)
+        p2 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 1,
+              "monthly_spend_ordinal": 5.0, "monthly_spend_not_sure": 0, "order_spend": 3.0}
+        # P3: Special basket (Code 6), Special spend (Code 8), Baseline spend (rank 6)
+        p3 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 1,
+              "monthly_spend_ordinal": np.nan, "monthly_spend_not_sure": 1, "order_spend": 6.0}
+
+        pairs = [(p1, p1), (p1, p2), (p1, p3), (p2, p2), (p2, p3), (p3, p3)]
+
+        for ra, rb in pairs:
+            dist, num, den = compute_pairwise_gower_distance(ra, rb, specs, return_details=True)
+            # In ALL pairs, QA19 contributes 1.0, QA26 contributes 1.0, baseline contributes 1.0 -> total = 3.0
+            self.assertEqual(den, 3.0, f"Denominator must remain invariant at 3.0 for all pair combinations, got {den}")
+            self.assertTrue(0.0 <= dist <= 1.0, f"Distance must be bounded in [0, 1], got {dist}")
+
+    def test_08_mathematical_properties_symmetry_identity_boundedness(self):
+        """Verify symmetry D(r1, r2) == D(r2, r1), identity D(r1, r1) == 0.0, and bounds [0, 1]."""
+        specs = [self.qa19_ord, self.qa19_asym, self.qa26_ord, self.qa26_asym]
+
+        r_ord1 = {"items_per_order_ordinal": 1.0, "items_varies_considerably": 0,
+                  "monthly_spend_ordinal": 3.0, "monthly_spend_not_sure": 0}
+        r_ord2 = {"items_per_order_ordinal": 5.0, "items_varies_considerably": 0,
+                  "monthly_spend_ordinal": 1.0, "monthly_spend_not_sure": 0}
+        r_spec1 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 1,
+                   "monthly_spend_ordinal": np.nan, "monthly_spend_not_sure": 1}
+
+        # Identity
+        self.assertAlmostEqual(compute_pairwise_gower_distance(r_ord1, r_ord1, specs), 0.0)
+        self.assertAlmostEqual(compute_pairwise_gower_distance(r_spec1, r_spec1, specs), 0.0)
+
+        # Symmetry
+        d12 = compute_pairwise_gower_distance(r_ord1, r_ord2, specs)
+        d21 = compute_pairwise_gower_distance(r_ord2, r_ord1, specs)
+        self.assertAlmostEqual(d12, d21, places=7)
+
+        d1s = compute_pairwise_gower_distance(r_ord1, r_spec1, specs)
+        ds1 = compute_pairwise_gower_distance(r_spec1, r_ord1, specs)
+        self.assertAlmostEqual(d1s, ds1, places=7)
+
+        # Boundedness
+        self.assertTrue(0.0 <= d12 <= 1.0)
+        self.assertTrue(0.0 <= d1s <= 1.0)
+
+    def test_09_zero_denominator_fails_clearly(self):
+        """Verify that when a pair has no comparable features, compute_pairwise_gower_distance raises ValueError."""
+        # Two respondents where ordinal is NaN and flags are both 0 (jointly absent asymmetric binary)
+        r_empty1 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 0}
+        r_empty2 = {"items_per_order_ordinal": np.nan, "items_varies_considerably": 0}
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r_empty1, r_empty2, [self.qa19_ord, self.qa19_asym])
+
+        self.assertIn("denominator is zero", str(ctx.exception).lower())
+
+    def test_10_machine_readable_specifications_asymmetric_binary(self):
+        """Verify feature_spec_a.json and feature_spec_b.json declare asymmetric_binary and pairwise contract."""
+        reports_dir = os.path.join("reports", "segmentation")
+        path_a = os.path.join(reports_dir, "feature_spec_a.json")
+        path_b = os.path.join(reports_dir, "feature_spec_b.json")
+
+        self.assertTrue(os.path.exists(path_a), "feature_spec_a.json must exist")
+        self.assertTrue(os.path.exists(path_b), "feature_spec_b.json must exist")
+
+        with open(path_a, "r", encoding="utf-8") as f:
+            spec_a = json.load(f)
+        with open(path_b, "r", encoding="utf-8") as f:
+            spec_b = json.load(f)
+
+        for spec, name in [(spec_a, "Specification A"), (spec_b, "Specification B")]:
+            qa19_flag = next(f for f in spec['features'] if f['name'] == 'items_varies_considerably')
+            qa26_flag = next(f for f in spec['features'] if f['name'] == 'monthly_spend_not_sure')
+
+            self.assertEqual(qa19_flag['data_type'], 'asymmetric_binary',
+                             f"{name}: items_varies_considerably must have data_type 'asymmetric_binary'")
+            self.assertEqual(qa26_flag['data_type'], 'asymmetric_binary',
+                             f"{name}: monthly_spend_not_sure must have data_type 'asymmetric_binary'")
+
+            # Check pairwise_gower_contract presence
+            rec_method = spec.get('recommended_clustering_methodology', {})
+            self.assertIn('pairwise_gower_contract', rec_method,
+                          f"{name}: pairwise_gower_contract must be present in recommended_clustering_methodology")
+            contract = rec_method['pairwise_gower_contract']
+            self.assertIn('denominator_rule', contract)
+            self.assertIn('qa19_basket_size_contract', contract)
+            self.assertIn('qa26_monthly_spend_contract', contract)
+            self.assertIn('construct_weight_invariance', contract)
 
 
 if __name__ == "__main__":

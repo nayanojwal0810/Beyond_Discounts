@@ -18,9 +18,9 @@ Description:
     3. Conducts dynamic invalid-value auditing across all 130 survey columns based on Code Book definitions.
     4. Enforces verified semantic rules:
        - QA 19 (Items per Order): Codes 1-5 map to ordinal ranks 1-5; Code 6 ("Varies considerably")
-         has structurally undefined ordinal rank (NaN) and sets items_varies_considerably = 1.
+         has structurally undefined ordinal rank (NaN) and sets items_varies_considerably = 1 (asymmetric binary).
        - QA 26 (Monthly Spend): Source codes 2-7 map to ordinal ranks 1-6; Code 8 ("Not sure")
-         has structurally undefined ordinal rank (NaN) and sets monthly_spend_not_sure = 1.
+         has structurally undefined ordinal rank (NaN) and sets monthly_spend_not_sure = 1 (asymmetric binary).
        - QA 15 (Order Frequency): Valid ordinal categories 2-7 for active users.
        - QA 14 (First Trial Reason): Nominal categories 1-7 for active users.
        - QA 43 (Shopping Routine Role): Explicitly typed as nominal categorical (1-5).
@@ -356,7 +356,7 @@ def get_column_metadata_mapping():
         'Reason Avoid Travel Queues': ('QA 18', 'Usual order occasion: Avoid travel/queues', 'Binary', 'Current Active Users (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Occasion multi-response; reserved for profiling order contexts without overweighting binary inputs.'),
         'Reason Promotion Discount': ('QA 18', 'Usual order occasion: Promotion/discount', 'Binary', 'Current Active Users (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Occasion multi-response; promo sensitivity captured directly by QA 28/29.'),
         'Reason Not Applicable': ('QA 18', 'Usual order occasion: Skip flag', 'Binary', 'Current Active Users (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for active users; skip routing flag.'),
-        'Items per Order': ('QA 19', 'Typical basket size items', 'Mixed Ordinal/Nominal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 6=Varies (n=100); Code 7=N/A (0)', 'primary_candidate_spec_a_b', 'Audited semantic rule: Codes 1-5 map to ordinal ranks 1-5; Code 6 (Varies considerably, n=100) has structurally undefined ordinal rank (NaN). Handled with separate binary volatility flag items_varies_considerably.'),
+        'Items per Order': ('QA 19', 'Typical basket size items', 'Mixed Ordinal/Nominal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 6=Varies (n=100); Code 7=N/A (0)', 'primary_candidate_spec_a_b', 'Audited semantic rule: Codes 1-5 map to ordinal ranks 1-5; Code 6 (Varies considerably, n=100) has structurally undefined ordinal rank (NaN). Handled with separate asymmetric binary volatility flag items_varies_considerably.'),
         'Expected Delivery': ('QA 20', 'Expected delivery window', 'Mixed Ordinal/Nominal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 6=No expectation (n=68); Code 7=N/A (0)', 'post_cluster_profiling', 'Delivery expectation interval; reserved for profiling. Speed importance captured directly by QA 35 Likert.'),
         'Spontaneous Frequency': ('QA 21', 'Frequency of spontaneous orders', 'Ordinal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'post_cluster_profiling', 'Impulse frequency; correlated with QA 44 (Unplanned purchase) which is retained as primary attitudinal Likert.'),
         'Category Fresh Fruit Veg': ('QA 22', 'Purchased: Fresh fruits/vegetables', 'Binary', 'Current Active Users (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Category adoption dummy; reserved for profiling product mix without bloating feature dimensionality.'),
@@ -387,7 +387,7 @@ def get_column_metadata_mapping():
         'Physical Electronic Accessories': ('QA 24', 'Physical store preference: Electronics', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Physical store channel preference; substantive offline preference, reserved for profiling.'),
         'Physical No Clear Preference': ('QA 24', 'Physical store preference: No clear preference', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Physical store channel preference; substantive offline preference, reserved for profiling.'),
         'Order Spend': ('QA 25', 'Typical single order ticket size', 'Ordinal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 8=N/A (0 in active)', 'primary_candidate_spec_a_b', 'Core monetary ticket size metric; codes 1-7 ordered from Below ₹200 to ₹1,500+.'),
-        'Monthly Spend': ('QA 26', 'Typical monthly quick-commerce spend', 'Mixed Ordinal/Nominal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 1=₹0 (0 in active); Code 8=Not sure (n=24)', 'primary_candidate_spec_a_b', 'Audited semantic rule: Source codes 2-7 map to ordinal ranks 1-6; Code 8 (Not sure, n=24) has structurally undefined ordinal rank (NaN). Handled with separate binary uncertainty flag monthly_spend_not_sure.'),
+        'Monthly Spend': ('QA 26', 'Typical monthly quick-commerce spend', 'Mixed Ordinal/Nominal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 1=₹0 (0 in active); Code 8=Not sure (n=24)', 'primary_candidate_spec_a_b', 'Audited semantic rule: Source codes 2-7 map to ordinal ranks 1-6; Code 8 (Not sure, n=24) has structurally undefined ordinal rank (NaN). Handled with separate asymmetric binary uncertainty flag monthly_spend_not_sure.'),
         'Total Spending Change': ('QA 27', 'Perceived total spend change vs baseline', 'Ordinal', 'Current Active Users (n=807)', 807, 807, 0, 'Code 5=Not sure; Code 6=N/A (0)', 'post_cluster_profiling', 'Self-reported perceived wallet evolution; reserved for profiling.'),
         'Discount Overspend': ('QA 28', 'Discounts cause overspending', 'Ordinal Likert', 'Current Active Users (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'primary_candidate_spec_a_b', 'Key deal-proneness and promo-driven basket inflation metric; Likert 1-5 (Never to Very often).'),
         'Threshold Extra Items': ('QA 29', 'Add items to reach free delivery threshold', 'Ordinal Likert', 'Current Active Users (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'primary_candidate_spec_a_b', 'Direct proxy for delivery fee sensitivity and threshold gaming; Likert 1-5 (Never to Very often). Distinct construct from QA 28 (r=0.06).'),
@@ -655,20 +655,20 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5, 6],
             "encoding": "substantive_spend_rank_with_undefined_special",
             "range": [1.0, 6.0],
-            "special_codes": "Source codes 2–7 map monotonically to ranks 1.0–6.0. Code 8 ('Not sure', n=24) is structurally undefined on the ordinal spend scale and encoded as NaN. It must NOT be assigned an arbitrary ordinal rank or imputed median. Uncertainty is captured separately by monthly_spend_not_sure.",
-            "description": "Typical monthly quick-commerce spend brackets 2–7 mapped monotonically to ranks 1.0–6.0. Special response Code 8 ('Not sure') has no ordinal rank (NaN)."
+            "special_codes": "Source codes 2–7 map monotonically to ranks 1.0–6.0. Code 8 ('Not sure', n=24) is structurally undefined on the ordinal spend scale and encoded as NaN. In pairwise Gower distance, if either respondent has Code 8, omit the QA26 ordinal component from the distance denominator (delta_ijk=0). Uncertainty is captured separately by asymmetric binary feature monthly_spend_not_sure.",
+            "description": "Typical monthly quick-commerce spend brackets 2–7 mapped monotonically to ranks 1.0–6.0. Special response Code 8 ('Not sure') has no ordinal rank (NaN) and is omitted from pairwise comparison."
         },
         {
             "feature_id": "feat_05",
             "name": "monthly_spend_not_sure",
             "question_id": "QA 26",
             "source_column": "Monthly Spend",
-            "data_type": "binary_indicator",
+            "data_type": "asymmetric_binary",
             "active_domain": [0, 1],
-            "encoding": "binary_flag",
+            "encoding": "asymmetric_binary_flag",
             "range": [0, 1],
-            "special_codes": "1 if Monthly Spend == 8 ('Not sure', n=24), 0 otherwise.",
-            "description": "Explicit non-ordinal indicator preserving spending uncertainty without distorting distance metrics."
+            "special_codes": "1 if Monthly Spend == 8 ('Not sure', n=24), 0 otherwise. Evaluated as an asymmetric binary variable in Gower distance: (0, 0) pairs are omitted from the distance denominator (delta_ijk=0); (1, 1) pairs match (delta_ijk=1, s_ijk=1); (1, 0) or (0, 1) pairs differ (delta_ijk=1, s_ijk=0).",
+            "description": "Asymmetric binary indicator for spending uncertainty. Joint absence (0, 0) is omitted from the distance denominator, ensuring ordinary spenders are compared solely on spend magnitude without artificial similarity inflation."
         },
         {
             "feature_id": "feat_06",
@@ -679,20 +679,20 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "substantive_basket_rank_with_undefined_special",
             "range": [1.0, 5.0],
-            "special_codes": "Codes 1–5 map to ordinal ranks 1.0–5.0. Code 6 ('Varies considerably', n=100) is structurally undefined on the ordinal basket-size scale and encoded as NaN. It must NOT be assigned an arbitrary ordinal rank or imputed median. Volatility is captured separately by items_varies_considerably.",
-            "description": "Typical items per order from 1 item (rank 1.0) to >10 items (rank 5.0). Special response Code 6 ('Varies considerably') has no ordinal rank (NaN)."
+            "special_codes": "Codes 1–5 map to ordinal ranks 1.0–5.0. Code 6 ('Varies considerably', n=100) is structurally undefined on the ordinal basket-size scale and encoded as NaN. In pairwise Gower distance, if either respondent has Code 6, omit the QA19 ordinal component from the distance denominator (delta_ijk=0). Volatility is captured separately by asymmetric binary feature items_varies_considerably.",
+            "description": "Typical items per order from 1 item (rank 1.0) to >10 items (rank 5.0). Special response Code 6 ('Varies considerably') has no ordinal rank (NaN) and is omitted from pairwise comparison."
         },
         {
             "feature_id": "feat_07",
             "name": "items_varies_considerably",
             "question_id": "QA 19",
             "source_column": "Items per Order",
-            "data_type": "binary_indicator",
+            "data_type": "asymmetric_binary",
             "active_domain": [0, 1],
-            "encoding": "binary_flag",
+            "encoding": "asymmetric_binary_flag",
             "range": [0, 1],
-            "special_codes": "1 if Items per Order == 6 ('Varies considerably', n=100), 0 otherwise.",
-            "description": "Explicit non-ordinal indicator capturing basket size volatility."
+            "special_codes": "1 if Items per Order == 6 ('Varies considerably', n=100), 0 otherwise. Evaluated as an asymmetric binary variable in Gower distance: (0, 0) pairs are omitted from the distance denominator (delta_ijk=0); (1, 1) pairs match (delta_ijk=1, s_ijk=1); (1, 0) or (0, 1) pairs differ (delta_ijk=1, s_ijk=0).",
+            "description": "Asymmetric binary indicator capturing basket size volatility. Joint absence (0, 0) is omitted from the distance denominator, ensuring ordinary basket-size respondents are compared solely on basket rank without artificial similarity inflation."
         },
         {
             "feature_id": "feat_08",
@@ -887,8 +887,23 @@ def generate_feature_specifications(reports_dir):
         "recommended_clustering_methodology": {
             "method": "Gower Distance Matrix + Partitioning Around Medoids (PAM)",
             "alternative": "Hierarchical Agglomerative Clustering (HAC) with Gower Distance",
-            "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating binary indicators (s_ijk) for volatility/uncertainty.",
-            "rationale": "Respects mixed ordinal, nominal, and binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
+            "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating asymmetric binary indicators (items_varies_considerably, monthly_spend_not_sure) to avoid inflating similarity for ordinary (0, 0) pairs.",
+            "pairwise_gower_contract": {
+                "distance_formula": "D_ij = 1 - (sum_k w_k * s_ijk * delta_ijk) / (sum_k w_k * delta_ijk)",
+                "denominator_rule": "Sum only feature weights for components eligible to contribute to that respondent pair. Jointly absent asymmetric binary flags (0, 0) and undefined ordinal components must not enter the denominator. If a pair has no comparable features at all (denominator == 0), fail clearly with ValueError rather than silently returning a misleading distance.",
+                "qa19_basket_size_contract": {
+                    "ordinary_ordinary": "If both respondents have defined QA19 ordinal ranks (source codes 1-5), compare those ranks using documented ordinal distance (range=4.0). items_varies_considerably is (0, 0), omitted from denominator (delta=0). Effective construct weight = 1.0.",
+                    "special_special": "If both respondents have Code 6 ('Varies considerably'), ordinal rank is NaN for both, omitted from denominator (delta=0). items_varies_considerably is (1, 1), included as match (delta=1, s=1). Effective construct weight = 1.0.",
+                    "ordinary_special": "If either respondent has Code 6 while the other has Code 1-5, ordinal rank is omitted (delta=0). items_varies_considerably is (1, 0) or (0, 1), included as mismatch (delta=1, s=0). Effective construct weight = 1.0."
+                },
+                "qa26_monthly_spend_contract": {
+                    "ordinary_ordinary": "If both respondents have defined spend responses (source codes 2-7), compare ordinal spend ranks (1-6, range=5.0). monthly_spend_not_sure is (0, 0), omitted from denominator (delta=0). Effective construct weight = 1.0.",
+                    "special_special": "If both respondents have Code 8 ('Not sure'), ordinal spend rank is NaN for both, omitted from denominator (delta=0). monthly_spend_not_sure is (1, 1), included as match (delta=1, s=1). Effective construct weight = 1.0.",
+                    "ordinary_special": "If either respondent has Code 8 while the other has Code 2-7, ordinal spend rank is omitted (delta=0). monthly_spend_not_sure is (1, 0) or (0, 1), included as mismatch (delta=1, s=0). Effective construct weight = 1.0."
+                },
+                "construct_weight_invariance": "For every respondent pair, the QA19 construct contributes exactly 1.0 to the denominator weight, and the QA26 construct contributes exactly 1.0 to the denominator weight. Special-response flags are prevented from redundantly increasing similarity for ordinary (0, 0) pairs."
+            },
+            "rationale": "Respects mixed ordinal, nominal, and asymmetric binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
         }
     }
 
@@ -913,8 +928,23 @@ def generate_feature_specifications(reports_dir):
         "recommended_clustering_methodology": {
             "method": "Gower Distance Matrix + Partitioning Around Medoids (PAM)",
             "alternative": "Hierarchical Agglomerative Clustering (HAC) with Gower Distance",
-            "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating binary indicators (s_ijk) for volatility/uncertainty.",
-            "rationale": "Respects mixed ordinal, nominal, and binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
+            "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating asymmetric binary indicators (items_varies_considerably, monthly_spend_not_sure) to avoid inflating similarity for ordinary (0, 0) pairs.",
+            "pairwise_gower_contract": {
+                "distance_formula": "D_ij = 1 - (sum_k w_k * s_ijk * delta_ijk) / (sum_k w_k * delta_ijk)",
+                "denominator_rule": "Sum only feature weights for components eligible to contribute to that respondent pair. Jointly absent asymmetric binary flags (0, 0) and undefined ordinal components must not enter the denominator. If a pair has no comparable features at all (denominator == 0), fail clearly with ValueError rather than silently returning a misleading distance.",
+                "qa19_basket_size_contract": {
+                    "ordinary_ordinary": "If both respondents have defined QA19 ordinal ranks (source codes 1-5), compare those ranks using documented ordinal distance (range=4.0). items_varies_considerably is (0, 0), omitted from denominator (delta=0). Effective construct weight = 1.0.",
+                    "special_special": "If both respondents have Code 6 ('Varies considerably'), ordinal rank is NaN for both, omitted from denominator (delta=0). items_varies_considerably is (1, 1), included as match (delta=1, s=1). Effective construct weight = 1.0.",
+                    "ordinary_special": "If either respondent has Code 6 while the other has Code 1-5, ordinal rank is omitted (delta=0). items_varies_considerably is (1, 0) or (0, 1), included as mismatch (delta=1, s=0). Effective construct weight = 1.0."
+                },
+                "qa26_monthly_spend_contract": {
+                    "ordinary_ordinary": "If both respondents have defined spend responses (source codes 2-7), compare ordinal spend ranks (1-6, range=5.0). monthly_spend_not_sure is (0, 0), omitted from denominator (delta=0). Effective construct weight = 1.0.",
+                    "special_special": "If both respondents have Code 8 ('Not sure'), ordinal spend rank is NaN for both, omitted from denominator (delta=0). monthly_spend_not_sure is (1, 1), included as match (delta=1, s=1). Effective construct weight = 1.0.",
+                    "ordinary_special": "If either respondent has Code 8 while the other has Code 2-7, ordinal spend rank is omitted (delta=0). monthly_spend_not_sure is (1, 0) or (0, 1), included as mismatch (delta=1, s=0). Effective construct weight = 1.0."
+                },
+                "construct_weight_invariance": "For every respondent pair, the QA19 construct contributes exactly 1.0 to the denominator weight, and the QA26 construct contributes exactly 1.0 to the denominator weight. Special-response flags are prevented from redundantly increasing similarity for ordinary (0, 0) pairs."
+            },
+            "rationale": "Respects mixed ordinal, nominal, and asymmetric binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
         }
     }
 
@@ -1091,6 +1121,153 @@ def prepare_feature_matrices(active_df, data_dir):
         'holdout': df_holdout,
         'manifest': manifest
     }
+
+
+def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_details=False):
+    """
+    Computes Gower dissimilarity D_ij in [0, 1] between two respondent records.
+
+    Implements the mandatory Gate 1C pairwise distance contract:
+    1. Ordinal and continuous features:
+       - If both respondents have defined values (non-NaN):
+         s_ijk = 1.0 - |x_ik - x_jk| / R_k, delta_ijk = 1.0.
+       - If either respondent has NaN (e.g. Code 6 on QA19, Code 8 on QA26):
+         delta_ijk = 0.0, s_ijk = 0.0 (omitted from denominator).
+    2. Nominal and symmetric binary features:
+       - If both respondents have defined values (non-NaN):
+         s_ijk = 1.0 if x_ik == x_jk else 0.0, delta_ijk = 1.0.
+       - If either respondent has NaN:
+         delta_ijk = 0.0, s_ijk = 0.0.
+    3. Asymmetric binary features (QA19 items_varies_considerably, QA26 monthly_spend_not_sure):
+       - (0, 0): jointly absent -> delta_ijk = 0.0, s_ijk = 0.0 (omitted from distance denominator).
+       - (1, 1): jointly present -> delta_ijk = 1.0, s_ijk = 1.0 (match).
+       - (1, 0) or (0, 1): present/absent -> delta_ijk = 1.0, s_ijk = 0.0 (mismatch).
+       - If either is NaN -> delta_ijk = 0.0, s_ijk = 0.0.
+    4. Denominator contract:
+       denom = sum_k w_k * delta_ijk
+       Sum only feature weights for components eligible to contribute to that respondent pair.
+       If denom == 0.0:
+           raise ValueError("Zero comparable features available for respondent pair: distance denominator is zero.")
+       D_ij = 1.0 - (sum_k w_k * delta_ijk * s_ijk) / denom
+
+    Parameters:
+    -----------
+    r1 : dict, pd.Series, or object supporting item access
+        Feature values for respondent 1.
+    r2 : dict, pd.Series, or object supporting item access
+        Feature values for respondent 2.
+    feature_specs : list of dict
+        Feature specification list (from feature_spec_a or feature_spec_b).
+    weights : dict, optional
+        Mapping of feature name or feature_id to float weight. Defaults to 1.0 for each feature.
+    return_details : bool, default False
+        If True, returns (distance, numerator, denominator) tuple.
+
+    Returns:
+    --------
+    float or tuple
+        Pairwise Gower distance in [0.0, 1.0], or (distance, numerator, denominator) if return_details=True.
+    """
+    numerator = 0.0
+    denominator = 0.0
+
+    for spec in feature_specs:
+        name = spec["name"]
+        fid = spec.get("feature_id", name)
+
+        # Access value for respondent 1
+        if isinstance(r1, dict):
+            val1 = r1.get(name, r1.get(fid, np.nan))
+        else:
+            val1 = r1[name] if name in r1 else (r1[fid] if fid in r1 else np.nan)
+
+        # Access value for respondent 2
+        if isinstance(r2, dict):
+            val2 = r2.get(name, r2.get(fid, np.nan))
+        else:
+            val2 = r2[name] if name in r2 else (r2[fid] if fid in r2 else np.nan)
+
+        # Analytical feature weight
+        if weights is None:
+            w = 1.0
+        elif isinstance(weights, dict):
+            w = float(weights.get(name, weights.get(fid, 1.0)))
+        else:
+            w = 1.0
+
+        if w <= 0.0:
+            continue
+
+        dtype = spec.get("data_type", "")
+        val1_missing = pd.isna(val1)
+        val2_missing = pd.isna(val2)
+
+        if dtype == "asymmetric_binary":
+            if val1_missing or val2_missing:
+                delta = 0.0
+                s = 0.0
+            else:
+                b1 = int(val1)
+                b2 = int(val2)
+                if b1 == 0 and b2 == 0:
+                    # Jointly absent: omitted from denominator
+                    delta = 0.0
+                    s = 0.0
+                elif b1 == 1 and b2 == 1:
+                    # Jointly present: match
+                    delta = 1.0
+                    s = 1.0
+                elif (b1 == 1 and b2 == 0) or (b1 == 0 and b2 == 1):
+                    # Present / absent: mismatch
+                    delta = 1.0
+                    s = 0.0
+                else:
+                    # Non-binary value fallback
+                    delta = 0.0
+                    s = 0.0
+        elif dtype in ("ordinal", "continuous", "continuous_composite", "discrete_count"):
+            if val1_missing or val2_missing:
+                delta = 0.0
+                s = 0.0
+            else:
+                rng = spec.get("range", None)
+                if rng is not None and len(rng) == 2:
+                    R = float(rng[1] - rng[0])
+                else:
+                    R = 1.0
+                if R <= 0.0:
+                    R = 1.0
+                delta = 1.0
+                s = 1.0 - (abs(float(val1) - float(val2)) / R)
+                s = max(0.0, min(1.0, s))
+        elif dtype in ("nominal", "binary", "binary_indicator"):
+            if val1_missing or val2_missing:
+                delta = 0.0
+                s = 0.0
+            else:
+                delta = 1.0
+                s = 1.0 if val1 == val2 else 0.0
+        else:
+            # General fallback
+            if val1_missing or val2_missing:
+                delta = 0.0
+                s = 0.0
+            else:
+                delta = 1.0
+                s = 1.0 if val1 == val2 else 0.0
+
+        numerator += w * delta * s
+        denominator += w * delta
+
+    if denominator == 0.0:
+        raise ValueError("Zero comparable features available for respondent pair: distance denominator is zero.")
+
+    distance = 1.0 - (numerator / denominator)
+    clipped_distance = float(np.clip(distance, 0.0, 1.0))
+
+    if return_details:
+        return clipped_distance, float(numerator), float(denominator)
+    return clipped_distance
 
 
 def main(args=None):

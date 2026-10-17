@@ -61,37 +61,71 @@ To identify a defensible segmentation methodology for Gate 1C, we evaluate four 
 ## 4. Deep-Dive on Recommended Methodology: Gower Distance + PAM
 
 ### 4.1. Mathematical Formulation
-Gower's general dissimilarity coefficient $S_{ij}$ between two respondents $i$ and $j$ across $p$ features is formulated as:
-$$D_{ij} = 1 - S_{ij} = 1 - \frac{\sum_{k=1}^p w_k s_{ijk}}{\sum_{k=1}^p w_k \delta_{ijk}}$$
+Gower's general dissimilarity coefficient $S_{ij}$ between two respondents $i$ and $j$ across $p$ candidate features is formulated as:
+$$D_{ij} = 1 - S_{ij} = 1 - \frac{\sum_{k=1}^p w_k s_{ijk} \delta_{ijk}}{\sum_{k=1}^p w_k \delta_{ijk}}$$
 
 where:
-- $\delta_{ijk} \in \{0, 1\}$ is the validity indicator. Crucially, $\delta_{ijk} = 1$ only when feature $k$ is validly observed and structurally defined for **both** respondents $i$ and $j$. If feature $k$ is structurally undefined (`NaN`) for either respondent, $\delta_{ijk} = 0$.
-- $w_k \in [0, 1]$ is the user-defined analytical weight assigned to feature $k$.
-- The partial similarity $s_{ijk}$ respects the variable's verified data type:
+- $\delta_{ijk} \in \{0, 1\}$ is the pairwise validity indicator. Crucially, $\delta_{ijk} = 1$ only when feature $k$ is validly observed, structurally defined, and eligible to contribute to distance comparison for **both** respondents $i$ and $j$. If feature $k$ is structurally undefined (`NaN`) for either respondent, or represents an absent state for an asymmetric binary variable, $\delta_{ijk} = 0$.
+- $w_k \in [0, 1]$ is the user-defined analytical weight assigned to feature $k$ (default $w_k = 1.0$).
+- The partial similarity $s_{ijk} \in [0, 1]$ respects the variable's verified data type:
   - **Nominal Variables** (`shopping_routine_role`):
-    $$s_{ijk} = \begin{cases} 1 & \text{if } x_{ik} = x_{jk} \\ 0 & \text{if } x_{ik} \neq x_{jk} \end{cases}$$
-  - **Binary Indicators** (`monthly_spend_not_sure`, `items_varies_considerably`):
-    $$s_{ijk} = \begin{cases} 1 & \text{if } x_{ik} = x_{jk} \\ 0 & \text{if } x_{ik} \neq x_{jk} \end{cases}$$
+    $$s_{ijk} = \begin{cases} 1 & \text{if } x_{ik} = x_{jk} \\ 0 & \text{if } x_{ik} \neq x_{jk} \end{cases}, \quad \delta_{ijk} = \begin{cases} 1 & \text{if both } x_{ik}, x_{jk} \text{ defined} \\ 0 & \text{otherwise} \end{cases}$$
+  - **Asymmetric Binary Variables** (`items_varies_considerably`, `monthly_spend_not_sure`):
+    $$s_{ijk} = \begin{cases} 1 & \text{if } x_{ik} = 1 \text{ and } x_{jk} = 1 \\ 0 & \text{if } (x_{ik} = 1 \land x_{jk} = 0) \lor (x_{ik} = 0 \land x_{jk} = 1) \end{cases}$$
+    $$\delta_{ijk} = \begin{cases} 1 & \text{if } x_{ik} = 1 \text{ or } x_{jk} = 1 \\ 0 & \text{if } x_{ik} = 0 \text{ and } x_{jk} = 0 \quad (\text{or if either is NaN}) \end{cases}$$
+    *Mandatory Contract:* Jointly absent flags $(0, 0)$ represent the mutual non-occurrence of an exceptional or uncertain condition, NOT a substantive shared attribute. They are strictly omitted from that pair's distance denominator ($\delta_{ijk} = 0$). This prevents ordinary respondents with defined responses from accumulating fictitious matching similarity.
   - **Ordinal & Continuous Variables** (`order_frequency`, `order_spend`, `discount_overspend`, `service_satisfaction_composite`):
-    $$s_{ijk} = 1 - \frac{|x_{ik} - x_{jk}|}{R_k}$$
+    $$s_{ijk} = 1 - \frac{|x_{ik} - x_{jk}|}{R_k}, \quad \delta_{ijk} = \begin{cases} 1 & \text{if both } x_{ik}, x_{jk} \text{ defined (non-NaN)} \\ 0 & \text{if either is NaN} \end{cases}$$
     where $R_k = \max(x_k) - \min(x_k)$ is the observed active range of feature $k$. This scales all ordinal and interval differences strictly into $[0, 1]$.
 
-### 4.2. Deliberate Handling of Structurally Undefined Ordinal Components (Gate 1C Requirement)
+### 4.2. Mandatory Gate 1C Distance Contract for QA 19 and QA 26
+
 In quick-commerce survey research, certain qualitative options cannot be mapped to an ordinal ranking:
 - **QA 19 (Items per Order):** Substantive basket codes 1–5 map monotonically to ordinal ranks 1.0–5.0 ($R = 4.0$). Code 6 represents `Varies considerably` ($n = 100$). This response expresses basket size *volatility*, not a basket size magnitude. Therefore, its ordinal rank is **structurally undefined (`NaN`)**.
 - **QA 26 (Monthly Spend):** Substantive spend codes 2–7 map monotonically to ordinal ranks 1.0–6.0 ($R = 5.0$). Code 8 represents `Not sure` ($n = 24$). This response expresses spend *uncertainty*, not a monetary interval. Therefore, its ordinal rank is **structurally undefined (`NaN`)**.
 
-#### Methodological Rules for Gate 1C Distance Engine:
-1. **No Artificial Ordinal Imputation:** Under no circumstances should Code 6 or Code 8 be assigned an artificial rank (such as median imputation or midpoint assignment). Imputing an arbitrary rank introduces false similarity and corrupts cluster boundaries.
-2. **Explicit Binary Tracking:** Two dedicated binary indicators capture these qualitative states:
-   - `items_varies_considerably` ($1$ if Code 6, $0$ otherwise; exactly $100$ ones).
-   - `monthly_spend_not_sure` ($1$ if Code 8, $0$ otherwise; exactly $24$ ones).
-3. **Deliberate Pairwise Gower Evaluation:**
-   Standard off-the-shelf distance packages frequently crash on `NaN`, drop incomplete rows, or default to zero imputation. In Gate 1C, the distance engine must implement Gower's formula deliberately:
-   - When respondent $i$ or $j$ has `monthly_spend_ordinal = NaN`, set $\delta_{\text{monthly\_spend\_ord}, ij} = 0$. That pair is not evaluated on spend magnitude.
-   - Simultaneously, evaluate `monthly_spend_not_sure`: both respondents have $\delta = 1$. If both are uncertain ($1, 1$), $s_{ij} = 1$; if one is uncertain and the other is a defined spender ($1, 0$), $s_{ij} = 0$.
-   - The same deliberate partial-similarity omission applies to `items_per_order_ordinal` and `items_varies_considerably`.
-   - **Zero Rows Dropped:** All $807$ active users remain in the analysis with no data loss.
+#### 4.2.1. The Feature-Weighting Inconsistency Problem and Asymmetric Solution
+Under naive distance specifications, tracking special responses with ordinary symmetric binary flags introduces a severe distortion: two respondents with defined ordinal responses (e.g., Code 2 and Code 4) each have flag $= 0$. An ordinary binary metric scores $(0, 0)$ as a shared match ($s = 1.0, \delta = 1.0$). This:
+1. Adds artificial similarity between ordinary respondents solely because neither answered the special code.
+2. Gives the basket and spend constructs an effective weight of $2.0$ ($w_{\text{ord}} + w_{\text{flag}}$) for ordinary pairs, but only $1.0$ for special pairs, distorting relative construct weighting across the sample.
+
+To solve this, Gate 1C establishes the following **mandatory pairwise distance contract**:
+
+#### QA 19 — Basket Size Distance Contract
+1. **Defined Ranks (Codes 1–5):** If both respondents have defined QA19 ordinal ranks, compare those ranks using the documented ordinal distance:
+   $$s_{\text{ord}, ij} = 1 - \frac{|x_i - x_j|}{4.0}, \quad \delta_{\text{ord}, ij} = 1$$
+2. **Special Code 6 Omission:** If either respondent has source Code 6 (`Varies considerably`), omit the QA19 ordinal component for that pair ($\delta_{\text{ord}, ij} = 0$).
+3. **Asymmetric Binary Volatility Flag (`items_varies_considerably`):**
+   - **(0, 0) Joint Absence:** Both respondents have defined basket sizes. Omit the flag from that pair's distance denominator ($\delta_{\text{asym}, ij} = 0$).
+   - **(1, 1) Joint Match:** Both respondents report volatile baskets. Include the flag as a match ($\delta_{\text{asym}, ij} = 1, s_{\text{asym}, ij} = 1$).
+   - **(1, 0) or (0, 1) Mismatch:** One respondent has a defined basket size, the other reports volatility. Include the flag as a mismatch ($\delta_{\text{asym}, ij} = 1, s_{\text{asym}, ij} = 0$).
+
+#### QA 26 — Monthly Spending Distance Contract
+1. **Defined Ranks (Codes 2–7):** If both respondents have defined spend responses, compare ordinal spend ranks (1.0–6.0, $R = 5.0$):
+   $$s_{\text{ord}, ij} = 1 - \frac{|x_i - x_j|}{5.0}, \quad \delta_{\text{ord}, ij} = 1$$
+2. **Special Code 8 Omission:** If either respondent has source Code 8 (`Not sure`), omit the ordinal spending component for that pair ($\delta_{\text{ord}, ij} = 0$).
+3. **Asymmetric Binary Uncertainty Flag (`monthly_spend_not_sure`):**
+   - **(0, 0) Joint Absence:** Both respondents have defined spending tiers. Omit the flag from that pair's distance denominator ($\delta_{\text{asym}, ij} = 0$).
+   - **(1, 1) Joint Match:** Both respondents are unsure of their monthly spending. Include the flag as a match ($\delta_{\text{asym}, ij} = 1, s_{\text{asym}, ij} = 1$).
+   - **(1, 0) or (0, 1) Mismatch:** One respondent has a defined spending bracket, the other is unsure. Include the flag as a mismatch ($\delta_{\text{asym}, ij} = 1, s_{\text{asym}, ij} = 0$).
+
+#### 4.2.2. Mathematical Proof of Construct Weight Invariance
+Under this asymmetric binary contract, every respondent pair contributes exactly the same construct weight ($w = 1.0$), with zero distortion:
+
+| Pair Respondent Types | Ordinal Component ($\delta_{\text{ord}}$) | Ordinal Similarity ($s_{\text{ord}}$) | Asymmetric Flag ($\delta_{\text{asym}}$) | Flag Similarity ($s_{\text{asym}}$) | Total Denominator Contribution ($\delta_{\text{ord}} + \delta_{\text{asym}}$) | Effective Construct Distance Contribution |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Ordinary / Ordinary** | $1.0$ | $1 - \frac{|\Delta x|}{R}$ | $0.0$ (omitted) | — | **$1.0$** | Ordinal rank difference on $[0, 1]$ |
+| **Special / Special** | $0.0$ (omitted) | — | $1.0$ | $1.0$ (match) | **$1.0$** | $0.0$ (identical qualitative state) |
+| **Ordinary / Special** | $0.0$ (omitted) | — | $1.0$ | $0.0$ (mismatch) | **$1.0$** | $1.0$ (qualitative divergence) |
+
+**Conclusion:** The effective construct weight is invariant across all respondent pairs ($1.0$ weight in all cases). Special-response flags never redundantly inflate similarity for ordinary $(0, 0)$ pairs, and no arbitrary imputation or row dropping is required.
+
+#### 4.2.3. Pairwise Gower Denominator and Zero-Denominator Failure Contract
+The denominator of Gower's pairwise distance is explicitly specified as:
+$$\text{Denominator}_{ij} = \sum_{k=1}^p w_k \delta_{ijk}$$
+1. **Strict Denominator Inclusion:** Sum **only** the feature weights for components eligible to contribute to that specific respondent pair. Jointly absent asymmetric binary flags $(0, 0)$ and undefined ordinal components (`NaN`) must **never** enter the denominator.
+2. **Defensive Zero-Denominator Check:** If two respondent records share zero comparable features (i.e. $\sum_{k=1}^p w_k \delta_{ijk} == 0$), the distance engine must **fail clearly** by raising an explicit `ValueError` rather than silently returning a misleading distance (such as `0.0` or `1.0`).
+3. **Preservation of Sample:** Because the active feature set spans 17 (Spec A) or 18 (Spec B) features with zero uncontrolled missingness, every active user pair ($325,221$ pairs) possesses at least 15 eligible features ($\text{Denominator}_{ij} \ge 15.0$). Zero rows are dropped.
 
 ### 4.3. Addressing Redundancy and Multi-Item Overweighting
 In Gate 1A, four satisfaction items (QA 37 Overall, QA 38 Product Quality, QA 39 Delivery Reliability, QA 40 Value for Money) exhibited high inter-item correlations ($r \in [0.53, 0.71]$) and an overall Cronbach's alpha of $\alpha = 0.863$.
@@ -164,7 +198,7 @@ graph TD
 
 In Gate 1C, the implementation pipeline will:
 1. Load prepared feature matrices `segmentation_spec_a.csv` and `segmentation_spec_b.csv`.
-2. Compute the exact Gower distance matrix using normalized feature ranges, incorporating deliberate partial-similarity omission ($\delta_{ijk} = 0$) for rows with undefined ordinal components (`items_per_order_ordinal` and `monthly_spend_ordinal`), while evaluating their corresponding binary indicators.
+2. Compute the exact Gower distance matrix using normalized feature ranges, incorporating the asymmetric binary distance contract for items_varies_considerably and monthly_spend_not_sure (omitting (0, 0) pairs from the denominator) and omitting undefined ordinal components for Code 6 / Code 8 pairs.
 3. Test candidate cluster solutions across $k \in \{3, 4, 5, 6\}$ using PAM ($k$-Medoids).
 4. Run Hierarchical Agglomerative Clustering (HAC with average and Ward-equivalent linkage) to assess hierarchical cluster stability and inspect dendrogram topology.
 5. Evaluate cluster quality using Average Silhouette Width, Hubert's $\Gamma$, within-cluster medoid dispersion, and bootstrap stability (Jaccard similarity).
