@@ -88,20 +88,20 @@
       "source_column": "Monthly Spend",
       "data_type": "ordinal",
       "active_domain": [
+        1,
         2,
         3,
         4,
         5,
-        6,
-        7
-      ],
-      "encoding": "substantive_spend_rank",
-      "range": [
-        1,
         6
       ],
-      "special_codes": "Code 8 ('Not sure', n=24) mapped to neutral median rank 2 (\u20b91,000\u2013\u20b92,499) for ordinal distance calculation.",
-      "description": "Typical monthly quick-commerce spend brackets 2-7 mapped monotonically to ranks 1-6."
+      "encoding": "substantive_spend_rank_with_undefined_special",
+      "range": [
+        1.0,
+        6.0
+      ],
+      "special_codes": "Source codes 2\u20137 map monotonically to ranks 1.0\u20136.0. Code 8 ('Not sure', n=24) is structurally undefined on the ordinal spend scale and encoded as NaN. It must NOT be assigned an arbitrary ordinal rank or imputed median. Uncertainty is captured separately by monthly_spend_not_sure.",
+      "description": "Typical monthly quick-commerce spend brackets 2\u20137 mapped monotonically to ranks 1.0\u20136.0. Special response Code 8 ('Not sure') has no ordinal rank (NaN)."
     },
     {
       "feature_id": "feat_05",
@@ -134,13 +134,13 @@
         4,
         5
       ],
-      "encoding": "substantive_basket_rank",
+      "encoding": "substantive_basket_rank_with_undefined_special",
       "range": [
-        1,
-        5
+        1.0,
+        5.0
       ],
-      "special_codes": "Code 6 ('Varies considerably', n=100) mapped to neutral median rank 3 ('4\u20135 items') for ordinal distance calculation.",
-      "description": "Typical items per order from 1 item (1) to >10 items (5)."
+      "special_codes": "Codes 1\u20135 map to ordinal ranks 1.0\u20135.0. Code 6 ('Varies considerably', n=100) is structurally undefined on the ordinal basket-size scale and encoded as NaN. It must NOT be assigned an arbitrary ordinal rank or imputed median. Volatility is captured separately by items_varies_considerably.",
+      "description": "Typical items per order from 1 item (rank 1.0) to >10 items (rank 5.0). Special response Code 6 ('Varies considerably') has no ordinal rank (NaN)."
     },
     {
       "feature_id": "feat_07",
@@ -302,7 +302,7 @@
         5
       ],
       "special_codes": "Code 6 ('Do not use') is 0 in active users.",
-      "description": "Nominal quick commerce role (1=Large grocery replacement, 2=Some replacement, 3=Top-up, 4=Urgent/emergencies, 5=Offers/convenience)."
+      "description": "Explicitly nominal quick commerce role (1=Large grocery replacement, 2=Some replacement, 3=Top-up, 4=Urgent/emergencies, 5=Offers/convenience)."
     },
     {
       "feature_id": "feat_15",
@@ -462,6 +462,7 @@
   "recommended_clustering_methodology": {
     "method": "Gower Distance Matrix + Partitioning Around Medoids (PAM)",
     "alternative": "Hierarchical Agglomerative Clustering (HAC) with Gower Distance",
+    "undefined_special_handling": "Gower implementation in Gate 1C must omit undefined ordinal components (delta_ijk=0) while evaluating binary indicators (s_ijk) for volatility/uncertainty.",
     "rationale": "Respects mixed ordinal, nominal, and binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
   }
 }

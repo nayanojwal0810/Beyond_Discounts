@@ -14,7 +14,7 @@ The objective of Gate 1B is to establish a rigorous, defensible, and reproducibl
 
 The data structure comprises **mixed survey responses** from $n = 807$ active Indian quick-commerce shoppers. The feature inventory spans ordered Likert ratings, bounded ordered intervals (spend, frequency, tenure), nominal behavioral classifications (shopping routine role), discrete counts (platforms used), and binary indicators (volatility and uncertainty flags). 
 
-Under classical clustering paradigms, analysts frequently submit raw integer-coded survey columns directly into Euclidean-based algorithms like ordinary $K$-means. This document demonstrates why that approach is statistically invalid for this dataset, evaluates four candidate mixed-data methodologies across five mandatory evaluation criteria, and recommends the candidate methodology for Gate 1C.
+Under classical clustering paradigms, analysts frequently submit raw integer-coded survey columns directly into Euclidean-based algorithms like ordinary $K$-means. This document demonstrates why that approach is statistically invalid for this dataset, evaluates candidate mixed-data methodologies across five mandatory evaluation criteria, establishes how structurally undefined special responses must be handled, and recommends the candidate methodology for Gate 1C.
 
 ---
 
@@ -31,7 +31,7 @@ Submitting raw questionnaire response codes to ordinary $K$-means is methodologi
 2. **Centroid Degeneracy and Non-Interpretable Means:**  
    $K$-means computes cluster centers as arithmetic means across all features ($\bar{x}_k = \frac{1}{|C_k|}\sum_{i \in C_k} x_i$). For discrete Likert and nominal features, arithmetic means produce nonsensical hybrid states (e.g., a centroid with `Shopping Routine Role = 2.74` or `Monthly Spend = 4.18`). Such centroids do not correspond to any valid survey response or observable customer profile, crippling CRM interpretability.
 
-3. **Curse of Dimensionality and Equal Variance Assumption:**  
+3. **Curse of Dimensionality and Scale Incommensurability:**
    Standard Euclidean distance is unweighted and highly sensitive to differences in feature measurement ranges. Features measured on a 1–7 scale (QA 15, QA 25) dominate distance calculations over features on a 1–5 scale (QA 28, QA 29) or binary indicators (0/1), unless explicitly and uniformly standardized.
 
 ---
@@ -51,7 +51,7 @@ To identify a defensible segmentation methodology for Gate 1C, we evaluate four 
 
 | Method | (1) Mixed Data Types | (2) Special Responses | (3) Weighting / Redundancy | (4) Scalability ($n=807$) | (5) CRM Persona Explainability | Overall Suitability |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **A. Gower Distance + Partitioning Around Medoids (PAM)** | **Optimal** (natively differentiates nominal, ordinal, binary, continuous) | **Robust** (supports dual-coding: ordinal rank + binary uncertainty flag) | **Transparent** (explicit feature weight vector $w_k$; easily balances constructs) | **High** (325,221 pairs, ~2.6 MB matrix, <0.5s computation) | **Superior** (medoids are actual, observable survey respondents) | **RECOMMENDED PRIMARY** |
+| **A. Gower Distance + Partitioning Around Medoids (PAM)** | **Optimal** (natively differentiates nominal, ordinal, binary, continuous) | **Robust** (omits undefined ordinal components via $\delta_{ijk}=0$; evaluates binary flags) | **Transparent** (explicit feature weight vector $w_k$; easily balances constructs) | **High** (325,221 pairs, ~2.6 MB matrix, <0.5s computation) | **Superior** (medoids are actual, observable survey respondents) | **RECOMMENDED PRIMARY** |
 | **B. Gower Distance + Hierarchical Agglomerative Clustering (HAC)** | **Optimal** (uses identical verified Gower matrix) | **Robust** (identical to PAM) | **Transparent** (identical distance weighting) | **High** (sub-second dendrogram and linkage computation) | **High** (clear hierarchical taxonomy, cophenetic correlation) | **RECOMMENDED VALIDATION BENCHMARK** |
 | **C. Factor Analysis of Mixed Data (FAMD) + K-Means** | **Moderate** (converts nominal to dummy coordinates; treats ordinal as continuous) | **Moderate** (treats special codes as dummy levels, increasing latent dimensionality) | **High** (orthogonal PCA components eliminate multicollinearity) | **Moderate** (requires iterative SVD/factor rotation) | **Low–Moderate** (clusters defined in abstract latent factor space) | Secondary Alternative |
 | **D. Latent Class Analysis (LCA / Mixture Models)** | **High** (probabilistic mixture over multinomial distributions) | **High** (treats all codes as multinomial categorical states) | **Moderate** (local independence assumption violated by correlated items) | **Low** (EM algorithm prone to local maxima and convergence instability) | **Moderate** (probabilistic assignment, but complex latent class tables) | Excluded (unnecessary model complexity) |
@@ -65,7 +65,7 @@ Gower's general dissimilarity coefficient $S_{ij}$ between two respondents $i$ a
 $$D_{ij} = 1 - S_{ij} = 1 - \frac{\sum_{k=1}^p w_k s_{ijk}}{\sum_{k=1}^p w_k \delta_{ijk}}$$
 
 where:
-- $\delta_{ijk} = 1$ if feature $k$ is validly observed for both respondents, and $0$ otherwise.
+- $\delta_{ijk} \in \{0, 1\}$ is the validity indicator. Crucially, $\delta_{ijk} = 1$ only when feature $k$ is validly observed and structurally defined for **both** respondents $i$ and $j$. If feature $k$ is structurally undefined (`NaN`) for either respondent, $\delta_{ijk} = 0$.
 - $w_k \in [0, 1]$ is the user-defined analytical weight assigned to feature $k$.
 - The partial similarity $s_{ijk}$ respects the variable's verified data type:
   - **Nominal Variables** (`shopping_routine_role`):
@@ -76,11 +76,22 @@ where:
     $$s_{ijk} = 1 - \frac{|x_{ik} - x_{jk}|}{R_k}$$
     where $R_k = \max(x_k) - \min(x_k)$ is the observed active range of feature $k$. This scales all ordinal and interval differences strictly into $[0, 1]$.
 
-### 4.2. Handling Special Categories Without Distorting Order
-For features with non-ordinal options:
-- **QA 19 (Items per Order):** Substantive basket levels 1–5 are mapped to an ordinal scale ($R = 4$), with Code 6 respondents assigned the neutral sample median rank ($3.0 = \text{4–5 items}$). Concurrently, a binary indicator `items_varies_considerably` captures volatility.
-- **QA 26 (Monthly Spend):** Substantive spend levels 2–7 are mapped to ordinal ranks 1–6 ($R = 5$), with Code 8 assigned the neutral sample median rank ($2.0 = \text{₹1,000–₹2,499}$). Concurrently, a binary indicator `monthly_spend_not_sure` captures spend uncertainty.
-This dual-coding guarantees that distance calculations reflect true purchasing magnitude among defined spenders while explicitly penalizing or grouping respondents who share spending uncertainty.
+### 4.2. Deliberate Handling of Structurally Undefined Ordinal Components (Gate 1C Requirement)
+In quick-commerce survey research, certain qualitative options cannot be mapped to an ordinal ranking:
+- **QA 19 (Items per Order):** Substantive basket codes 1–5 map monotonically to ordinal ranks 1.0–5.0 ($R = 4.0$). Code 6 represents `Varies considerably` ($n = 100$). This response expresses basket size *volatility*, not a basket size magnitude. Therefore, its ordinal rank is **structurally undefined (`NaN`)**.
+- **QA 26 (Monthly Spend):** Substantive spend codes 2–7 map monotonically to ordinal ranks 1.0–6.0 ($R = 5.0$). Code 8 represents `Not sure` ($n = 24$). This response expresses spend *uncertainty*, not a monetary interval. Therefore, its ordinal rank is **structurally undefined (`NaN`)**.
+
+#### Methodological Rules for Gate 1C Distance Engine:
+1. **No Artificial Ordinal Imputation:** Under no circumstances should Code 6 or Code 8 be assigned an artificial rank (such as median imputation or midpoint assignment). Imputing an arbitrary rank introduces false similarity and corrupts cluster boundaries.
+2. **Explicit Binary Tracking:** Two dedicated binary indicators capture these qualitative states:
+   - `items_varies_considerably` ($1$ if Code 6, $0$ otherwise; exactly $100$ ones).
+   - `monthly_spend_not_sure` ($1$ if Code 8, $0$ otherwise; exactly $24$ ones).
+3. **Deliberate Pairwise Gower Evaluation:**
+   Standard off-the-shelf distance packages frequently crash on `NaN`, drop incomplete rows, or default to zero imputation. In Gate 1C, the distance engine must implement Gower's formula deliberately:
+   - When respondent $i$ or $j$ has `monthly_spend_ordinal = NaN`, set $\delta_{\text{monthly\_spend\_ord}, ij} = 0$. That pair is not evaluated on spend magnitude.
+   - Simultaneously, evaluate `monthly_spend_not_sure`: both respondents have $\delta = 1$. If both are uncertain ($1, 1$), $s_{ij} = 1$; if one is uncertain and the other is a defined spender ($1, 0$), $s_{ij} = 0$.
+   - The same deliberate partial-similarity omission applies to `items_per_order_ordinal` and `items_varies_considerably`.
+   - **Zero Rows Dropped:** All $807$ active users remain in the analysis with no data loss.
 
 ### 4.3. Addressing Redundancy and Multi-Item Overweighting
 In Gate 1A, four satisfaction items (QA 37 Overall, QA 38 Product Quality, QA 39 Delivery Reliability, QA 40 Value for Money) exhibited high inter-item correlations ($r \in [0.53, 0.71]$) and an overall Cronbach's alpha of $\alpha = 0.863$.
@@ -92,13 +103,13 @@ In Gate 1A, four satisfaction items (QA 37 Overall, QA 38 Product Quality, QA 39
 For the active cohort ($n = 807$):
 - Pairwise distance matrix size: $\frac{n(n-1)}{2} = \frac{807 \times 806}{2} = 325,221$ unique pairwise distances.
 - Memory requirement: A condensed 1D distance vector in `float64` requires only $2.60\text{ MB}$ of RAM.
-- Computation time: Gower matrix computation executes in under $0.4\text{ seconds}$ in standard NumPy/SciPy on standard hardware.
+- Computation time: Custom vectorized Gower matrix computation with deliberate NaN omission executes in under $0.5\text{ seconds}$ in NumPy/SciPy.
 - PAM optimization: $k$-Medoids converges in $<1.5\text{ seconds}$ for candidate clusters $k \in [3, 6]$.
 
 ### 4.5. CRM Explainability via Actual Medoids
 Unlike $K$-means centroids, PAM selects **actual survey respondents** (medoids) that minimize the total dissimilarity to all other cluster members:
 $$m_k = \arg\min_{i \in C_k} \sum_{j \in C_k} D(i, j)$$
-Because the medoid is an actual customer record, CRM strategists can inspect the exact real-world survey response profile (e.g., "Respondent #412: Orders 2–3 times/week, spends ₹2,500–₹5,000/month, highly sensitive to threshold delivery fees, highly satisfied with speed, primarily uses Blinkit"). This produces authentic customer personas directly linked to targeted commercial interventions.
+Because the medoid is an actual customer record, CRM strategists can inspect the exact real-world survey response profile (e.g., "Respondent #412: Orders 2–3 times/week, spend bracket ₹2,500–₹5,000, highly sensitive to threshold delivery fees, highly satisfied with speed, primarily uses Blinkit"). This produces authentic customer personas directly linked to targeted commercial interventions.
 
 ---
 
@@ -131,7 +142,7 @@ graph TD
 ```
 
 1. **Specification A (Independent Discount-Sensitivity Evaluation):**
-   - **Clustering Inputs:** 17 features (order velocity, basket items, spend tier, spend uncertainty flag, basket volatility flag, promo overspend, threshold gaming, platform price comparison, physical price comparison, fast delivery importance, service satisfaction composite, shopping routine role, platforms used count, unplanned purchase, new brand trial).
+   - **Clustering Inputs:** 17 features (order velocity, tenure, order spend, monthly spend ordinal [NaN for code 8], monthly spend not sure flag, items ordinal [NaN for code 6], items varies considerably flag, promo overspend, threshold gaming, platform price comparison, physical price comparison, fast delivery importance, service satisfaction composite, shopping routine role [nominal], platforms used count, unplanned purchase, new brand trial).
    - **QA 47 Role:** Strictly EXCLUDED from clustering inputs. Reserved as the primary external validation benchmark to test whether clusters formed from general shopping habits naturally diverge in stated discount resilience.
    - **Hypothesis Tested:** "Do distinct behavioural and attitudinal customer segments inherently possess differing levels of stated discount sensitivity without using discount sensitivity to create the clusters?"
 
@@ -145,6 +156,7 @@ graph TD
    - **Demographics (QA 1–8):** Reserved for post-cluster profiling to prevent clusters from degenerating into demographic stereotypes.
    - **Platform-Specific Indicators (QA 12 dummies):** Reserved for profiling to avoid tying segments to single brand names.
    - **QA 49 (Preferred Improvement):** Reserved for post-cluster retention strategy mapping.
+   - **QA 48 (Non-Use Barriers):** Excluded entirely from active clustering (eligible count = 0; 807 skip-coded).
 
 ---
 
@@ -152,7 +164,7 @@ graph TD
 
 In Gate 1C, the implementation pipeline will:
 1. Load prepared feature matrices `segmentation_spec_a.csv` and `segmentation_spec_b.csv`.
-2. Compute the exact Gower distance matrix using normalized feature ranges.
+2. Compute the exact Gower distance matrix using normalized feature ranges, incorporating deliberate partial-similarity omission ($\delta_{ijk} = 0$) for rows with undefined ordinal components (`items_per_order_ordinal` and `monthly_spend_ordinal`), while evaluating their corresponding binary indicators.
 3. Test candidate cluster solutions across $k \in \{3, 4, 5, 6\}$ using PAM ($k$-Medoids).
 4. Run Hierarchical Agglomerative Clustering (HAC with average and Ward-equivalent linkage) to assess hierarchical cluster stability and inspect dendrogram topology.
 5. Evaluate cluster quality using Average Silhouette Width, Hubert's $\Gamma$, within-cluster medoid dispersion, and bootstrap stability (Jaccard similarity).
