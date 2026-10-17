@@ -1,18 +1,29 @@
 # Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce
 
 [![Gate Status](https://img.shields.io/badge/Gate%200-Closed%20%26%20Locked-success)](docs/gates/GATE_0_DECISION_LOG.md)
-[![Current Gate](https://img.shields.io/badge/Current%20Gate-1A%20EDA%20In%20Progress-blue)](reports/eda/EDA_REPORT.md)
+[![Current Gate](https://img.shields.io/badge/Current%20Gate-1D%20CRM%20Decision%20Analysis-blue)](reports/eda/EDA_REPORT.md)
 [![License: CC BY 4.0](https://img.shields.io/badge/Data%20License-CC%20BY%204.0-lightgrey)](https://creativecommons.org/licenses/by/4.0/)
 
 ---
 
+## Current Project Status — 17 October 2026
+
+**Current milestone: Gate 1D — lifecycle-based CRM decision analysis. Implementation is in progress; this gate is not yet approved.**
+
+- Gate 0 feasibility/provenance review, Gate 1A EDA, Gate 1B feature preparation, and Gate 1C exploratory clustering experiments have been completed as repository artifacts.
+- Gate 1C did **not** establish reliable hard customer segments: Specification A PAM k=4 had mean silhouette 0.050, 20.20% negative silhouettes, and 8/20 subsamples below ARI 0.50. The held-out QA47 cluster means were approximately 3.44–3.46 with no detected difference after correction. Cluster labels therefore remain exploratory and are not the primary basis for CRM recommendations.
+- The project direction is now lifecycle-based: never-users (n=376), previous users reporting no current orders (n=80), and current users (n=807). The primary business analysis is QA49 preferred improvements linked to lifecycle and stated intention, QA48 non-use barriers, QA46 stated future-use intention, and a compact QA47 ordinal association analysis.
+- The detailed analysis contract and acceptance criteria are in [Gate 1D CRM Decision Analysis Protocol](docs/gates/GATE_1D_CRM_DECISION_ANALYSIS_PROTOCOL.md).
+- The new technical remediation branch is [feat/gate-1d-crm-decision-framework](https://github.com/nayanojwal0810/Beyond_Discounts/tree/feat/gate-1d-crm-decision-framework). Changes made on that branch have **not yet been run against the local workbook**. Do not interpret their existence as test approval.
+- The raw workbook, questionnaire, codebook, and row-level processed matrices must remain local and must not be committed to Git.
+
 ## 1. Project Overview & Canonical Framing
 
 ### Approved Working Title
-**Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce**
+**Beyond Discounts: A Lifecycle-Based CRM Decision Framework for Indian Quick Commerce**
 
 ### Research Question
-> *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+> *Which lifecycle-based CRM actions are most strongly supported by Indian quick-commerce consumers' stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements?*
 
 ### Problem We Are Investigating
 Quick-commerce consumers in India may differ significantly in the importance they place on promotional discounts, delivery speed, shopping convenience, spending levels, service experience, and operational reliability. A one-size-fits-all retention or reactivation strategy cannot suit every consumer type. 
@@ -67,34 +78,37 @@ The 1,263 respondents are partitioned into three mutually exclusive, verified su
 
 ```text
 Beyond_Discounts/
-├── README.md                                 # Canonical project overview, research question & reproduction guide
+├── README.md
 ├── data/
-│   ├── README.md                             # Dataset provenance, dictionary notes, and security controls
-│   └── raw/survey/                           # Raw survey files (excluded from Git tracking)
-│       ├── Data.xlsx                         # Survey microdata (1,263 rows x 130 columns)
-│       ├── Code Book.docx                    # Questionnaire codebook and coding manual
-│       └── Questionairre.docx                # Full survey questionnaire instrument
+│   ├── README.md
+│   ├── raw/survey/                  # Local only; excluded from Git
+│   └── processed/                   # Local only; excluded from Git
 ├── docs/
-│   ├── data/
-│   │   └── DATA_SOURCE_REGISTER.csv          # Register of evaluated data sources and provenance audits
+│   ├── data/DATA_SOURCE_REGISTER.csv
 │   └── gates/
-│       ├── GATE_0_DECISION_LOG.md            # Formal decision record for Gate 0 closure & Gate 1 launch
-│       ├── GATE_0_SURVEY_CANDIDATE_AUDIT.md  # Comprehensive technical audit of the survey dataset
-│       └── GATE_0_SURVEY_AUDIT_SUMMARY.json  # Machine-readable audit summary artifact
+│       ├── GATE_0_DECISION_LOG.md
+│       ├── GATE_0_FEASIBILITY_REPORT.md
+│       ├── GATE_0_SURVEY_CANDIDATE_AUDIT.md
+│       └── GATE_1D_CRM_DECISION_ANALYSIS_PROTOCOL.md
 ├── reports/
-│   └── eda/
-│       ├── EDA_REPORT.md                     # Comprehensive Gate 1A exploratory data analysis report
-│       ├── ANALYSIS_PLAN.md                  # Methodological analysis plan and hypothesis roadmap
-│       ├── VARIABLE_REGISTER.md              # Question and variable register with coding rules
-│       ├── figures/                          # Publication-quality PNG visualizations (8 figures)
-│       └── tables/                           # Aggregate-only analytical CSV tables (11 tables)
+│   ├── eda/                         # Aggregate tables, figures, report, variable register
+│   └── segmentation/                # Cluster metrics, profiles, stability, validation, decision report
 ├── scripts/
-│   ├── audit_survey_data.py                  # Gate 0 schema and questionnaire routing validation script
-│   └── run_eda.py                            # Gate 1A reproducible EDA pipeline and export script
+│   ├── audit_data.py
+│   ├── audit_survey_data.py
+│   ├── run_eda.py
+│   ├── prepare_segmentation_features.py
+│   └── run_segmentation_experiments.py
 └── tests/
-    ├── test_audit_survey_data.py             # Unit tests for survey schema, routing, and error conditions
-    └── test_eda.py                           # Automated tests for EDA derivations, tables, and denominators
+    ├── test_audit_data.py
+    ├── test_audit_survey_data.py
+    ├── test_eda.py
+    ├── test_segmentation_features.py
+    ├── test_segmentation_experiments.py
+    └── test_gate1d_contracts.py
 ```
+
+The tree highlights principal entry points and does not enumerate every aggregate report. See the repository directories for the full artifact inventory.
 
 ---
 
