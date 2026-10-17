@@ -1,4 +1,4 @@
-# Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce
+# Beyond Discounts: A Lifecycle-Based CRM Decision Framework for Indian Quick Commerce
 
 [![Gate Status](https://img.shields.io/badge/Gate%200-Closed%20%26%20Locked-success)](docs/gates/GATE_0_DECISION_LOG.md)
 [![Current Gate](https://img.shields.io/badge/Current%20Gate-1C.1%20Technical%20QA-orange)](docs/gates/GATE_1C1_TECHNICAL_REVIEW.md)
@@ -9,7 +9,7 @@
 ## 1. Project Overview & Canonical Framing
 
 ### Approved Working Title
-**Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce**
+**Beyond Discounts: A Lifecycle-Based CRM Decision Framework for Indian Quick Commerce**
 
 ### Research Question
 > *Which lifecycle-based CRM actions are best supported by the observed sample's stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements?*
@@ -48,7 +48,7 @@ The 1,263 respondents are partitioned into three mutually exclusive, verified su
 | Subgroup | Definition / Filter | Count ($n$) | Share (%) | Questionnaire Routing Rules |
 | :--- | :--- | :---: | :---: | :--- |
 | **Never-Users** | `Ever Ordered == 0` AND `Order Frequency == 1 (Never)` | 376 | 29.8% | Routed to QA 48 (reasons for non-use); QA 47 coded 6 (Not Applicable). QA 46 & 49 substantive. |
-| **Previous Users** | `Ever Ordered == 1` AND `Order Frequency == 1 (Never)` | 80 | 6.3% | Lapsed users reporting no current orders. Routed to QA 48; QA 47 coded 6 (Not Applicable). Historical satisfaction unobserved. QA 46 & 49 substantive. |
+| **Previous Users** | `Ever Ordered == 1` AND `Order Frequency == 1 (Never)` | 80 | 6.3% | Previously ordered users who currently report no orders; this does not verify transactional churn or why they stopped. Routed to QA 48; QA 47 coded 6 (Not Applicable). Historical satisfaction unobserved. QA 46 & 49 substantive. |
 | **Current Users (survey-defined cohort)** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.9% | Questionnaire-defined current users; includes respondents selecting “less than once a month.” QA 47 substantive (1–5 scale: Definitely no to Definitely yes). QA 48 holds binary indicator `Reason Not Applicable Current User == 1`. QA 46 & 49 substantive. |
 | **Total Sample** | Full workbook manifest | **1,263** | **100.0%** | **Physical nulls = 0; duplicate rows = 0.** |
 
