@@ -435,6 +435,11 @@ def build_qa49_association_tests(df: pd.DataFrame, *, n_resamples: int, seed: in
     for comparison, table, test_seed in tests:
         test = monte_carlo_chi_square(table, n_resamples=n_resamples, seed=test_seed)
         out.append({"comparison": comparison, **test})
+    # Treat the four pre-specified QA49 omnibus tests as one family for family-wise inference.
+    adjusted = holm_adjust([row["monte_carlo_p_value"] for row in out])
+    for row, p_adj in zip(out, adjusted):
+        row["holm_adjusted_p_value"] = float(p_adj)
+        row["significant_after_holm_0_05"] = bool(p_adj < 0.05)
     return pd.DataFrame(out)
 
 
