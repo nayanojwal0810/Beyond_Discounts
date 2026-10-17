@@ -1,9 +1,9 @@
 n_subsamples,subsample_ratio,seed_policy,median_ari,mean_ari,std_ari,min_ari,max_ari,iqr_ari,unstable_runs_count,stability_verdict,specification,algorithm,k
 20,0.8,"Deterministic range(101, 121)",0.389,0.4493,0.2497,0.04,1.0,0.3159,11,UNSTABLE,SPEC_A,PAM,3
-20,0.8,"Deterministic range(101, 121)",0.6787,0.6425,0.2771,0.2853,1.0,0.6302,8,STABLE,SPEC_A,PAM,4
+20,0.8,"Deterministic range(101, 121)",0.6787,0.6425,0.2771,0.2853,1.0,0.6302,8,PROVISIONALLY_STABLE,SPEC_A,PAM,4
 20,0.8,"Deterministic range(101, 121)",0.402,0.4866,0.2351,0.1988,1.0,0.3537,13,MODERATE,SPEC_A,PAM,5
 20,0.8,"Deterministic range(101, 121)",0.4175,0.4749,0.1959,0.1847,1.0,0.2452,12,MODERATE,SPEC_A,PAM,6
 20,0.8,"Deterministic range(101, 121)",0.3531,0.4903,0.3469,0.0724,1.0,0.8115,14,UNSTABLE,SPEC_B,PAM,3
-20,0.8,"Deterministic range(101, 121)",0.6621,0.5768,0.2879,0.0836,1.0,0.3715,8,STABLE,SPEC_B,PAM,4
+20,0.8,"Deterministic range(101, 121)",0.6621,0.5768,0.2879,0.0836,1.0,0.3715,8,PROVISIONALLY_STABLE,SPEC_B,PAM,4
 20,0.8,"Deterministic range(101, 121)",0.4483,0.4848,0.2193,0.1348,1.0,0.3169,12,MODERATE,SPEC_B,PAM,5
 20,0.8,"Deterministic range(101, 121)",0.4746,0.4782,0.2252,0.1334,1.0,0.3405,11,MODERATE,SPEC_B,PAM,6

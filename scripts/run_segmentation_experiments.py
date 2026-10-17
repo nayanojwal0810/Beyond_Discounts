@@ -347,8 +347,14 @@ def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_b
 
     aris = np.array(aris)
     q25, q75 = np.percentile(aris, [25, 75])
-
-    verdict = "STABLE" if np.median(aris) >= 0.60 else ("MODERATE" if np.median(aris) >= 0.40 else "UNSTABLE")
+    if np.median(aris) >= 0.70 and unstable_runs == 0:
+        verdict = "HIGH_STABILITY"
+    elif np.median(aris) >= 0.60:
+        verdict = "PROVISIONALLY_STABLE" if unstable_runs > 0 else "STABLE"
+    elif np.median(aris) >= 0.40:
+        verdict = "MODERATE"
+    else:
+        verdict = "UNSTABLE"
 
     return {
         "n_subsamples": n_subsamples,
@@ -430,13 +436,14 @@ def compute_cluster_profiles(df, labels, feature_specs, spec_name, algorithm, k)
     return profiles
 
 
-def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k, n_k_comparisons=4):
+def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k):
     """
     Evaluates cluster solutions against held-out variables:
     - QA 47: Continue If Discounts Reduced (1-5 Likert).
     - QA 46: Next 3 Month Use (1-5 Likert).
-    Applies Kruskal-Wallis H test and Chi-Square contingency test, reporting effect size
-    and Holm-Bonferroni corrected p-values.
+    Computes Kruskal-Wallis H test, raw p-value, and epsilon-squared effect size.
+    Multiple-testing corrections (Bonferroni, Holm-Bonferroni) are applied
+    across the family of candidate k comparisons via apply_multiple_testing_corrections.
     """
     records = []
     unique_clusters = sorted(np.unique(labels))
@@ -462,11 +469,6 @@ def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k, n_
         n = len(vals)
         epsilon_sq = max(0.0, (h_stat - k + 1) / (n - k))
 
-        # Holm-Bonferroni correction factor across the 4 candidate k comparisons (k in 3,4,5,6)
-        p_holm = min(1.0, p_raw * n_k_comparisons)
-
-        interpretation = "Statistically significant cluster divergence" if p_raw < 0.05 else "No statistically significant cluster divergence (clusters are homogeneous on this construct)"
-
         records.append({
             "specification": spec_name,
             "algorithm": algorithm,
@@ -475,13 +477,65 @@ def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k, n_
             "test_method": "Kruskal-Wallis H-test",
             "test_statistic": round(float(h_stat), 4),
             "p_value": round(float(p_raw), 6),
-            "holm_bonferroni_p_value": round(float(p_holm), 6),
+            "bonferroni_p_value": None,
+            "holm_bonferroni_p_value": None,
+            "correction_family_size": 4,
             "effect_size_metric": "epsilon_squared",
             "effect_size_value": round(float(epsilon_sq), 4),
             "cluster_means_or_proportions": json.dumps(means_by_cluster),
-            "substantive_interpretation": interpretation,
+            "substantive_interpretation": "",
             "circularity_status": circ_status
         })
+
+    return records
+
+
+def apply_multiple_testing_corrections(records):
+    """
+    Applies exact family-wise Bonferroni and Holm-Bonferroni step-down corrections
+    across the predeclared family of candidate k comparisons (k in {3, 4, 5, 6}).
+    Each family is defined by (specification, algorithm, holdout_variable).
+    """
+    groups = {}
+    for i, r in enumerate(records):
+        key = (r["specification"], r["algorithm"], r["holdout_variable"])
+        groups.setdefault(key, []).append((i, r["p_value"]))
+
+    for key, items in groups.items():
+        m = len(items)
+        # Sort items by p_value ascending
+        sorted_items = sorted(items, key=lambda x: x[1])
+
+        running_max = 0.0
+        holm_pvals = {}
+        bonf_pvals = {}
+
+        for rank, (idx, p_raw) in enumerate(sorted_items):
+            multiplier = m - rank
+            val_holm = min(1.0, p_raw * multiplier)
+            running_max = max(running_max, val_holm)
+            holm_pvals[idx] = min(1.0, running_max)
+            bonf_pvals[idx] = min(1.0, p_raw * m)
+
+        for idx, p_raw in items:
+            records[idx]["bonferroni_p_value"] = round(float(bonf_pvals[idx]), 6)
+            records[idx]["holm_bonferroni_p_value"] = round(float(holm_pvals[idx]), 6)
+            records[idx]["correction_family_size"] = m
+
+            circ = records[idx]["circularity_status"]
+            p_holm = holm_pvals[idx]
+            if "Construct-defining" in circ:
+                records[idx]["substantive_interpretation"] = (
+                    "Statistically significant divergence by construction (construct-defining input, not independent validation)"
+                )
+            elif p_holm < 0.05:
+                records[idx]["substantive_interpretation"] = (
+                    f"Statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.4f} < 0.05)"
+                )
+            else:
+                records[idx]["substantive_interpretation"] = (
+                    f"No statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.4f} >= 0.05; clusters are homogeneous)"
+                )
 
     return records
 
@@ -703,6 +757,7 @@ def run_experiments(args=None):
     profile_df.to_csv(profile_path, index=False)
     print(f"Saved cluster profile summary to: {profile_path} ({len(profile_df)} rows)")
 
+    validation_records = apply_multiple_testing_corrections(validation_records)
     validation_df = pd.DataFrame(validation_records)
     validation_path = os.path.join(parsed.reports_dir, "external_validation_summary.csv")
     validation_df.to_csv(validation_path, index=False)
