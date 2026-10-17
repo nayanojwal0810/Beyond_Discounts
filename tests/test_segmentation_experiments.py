@@ -71,6 +71,7 @@ class TestSegmentationExperiments(unittest.TestCase):
         cls.metrics_csv_path = os.path.join("reports", "segmentation", "clustering_metrics.csv")
         cls.profiles_csv_path = os.path.join("reports", "segmentation", "cluster_profile_summary.csv")
         cls.stability_csv_path = os.path.join("reports", "segmentation", "stability_summary.csv")
+        cls.stability_runs_path = os.path.join("reports", "segmentation", "stability_runs.csv")
         cls.validation_csv_path = os.path.join("reports", "segmentation", "external_validation_summary.csv")
         cls.decision_md_path = os.path.join("reports", "segmentation", "SEGMENTATION_EXPERIMENT_DECISION.md")
 
