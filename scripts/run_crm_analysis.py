@@ -555,6 +555,19 @@ def _coefficient_rows(result: Any, model_name: str) -> list[dict[str, Any]]:
             "interpretation": ("Threshold/cutpoint parameter, not a CRM predictor." if is_threshold else
               "Adjusted association with higher QA47 stated-continuation response under the proportional-odds specification; not causal.")
         })
+    # Treat predictor coefficients within each fitted ordinal model as one predeclared family.
+    predictor_indices = [
+        i for i, row in enumerate(rows)
+        if row["term_type"] == "predictor" and np.isfinite(row["p_value"])
+    ]
+    for row in rows:
+        row["p_value_holm_within_model"] = np.nan
+        row["p_adjustment_method"] = "Holm across predictor coefficients within this model"
+        row["p_adjustment_family_size"] = len(predictor_indices)
+    if predictor_indices:
+        adjusted = holm_adjust([rows[i]["p_value"] for i in predictor_indices])
+        for i, p_adj in zip(predictor_indices, adjusted):
+            rows[i]["p_value_holm_within_model"] = float(p_adj)
     return rows
 
 
@@ -605,6 +618,19 @@ def fit_multinomial_sensitivity(y: pd.Series, X: pd.DataFrame, model_name: str) 
                     "or_ci95_high": float(np.exp(np.clip(hi, -30, 30))),
                     "interpretation_limit": "Category-specific relative odds from a sensitivity model; adjusted association, not causal."
                 })
+        # Adjust each non-reference response contrast as its own predictor-test family.
+        by_response = {}
+        for row in rows:
+            if row["term"] != "const" and np.isfinite(row["p_value"]):
+                by_response.setdefault(row["response_category_vs_reference"], []).append(row)
+        for row in rows:
+            row["p_value_holm_within_model"] = np.nan
+            row["p_adjustment_method"] = "Holm across predictors within response-category contrast"
+            row["p_adjustment_family_size"] = len(by_response.get(row["response_category_vs_reference"], []))
+        for contrast_rows in by_response.values():
+            adjusted = holm_adjust([row["p_value"] for row in contrast_rows])
+            for row, p_adj in zip(contrast_rows, adjusted):
+                row["p_value_holm_within_model"] = float(p_adj)
         return info, rows
     except Exception as exc:
         return {
