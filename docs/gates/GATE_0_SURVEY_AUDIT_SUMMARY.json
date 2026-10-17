@@ -1,0 +1,97 @@
+{
+  "status": "SUCCESS",
+  "total_rows": 1263,
+  "total_columns": 130,
+  "full_duplicate_rows": 0,
+  "demographic_duplicate_rows": 5,
+  "total_null_cells": 0,
+  "null_columns_count": 0,
+  "whitespace_column_names": [
+    " First Trial Reason",
+    " Order Frequency",
+    " Factor Low Delivery Fee",
+    "Fast Delivery Importance ",
+    " Problem No Major Problem"
+  ],
+  "binary_column_violations": {},
+  "range_violations": {},
+  "logical_conflicts": {
+    "aware_none_conflict": 0,
+    "used_never_vs_used_platforms": 0,
+    "ever_0_used_platforms_conflict": 0,
+    "ever_1_used_never_conflict": 0,
+    "problem_no_major_conflict": 0,
+    "qa48_na_current_user_mismatch": 0
+  },
+  "usage_status_audit": {
+    "ever_ordered_yes": 887,
+    "ever_ordered_no": 376,
+    "current_order_frequency_never": 456,
+    "current_order_frequency_active": 807,
+    "never_users_count": 376,
+    "previous_users_count": 80,
+    "current_users_count": 807,
+    "inconsistent_never_count": 0,
+    "previous_users_satisfaction_mislabeled_as_never_used": {
+      "Overall Satisfaction": 80,
+      "Product Quality Satisfaction": 80,
+      "Delivery Reliability Satisfaction": 80,
+      "Value Money Satisfaction": 80
+    },
+    "previous_users_reasons_for_not_using": {
+      "Reason Service Unavailable": 22,
+      "Reason Prefer Physical": 33,
+      "Reason Prices High": 31,
+      "Reason Delivery Fees": 22,
+      "Reason Distrust Quality": 20,
+      "Reason Prefer Inspect": 28,
+      "Reason Impulsive Spending Concern": 16,
+      "Reason No Need Rapid": 23,
+      "Reason Privacy Payment Concern": 18,
+      "Reason Unfamiliar Apps": 15
+    }
+  },
+  "platform_usage_counts": {
+    "Blinkit": {
+      "total_used_count": 577,
+      "pct_of_all_respondents": "45.7%",
+      "pct_of_ever_users": "65.1%"
+    },
+    "Zepto": {
+      "total_used_count": 439,
+      "pct_of_all_respondents": "34.8%",
+      "pct_of_ever_users": "49.5%"
+    },
+    "Swiggy Instamart": {
+      "total_used_count": 430,
+      "pct_of_all_respondents": "34.0%",
+      "pct_of_ever_users": "48.5%"
+    },
+    "BigBasket BBNow": {
+      "total_used_count": 283,
+      "pct_of_all_respondents": "22.4%",
+      "pct_of_ever_users": "31.9%"
+    },
+    "Flipkart Minutes": {
+      "total_used_count": 149,
+      "pct_of_all_respondents": "11.8%",
+      "pct_of_ever_users": "16.8%"
+    },
+    "Amazon Rapid": {
+      "total_used_count": 171,
+      "pct_of_all_respondents": "13.5%",
+      "pct_of_ever_users": "19.3%"
+    }
+  },
+  "survey_metadata": {
+    "source_title": "A Large-Scale Survey Dataset on Quick-Commerce Adoption, Ordering Patterns, Product Categories and Spending Behaviour among Indian Consumers",
+    "contributor": "Dr. Ashish Chandra (Amity Business School, Amity University, Lucknow)",
+    "declared_licence": "CC BY 4.0",
+    "mendeley_doi": "10.17632/cw88nb7822.1",
+    "deposit_date": "14 October 2026",
+    "input_file_path": "data\\raw\\survey\\Data.xlsx",
+    "input_file_sha256": "c6e92099b960f11472558b629e90b2926012061eac45b9051973c8fe79e1a73d",
+    "input_file_size_bytes": 565344,
+    "audit_timestamp_utc": "2026-10-17T08:17:59.950156+00:00"
+  }
+}
