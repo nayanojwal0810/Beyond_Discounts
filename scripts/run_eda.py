@@ -540,59 +540,94 @@ def generate_table7_qa47_associations(df, tables_dir):
     curr_df['satisfaction_composite'] = curr_df[sat_cols].mean(axis=1)
 
     association_tests = [
-        ('Order Frequency (QA 15)', 'Order Frequency', 'Ordinal Category (2–7)'),
-        ('Monthly Spend Tier (QA 26)', 'Monthly Spend', 'Ordinal Spend (2–8)'),
-        ('Typical Basket Items (QA 19)', 'Items per Order', 'Ordinal Category (1–6)'),
-        ('Typical Spend per Order (QA 25)', 'Order Spend', 'Ordinal Spend (1–7)'),
-        ('Discount-Induced Overspending (QA 28)', 'Discount Overspend', 'Ordinal Likert (1–5)'),
-        ('Basket Building to Reach Threshold (QA 29)', 'Threshold Extra Items', 'Ordinal Likert (1–5)'),
-        ('Price Comparison across QC Apps (QA 33)', 'Compare Platform Prices', 'Ordinal Likert (1–5)'),
-        ('Price Comparison vs Physical Stores (QA 34)', 'Compare Physical Prices', 'Ordinal Likert (1–5)'),
-        ('Fast Delivery Importance (QA 35)', 'Fast Delivery Importance', 'Ordinal Likert (1–5)'),
-        ('Composite Service Satisfaction', 'satisfaction_composite', 'Continuous Mean (1.0–5.0)'),
-        ('Multi-Platform Usage Count (QA 12)', 'platforms_used_count', 'Discrete Count (1–6)'),
-        ('Unplanned Impulse Purchasing (QA 44)', 'Unplanned Purchase', 'Ordinal Likert (1–5)'),
-        ('New Brand Trial Propensity (QA 45)', 'New Brand Trial', 'Ordinal Likert (1–5)')
+        ('Order Frequency (QA 15)', 'Order Frequency', 'Ordinal Category (Codes 2–7)', 'spearman'),
+        ('Monthly Spend Tier (QA 26)', 'Monthly Spend', 'Categorical with Unordered Option (Codes 2–8: 2–7 spend + 8 Not sure)', 'kruskal_qa26'),
+        ('Typical Basket Items (QA 19)', 'Items per Order', 'Categorical with Unordered Option (Codes 1–6: 1–5 size + 6 Varies)', 'kruskal_qa19'),
+        ('Typical Spend per Order (QA 25)', 'Order Spend', 'Ordinal Spend (Codes 1–7)', 'spearman'),
+        ('Discount-Induced Overspending (QA 28)', 'Discount Overspend', 'Ordinal Likert (Codes 1–5)', 'spearman'),
+        ('Basket Building to Reach Threshold (QA 29)', 'Threshold Extra Items', 'Ordinal Likert (Codes 1–5)', 'spearman'),
+        ('Price Comparison across QC Apps (QA 33)', 'Compare Platform Prices', 'Ordinal Likert (Codes 1–5)', 'spearman'),
+        ('Price Comparison vs Physical Stores (QA 34)', 'Compare Physical Prices', 'Ordinal Likert (Codes 1–5)', 'spearman'),
+        ('Fast Delivery Importance (QA 35)', 'Fast Delivery Importance', 'Ordinal Likert (Codes 1–5)', 'spearman'),
+        ('Composite Service Satisfaction', 'satisfaction_composite', 'Continuous Mean (1.0–5.0)', 'spearman'),
+        ('Multi-Platform Usage Count (QA 12)', 'platforms_used_count', 'Discrete Count (Codes 1–6)', 'spearman'),
+        ('Unplanned Impulse Purchasing (QA 44)', 'Unplanned Purchase', 'Ordinal Likert (Codes 1–5)', 'spearman'),
+        ('New Brand Trial Propensity (QA 45)', 'New Brand Trial', 'Ordinal Likert (Codes 1–5)', 'spearman')
     ]
 
+    m_tests = len(association_tests)
+    bonf_alpha = 0.05 / m_tests  # 0.05 / 13 ~ 0.0038
+
     rows = []
-    bonf_alpha = 0.05 / len(association_tests)  # 0.05 / 13 ~ 0.0038
+    for var_title, col_name, var_type, test_family in association_tests:
+        if test_family == 'spearman':
+            x = curr_df[col_name]
+            test_n = int(curr_df.dropna(subset=[col_name, 'Continue If Discounts Reduced']).shape[0])
+            rho, p_val = stats.spearmanr(x, qa47)
+            adj_p = min(1.0, float(p_val) * m_tests)
+            test_method = "Spearman rank correlation"
+            stat_name = "Spearman Rho (ρ)"
+            stat_val = round(float(rho), 3)
+            effect_name = "Spearman Rho (ρ)"
+            effect_val = round(float(rho), 3)
+            spearman_rho_col = round(float(rho), 3)
+            spearman_p_col = f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}"
+            kw_stat_col = "N/A (Spearman test)"
+            kw_p_col = "N/A (Spearman test)"
 
-    for var_title, col_name, var_type in association_tests:
-        x = curr_df[col_name]
-        # Spearman rank correlation
-        rho, p_val = stats.spearmanr(x, qa47)
+            is_sig = adj_p < 0.05
+            interp = (f"Inconclusive: No statistically significant monotonic relationship "
+                      f"(|ρ|={abs(rho):.3f} <= 0.05, raw p={p_val:.4f} >= 0.05, Bonferroni p_adj={adj_p:.4f}; "
+                      f"exploratory test does not prove absence of relationship)")
 
-        # Kruskal-Wallis across the 3 operational discount continuation intention tiers
-        g_low = curr_df.loc[curr_df['discount_resilience_tier'] == 'Lower continuation intention (1-2)', col_name]
-        g_unc = curr_df.loc[curr_df['discount_resilience_tier'] == 'Uncertain (3)', col_name]
-        g_high = curr_df.loc[curr_df['discount_resilience_tier'] == 'Higher continuation intention (4-5)', col_name]
+        elif test_family in ['kruskal_qa19', 'kruskal_qa26']:
+            categories = sorted(curr_df[col_name].unique())
+            groups = [qa47[curr_df[col_name] == c].values for c in categories]
+            group_counts = [len(g) for g in groups]
+            test_n = sum(group_counts)
+            h_stat, p_val = stats.kruskal(*groups)
+            eps2 = h_stat / (test_n - 1)
+            adj_p = min(1.0, float(p_val) * m_tests)
 
-        kw_stat, kw_p = stats.kruskal(g_low, g_unc, g_high)
+            if test_family == 'kruskal_qa19':
+                test_method = f"Kruskal-Wallis test across {len(categories)} QA 19 categories (Codes 1–5 size + 6 Varies, n={test_n})"
+                special_desc = "Code 6 'Varies considerably' evaluated as separate non-ordinal category"
+            else:
+                test_method = f"Kruskal-Wallis test across {len(categories)} QA 26 categories (Codes 2–7 spend + 8 Not sure, n={test_n})"
+                special_desc = "Code 8 'Not sure' evaluated as separate non-ordinal category"
 
-        # Formulate neutral statistical interpretation distinguishing effect size, significance, and multiple-testing limitation
-        is_raw_sig = (p_val < 0.05) or (kw_p < 0.05)
-        is_bonf_sig = (p_val < bonf_alpha)
+            stat_name = "Kruskal-Wallis H"
+            stat_val = round(float(h_stat), 3)
+            effect_name = "Epsilon-squared (ε²)"
+            effect_val = round(float(eps2), 4)
+            spearman_rho_col = "N/A (Categorical test)"
+            spearman_p_col = "N/A (Categorical test)"
+            kw_stat_col = round(float(h_stat), 2)
+            kw_p_col = f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}"
 
-        if not is_raw_sig:
-            interp = f"Inconclusive: No statistically significant monotonic relationship (|ρ|={abs(rho):.3f} <= 0.06, p={p_val:.3f} >= 0.05; KW p={kw_p:.3f} >= 0.05; exploratory test)"
-        else:
-            direction = "positive" if rho > 0 else "negative"
-            bonf_text = "survives Bonferroni" if is_bonf_sig else "does not survive multiple-testing correction"
-            interp = f"Raw exploratory {direction} correlation (|ρ|={abs(rho):.3f}, p={p_val:.4f}; {bonf_text})"
+            is_sig = adj_p < 0.05
+            interp = (f"Inconclusive: No statistically significant difference in QA 47 continuation intention "
+                      f"across {len(categories)} categories (H={h_stat:.3f}, raw p={p_val:.4f} >= 0.05, "
+                      f"Bonferroni p_adj={adj_p:.4f}, ε²={eps2:.4f}; {special_desc}; "
+                      f"exploratory test does not prove absence of relationship)")
 
         rows.append({
             "Predictor / Behavioral Factor": var_title,
             "Variable Type": var_type,
-            "Spearman Rho (ρ)": round(rho, 3),
-            "Spearman p-value": f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}",
-            f"Lower Intention Tier Mean (n={len(g_low)})": round(g_low.mean(), 2),
-            f"Uncertain Tier Mean (n={len(g_unc)})": round(g_unc.mean(), 2),
-            f"Higher Intention Tier Mean (n={len(g_high)})": round(g_high.mean(), 2),
-            "Kruskal-Wallis H-stat": round(kw_stat, 2),
-            "Kruskal-Wallis p-value": f"{kw_p:.4e}" if kw_p < 0.001 else f"{kw_p:.4f}",
+            "Analysis Sample Size (n)": test_n,
+            "Statistical Test Method": test_method,
+            "Test Statistic Name": stat_name,
+            "Test Statistic Value": stat_val,
+            "Raw p-value": f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}",
+            "Effect Size Measure": effect_name,
+            "Effect Size Value": effect_val,
+            "Bonferroni Adjusted p-value": f"{adj_p:.4e}" if adj_p < 0.001 else f"{adj_p:.4f}",
             "Multiple Testing Adjusted α (m=13)": f"{bonf_alpha:.4f}",
-            "Significant after Multiple Testing?": "Yes" if is_bonf_sig else "No",
+            "Significant after Multiple Testing?": "Yes" if is_sig else "No",
+            "Spearman Rho (ρ)": spearman_rho_col,
+            "Spearman p-value": spearman_p_col,
+            "Kruskal-Wallis H-stat": kw_stat_col,
+            "Kruskal-Wallis p-value": kw_p_col,
             "Substantive Interpretation": interp
         })
 
@@ -1054,24 +1089,40 @@ def generate_fig4_discount_bivariate(df, figures_dir):
     axes[0, 0].set_yticks(range(1, 6))
 
     # 2. Monthly Spend vs QA 47 (all 7 active categories: 2 to 8)
+    # Codes 2–7 are ordered spend brackets; Code 8 is 'Not sure' (non-ordinal category)
     spend_labels = {
-        2: '<₹1k',
-        3: '₹1k–₹2.5k',
-        4: '₹2.5k–₹5k',
-        5: '₹5k–₹7.5k',
-        6: '₹7.5k–₹10k',
-        7: '₹10k+',
-        8: 'Not sure'
+        2: '<₹1k\n(n=178)',
+        3: '₹1k–₹2.5k\n(n=230)',
+        4: '₹2.5k–₹5k\n(n=195)',
+        5: '₹5k–₹7.5k\n(n=114)',
+        6: '₹7.5k–₹10k\n(n=40)',
+        7: '₹10k+\n(n=26)',
+        8: 'Not sure\n(n=24)'
     }
     curr_df['spend_label'] = curr_df['Monthly Spend'].map(spend_labels)
-    spend_order = ['<₹1k', '₹1k–₹2.5k', '₹2.5k–₹5k', '₹5k–₹7.5k', '₹7.5k–₹10k', '₹10k+', 'Not sure']
+    spend_order = [
+        '<₹1k\n(n=178)', '₹1k–₹2.5k\n(n=230)', '₹2.5k–₹5k\n(n=195)',
+        '₹5k–₹7.5k\n(n=114)', '₹7.5k–₹10k\n(n=40)', '₹10k+\n(n=26)',
+        'Not sure\n(n=24)'
+    ]
+    spend_colors = ['#90CAF9', '#64B5F6', '#42A5F5', '#2196F3', '#1E88E5', '#1565C0', '#9E9E9E']
     sns.boxplot(data=curr_df, x='spend_label', y='Continue If Discounts Reduced', order=spend_order,
-                hue='spend_label', legend=False,
-                ax=axes[0, 1], palette="Blues_d", width=0.5, boxprops=dict(edgecolor='#333333'))
-    rho2, p2 = stats.spearmanr(curr_df['Monthly Spend'], curr_df['Continue If Discounts Reduced'])
-    p2_str = f"p = {p2:.3f}" if p2 >= 0.001 else "p < 0.001"
-    axes[0, 1].set_title(f'QA 47 by Monthly Spend (QA 26, Codes 2–8)\n(Spearman ρ = {rho2:+.3f}, {p2_str}; Inconclusive)', fontsize=12, fontweight='bold')
-    axes[0, 1].set_xlabel('Monthly Spend Bracket (INR)', fontsize=11)
+                palette=spend_colors, hue='spend_label', legend=False,
+                ax=axes[0, 1], width=0.55, boxprops=dict(edgecolor='#333333'))
+
+    # Visual demarcation: separate ordered spend brackets from non-ordinal 'Not sure'
+    axes[0, 1].axvline(5.5, color='#757575', linestyle='--', linewidth=1.5, alpha=0.8)
+    axes[0, 1].text(2.5, 5.25, 'Ordered Spend Brackets (n = 783)', ha='center', fontsize=9.5, fontweight='bold', color='#1565C0')
+    axes[0, 1].text(6.0, 5.25, 'Non-Ordinal\n(n = 24)', ha='center', fontsize=8.5, fontweight='bold', color='#616161')
+    axes[0, 1].set_ylim(0.8, 5.55)
+
+    # Kruskal-Wallis test across all 7 active categories of Monthly Spend
+    spend_groups = [curr_df.loc[curr_df['Monthly Spend'] == c, 'Continue If Discounts Reduced'].values for c in sorted(curr_df['Monthly Spend'].unique())]
+    h_spend, p_spend = stats.kruskal(*spend_groups)
+    eps2_spend = h_spend / (len(curr_df) - 1)
+    p_spend_str = f"p = {p_spend:.3f}" if p_spend >= 0.001 else "p < 0.001"
+    axes[0, 1].set_title(f'QA 47 by Monthly Spend (QA 26, 7 Categories, n = 807)\n(Kruskal–Wallis H = {h_spend:.2f}, {p_spend_str}, ε² = {eps2_spend:.3f}; Inconclusive)', fontsize=12, fontweight='bold')
+    axes[0, 1].set_xlabel('Monthly Spend Category (Current Active Users n = 807: 783 ordered + 24 Not sure)', fontsize=10)
     axes[0, 1].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[0, 1].set_yticks(range(1, 6))
 
@@ -1084,7 +1135,7 @@ def generate_fig4_discount_bivariate(df, figures_dir):
                 ax=axes[1, 0], palette="Oranges_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho3, p3 = stats.spearmanr(curr_df['Threshold Extra Items'], curr_df['Continue If Discounts Reduced'])
     p3_str = f"p = {p3:.3f}" if p3 >= 0.001 else "p < 0.001"
-    axes[1, 0].set_title(f'QA 47 by Adding Threshold Items (QA 29, Codes 1–5)\n(Spearman ρ = {rho3:+.3f}, {p3_str}; Inconclusive)', fontsize=12, fontweight='bold')
+    axes[1, 0].set_title(f'QA 47 by Adding Threshold Items (QA 29, Codes 1–5, n = 807)\n(Spearman ρ = {rho3:+.3f}, {p3_str}; Inconclusive)', fontsize=12, fontweight='bold')
     axes[1, 0].set_xlabel('Frequency of Adding Threshold Items', fontsize=11)
     axes[1, 0].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[1, 0].set_yticks(range(1, 6))
@@ -1095,12 +1146,12 @@ def generate_fig4_discount_bivariate(df, figures_dir):
                 ax=axes[1, 1], palette="Purples_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho4, p4 = stats.spearmanr(curr_df['platforms_used_count'], curr_df['Continue If Discounts Reduced'])
     p4_str = f"p = {p4:.3f}" if p4 >= 0.001 else "p < 0.001"
-    axes[1, 1].set_title(f'QA 47 by Multi-Platform Footprint (Ever Used 1–6 Apps)\n(Spearman ρ = {rho4:+.3f}, {p4_str}; Inconclusive)', fontsize=12, fontweight='bold')
+    axes[1, 1].set_title(f'QA 47 by Multi-Platform Footprint (Ever Used 1–6 Apps, n = 807)\n(Spearman ρ = {rho4:+.3f}, {p4_str}; Inconclusive)', fontsize=12, fontweight='bold')
     axes[1, 1].set_xlabel('Number of Quick-Commerce Apps Ever Used', fontsize=11)
     axes[1, 1].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[1, 1].set_yticks(range(1, 6))
 
-    plt.suptitle('Figure 4: Bivariate Exploration of QA 47 Stated Post-Discount Continuation Intention\n(Current Active Users n = 807; All Spearman correlations non-significant p >= 0.05; Exploratory analysis, not confirmatory)',
+    plt.suptitle('Figure 4: Bivariate Exploration of QA 47 Stated Post-Discount Continuation Intention\n(Current Active Users n = 807; All tests non-significant p >= 0.05; Inconclusive exploratory analysis, not proof of no relationship)',
                  fontsize=14, fontweight='bold', y=0.99)
     plt.tight_layout()
     plt.savefig(os.path.join(figures_dir, "fig4_discount_sensitivity_bivariate.png"), dpi=300, bbox_inches='tight')

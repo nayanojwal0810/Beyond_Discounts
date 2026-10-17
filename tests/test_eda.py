@@ -20,6 +20,7 @@ import os
 import unittest
 import pandas as pd
 import numpy as np
+from scipy import stats
 
 from scripts.run_eda import (
     load_and_preprocess_data,
@@ -377,6 +378,92 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
         self.assertTrue(tdf['Fisher Exact p-value'].notna().all())
         # Ensure exploratory methodological note is present
         self.assertTrue(tdf['Exploratory Methodological Note'].notna().all())
+
+    def test_qa47_association_analysis_methods_and_categories(self):
+        """
+        Validates statistical rigor of QA 47 association analysis (Table 7):
+        - QA19 code 6 ('Varies considerably') is handled as a separate non-ordinal response via Kruskal-Wallis.
+        - QA26 code 8 ('Not sure') is handled as a separate non-ordinal response via Kruskal-Wallis.
+        - Correct analysis methods are recorded (Kruskal-Wallis for QA 19/26; Spearman for 11 ordered/continuous variables).
+        - Test sample sizes and category totals reconcile to all 807 eligible current active users.
+        - Other eligible ordinal predictors retain valid ordered treatment.
+        - Bonferroni multiple testing correction is applied consistently across all 13 primary tests.
+        """
+        tpath = os.path.join(DEFAULT_TABLES_DIR, "qa47_cross_tabs_and_associations.csv")
+        tdf = pd.read_csv(tpath)
+        self.assertEqual(len(tdf), 13, "Must evaluate exactly 13 primary association tests.")
+
+        # Load active users to compute ground-truth checks dynamically
+        df = load_and_preprocess_data(DEFAULT_SURVEY_PATH, "Data")
+        curr_df = df[df['user_subgroup'] == 'Current Active User'].copy()
+        self.assertEqual(len(curr_df), 807, "Eligible current active users must equal 807.")
+
+        # 1. QA 19 (Items per Order) validation
+        qa19_row = tdf[tdf['Predictor / Behavioral Factor'].str.contains('QA 19')]
+        self.assertEqual(len(qa19_row), 1, "QA 19 must appear exactly once.")
+        qa19 = qa19_row.iloc[0]
+        self.assertEqual(int(qa19['Analysis Sample Size (n)']), 807, "QA 19 sample size must be 807.")
+        self.assertIn("Kruskal-Wallis", str(qa19['Statistical Test Method']),
+                      "QA 19 must use Kruskal-Wallis test across categories, not Spearman rank.")
+        self.assertEqual(qa19['Test Statistic Name'], "Kruskal-Wallis H")
+        self.assertEqual(str(qa19['Spearman Rho (ρ)']), "N/A (Categorical test)",
+                         "QA 19 must not have an ordinal Spearman Rho.")
+        # Verify category distribution of QA 19 among active users
+        qa19_counts = curr_df['Items per Order'].value_counts().to_dict()
+        self.assertEqual(qa19_counts[6], 100, "Code 6 ('Varies considerably') must have n=100.")
+        self.assertEqual(sum(qa19_counts.values()), 807, "QA 19 category sum must reconcile to 807.")
+        # Dynamically verify Kruskal-Wallis H and p-value
+        qa19_groups = [curr_df.loc[curr_df['Items per Order'] == c, 'Continue If Discounts Reduced'].values
+                       for c in sorted(curr_df['Items per Order'].unique())]
+        self.assertEqual(len(qa19_groups), 6, "QA 19 must have 6 categories (Codes 1–6).")
+        h19, p19 = stats.kruskal(*qa19_groups)
+        self.assertAlmostEqual(float(qa19['Test Statistic Value']), round(h19, 3), places=2)
+
+        # 2. QA 26 (Monthly Spend) validation
+        qa26_row = tdf[tdf['Predictor / Behavioral Factor'].str.contains('QA 26')]
+        self.assertEqual(len(qa26_row), 1, "QA 26 must appear exactly once.")
+        qa26 = qa26_row.iloc[0]
+        self.assertEqual(int(qa26['Analysis Sample Size (n)']), 807, "QA 26 sample size must be 807.")
+        self.assertIn("Kruskal-Wallis", str(qa26['Statistical Test Method']),
+                      "QA 26 must use Kruskal-Wallis test across categories, not Spearman rank.")
+        self.assertEqual(qa26['Test Statistic Name'], "Kruskal-Wallis H")
+        self.assertEqual(str(qa26['Spearman Rho (ρ)']), "N/A (Categorical test)",
+                         "QA 26 must not have an ordinal Spearman Rho.")
+        # Verify category distribution of QA 26 among active users
+        qa26_counts = curr_df['Monthly Spend'].value_counts().to_dict()
+        self.assertEqual(qa26_counts[8], 24, "Code 8 ('Not sure') must have n=24.")
+        self.assertEqual(sum(qa26_counts.values()), 807, "QA 26 category sum must reconcile to 807.")
+        # Dynamically verify Kruskal-Wallis H and p-value
+        qa26_groups = [curr_df.loc[curr_df['Monthly Spend'] == c, 'Continue If Discounts Reduced'].values
+                       for c in sorted(curr_df['Monthly Spend'].unique())]
+        self.assertEqual(len(qa26_groups), 7, "QA 26 must have 7 active categories (Codes 2–8).")
+        h26, p26 = stats.kruskal(*qa26_groups)
+        self.assertAlmostEqual(float(qa26['Test Statistic Value']), round(h26, 3), places=2)
+
+        # 3. Validate the 11 remaining ordered/continuous predictors retain valid Spearman treatment
+        spearman_rows = tdf[~tdf['Predictor / Behavioral Factor'].str.contains('QA 19|QA 26')]
+        self.assertEqual(len(spearman_rows), 11, "Must have exactly 11 Spearman rank correlation tests.")
+        for _, row in spearman_rows.iterrows():
+            self.assertEqual(row['Statistical Test Method'], "Spearman rank correlation")
+            self.assertEqual(row['Test Statistic Name'], "Spearman Rho (ρ)")
+            self.assertEqual(int(row['Analysis Sample Size (n)']), 807)
+            self.assertEqual(row['Kruskal-Wallis H-stat'], "N/A (Spearman test)")
+            self.assertTrue(np.isfinite(float(row['Spearman Rho (ρ)'])))
+
+        # 4. Validate consistent Bonferroni multiple testing adjustment across all 13 tests
+        for _, row in tdf.iterrows():
+            raw_p = float(row['Raw p-value'])
+            adj_p = float(row['Bonferroni Adjusted p-value'])
+            expected_adj_p = min(1.0, raw_p * 13)
+            self.assertAlmostEqual(adj_p, expected_adj_p, places=3)
+            self.assertEqual(row['Significant after Multiple Testing?'], "No")
+            self.assertIn("inconclusive", str(row['Substantive Interpretation']).lower())
+
+    def test_fig4_bivariate_figure_properties(self):
+        """Validates that Figure 4 is properly regenerated and exists."""
+        fig4_path = os.path.join(DEFAULT_FIGURES_DIR, "fig4_discount_sensitivity_bivariate.png")
+        self.assertTrue(os.path.exists(fig4_path), "fig4_discount_sensitivity_bivariate.png must exist.")
+        self.assertGreater(os.path.getsize(fig4_path), 50000, "Figure 4 file size must be substantial (>50KB).")
 
 
 class TestErrorHandlingAndEdgeCases(unittest.TestCase):
