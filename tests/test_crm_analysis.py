@@ -95,8 +95,13 @@ class TestCRMAnalysis(unittest.TestCase):
         source = make_synthetic_survey(
             seed=65, n_never=376, n_previous=80, n_current=807
         )
-        for index in range(130 - source.shape[1]):
-            source[f"unused_source_column_{index:03d}"] = 0
+        padding_count = 130 - source.shape[1]
+        padding = pd.DataFrame(
+            {f"unused_source_column_{index:03d}": np.zeros(len(source), dtype=int)
+             for index in range(padding_count)},
+            index=source.index,
+        )
+        source = pd.concat([source, padding], axis=1)
         self.assertEqual(source.shape, (1263, 130))
         data = derive_cohorts(source, strict=True)
         self.assertEqual(len(data), 1263)
