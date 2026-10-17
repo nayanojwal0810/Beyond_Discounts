@@ -84,7 +84,7 @@ Beyond_Discounts/
 │   ├── eda/                                        # Aggregate EDA tables, figures and report
 │   ├── segmentation/                               # Aggregate clustering metrics and profiles
 │   └── crm/CRM_DECISION_ANALYSIS_PLAN.md            # Gate 1D decision-analysis plan
-└── tests/                                          # Automated audit, EDA, feature and segmentation tests
+│   └── crm/CRM_DECISION_ANALYSIS_PLAN.md            # Gate 1D plan\n├── scripts/run_crm_analysis.py                      # Aggregate-only lifecycle CRM analysis\n└── tests/                                          # Automated audit, EDA, segmentation and CRM tests
 ```
 
 Historical app-review feasibility artifacts and scripts remain for auditability but are **superseded for primary quantitative analysis**. The survey workbook, codebook, questionnaire, processed matrices, and respondent-level assignments are local-only and must stay outside Git.
@@ -102,7 +102,7 @@ python scripts/run_segmentation_experiments.py --survey-file data/raw/survey/Dat
 python -m unittest discover tests
 ```
 
-The segmentation experiment prepares its feature matrices and holdout locally if missing, then writes aggregate outputs under `reports/segmentation/`. Gate 1C.1 is not closed until the full local run succeeds and its regenerated reports reconcile.
+The segmentation experiment prepares its feature matrices and holdout locally if missing, then writes aggregate outputs under `reports/segmentation/`. Gate 1C.1 is not closed until the full local run succeeds and its regenerated reports reconcile. The Gate 1D runner is implemented but is not yet accepted as evidence until it has been executed on the real workbook and its diagnostics reviewed.
 
 **Reproducibility status:** direct dependency versions are pinned in `requirements.txt`, but this is not a full transitive/hash lock and has not been verified against a complete real-workbook run. The clean-clone clustering test path now has synthetic fixtures; the full workbook pipeline remains an explicit Gate 1C.1 acceptance criterion. Existing committed aggregate reports are evidence of prior runs, not proof the current branch has been rerun end-to-end.
 
