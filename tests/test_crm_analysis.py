@@ -17,10 +17,9 @@ from scripts.run_crm_analysis import (
 )
 
 
-def make_synthetic_survey(seed=64):
+def make_synthetic_survey(seed=64, n_never=30, n_previous=20, n_current=120):
     """Create synthetic-only responses to test code paths, never survey findings."""
     rng = np.random.default_rng(seed)
-    n_never, n_previous, n_current = 30, 20, 120
     n = n_never + n_previous + n_current
     never = np.arange(0, n_never)
     previous = np.arange(n_never, n_never + n_previous)
@@ -93,13 +92,18 @@ class TestCRMAnalysis(unittest.TestCase):
         self.assertEqual(int(tier_counts["Higher intention (4-5)"]), 48)
 
     def test_strict_shape_check_uses_original_source_columns(self):
-        """Internal derived columns must not cause the 130-column source check to fail."""
-        source = self.df.copy()
-        for index in range(99):
+        """A valid-shaped source passes schema/cohort checks after internal columns are derived."""
+        source = make_synthetic_survey(
+            seed=65, n_never=376, n_previous=80, n_current=807
+        )
+        for index in range(130 - source.shape[1]):
             source[f"unused_source_column_{index:03d}"] = 0
-        self.assertEqual(source.shape[1], 130)
-        with self.assertRaisesRegex(ValueError, "Cohort counts do not match"):
-            derive_cohorts(source, strict=True)
+        self.assertEqual(source.shape, (1263, 130))
+        data = derive_cohorts(source, strict=True)
+        self.assertEqual(len(data), 1263)
+        self.assertEqual(data["user_subgroup"].value_counts().to_dict(), {
+            "Current Active User": 807, "Never User": 376, "Previous User": 80
+        })
 
     def test_holm_adjustment_preserves_input_order_and_small_values(self):
         p = [0.03, 1e-10, 0.2, 0.01]
