@@ -90,12 +90,11 @@ class TestSegmentationExperiments(unittest.TestCase):
             elif dtype in ("nominal", "binary", "binary_indicator"):
                 domain = spec.get("active_domain", [int(lo), int(hi)])
                 values = rng.choice(domain, size=n_rows)
-            elif dtype in ("ordinal", "continuous", "continuous_composite", "discrete_count"):
-                if name in ("monthly_spend_ordinal", "items_per_order_ordinal"):
-                    values = rng.randint(int(lo), int(hi) + 1, size=n_rows).astype(float)
-                else:
-                    # Use integer ranks for the survey's coded ordinal fields.
-                    values = rng.randint(int(lo), int(hi) + 1, size=n_rows).astype(float)
+            elif dtype in ("continuous", "continuous_composite"):
+                values = rng.uniform(lo, hi, size=n_rows).astype(float)
+            elif dtype in ("ordinal", "discrete_count"):
+                # Use integer ranks for ordinal/count fields in the synthetic test fixture.
+                values = rng.randint(int(lo), int(hi) + 1, size=n_rows).astype(float)
             else:
                 raise ValueError(f"Unsupported synthetic fixture type: {dtype}")
             df_a[name] = values
