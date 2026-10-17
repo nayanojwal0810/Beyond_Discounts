@@ -92,6 +92,15 @@ class TestCRMAnalysis(unittest.TestCase):
         self.assertEqual(int(tier_counts["Uncertain (3)"]), 24)
         self.assertEqual(int(tier_counts["Higher intention (4-5)"]), 48)
 
+    def test_strict_shape_check_uses_original_source_columns(self):
+        """Internal derived columns must not cause the 130-column source check to fail."""
+        source = self.df.copy()
+        for index in range(99):
+            source[f"unused_source_column_{index:03d}"] = 0
+        self.assertEqual(source.shape[1], 130)
+        with self.assertRaisesRegex(ValueError, "Cohort counts do not match"):
+            derive_cohorts(source, strict=True)
+
     def test_holm_adjustment_preserves_input_order_and_small_values(self):
         p = [0.03, 1e-10, 0.2, 0.01]
         adjusted = holm_adjust(p)
