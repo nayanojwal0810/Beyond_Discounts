@@ -67,64 +67,44 @@ The 1,263 respondents are partitioned into three mutually exclusive, verified su
 
 ```text
 Beyond_Discounts/
-├── README.md                                 # Canonical project overview, research question & reproduction guide
-├── data/
-│   ├── README.md                             # Dataset provenance, dictionary notes, and security controls
-│   └── raw/survey/                           # Raw survey files (excluded from Git tracking)
-│       ├── Data.xlsx                         # Survey microdata (1,263 rows x 130 columns)
-│       ├── Code Book.docx                    # Questionnaire codebook and coding manual
-│       └── Questionairre.docx                # Full survey questionnaire instrument
+├── README.md
+├── data/README.md                                  # Provenance, routing semantics, input setup and privacy
 ├── docs/
-│   ├── data/
-│   │   └── DATA_SOURCE_REGISTER.csv          # Register of evaluated data sources and provenance audits
+│   ├── data/DATA_SOURCE_REGISTER.csv               # Evaluated sources and provenance register
 │   └── gates/
-│       ├── GATE_0_DECISION_LOG.md            # Formal decision record for Gate 0 closure & Gate 1 launch
-│       ├── GATE_0_SURVEY_CANDIDATE_AUDIT.md  # Comprehensive technical audit of the survey dataset
-│       └── GATE_0_SURVEY_AUDIT_SUMMARY.json  # Machine-readable audit summary artifact
-├── reports/
-│   └── eda/
-│       ├── EDA_REPORT.md                     # Comprehensive Gate 1A exploratory data analysis report
-│       ├── ANALYSIS_PLAN.md                  # Methodological analysis plan and hypothesis roadmap
-│       ├── VARIABLE_REGISTER.md              # Question and variable register with coding rules
-│       ├── figures/                          # Publication-quality PNG visualizations (8 figures)
-│       └── tables/                           # Aggregate-only analytical CSV tables (11 tables)
+│       ├── GATE_0_DECISION_LOG.md                  # Scope and dataset decisions
+│       ├── GATE_0_SURVEY_CANDIDATE_AUDIT.md        # Survey audit and limitations
+│       └── GATE_1C1_TECHNICAL_REVIEW.md            # Current technical QA and closure criteria
 ├── scripts/
-│   ├── audit_survey_data.py                  # Gate 0 schema and questionnaire routing validation script
-│   └── run_eda.py                            # Gate 1A reproducible EDA pipeline and export script
-└── tests/
-    ├── test_audit_survey_data.py             # Unit tests for survey schema, routing, and error conditions
-    └── test_eda.py                           # Automated tests for EDA derivations, tables, and denominators
+│   ├── audit_survey_data.py                        # Schema and questionnaire-routing audit
+│   ├── run_eda.py                                  # Gate 1A EDA
+│   ├── prepare_segmentation_features.py            # Typed features/specifications/holdouts
+│   └── run_segmentation_experiments.py              # Gower/PAM/HAC experiment
+├── reports/
+│   ├── eda/                                        # Aggregate EDA tables, figures and report
+│   ├── segmentation/                               # Aggregate clustering metrics and profiles
+│   └── crm/CRM_DECISION_ANALYSIS_PLAN.md            # Gate 1D decision-analysis plan
+└── tests/                                          # Automated audit, EDA, feature and segmentation tests
 ```
 
----
+Historical app-review feasibility artifacts and scripts remain for auditability but are **superseded for primary quantitative analysis**. The survey workbook, codebook, questionnaire, processed matrices, and respondent-level assignments are local-only and must stay outside Git.
 
 ## 5. Reproduction & Execution Guide
 
-### Prerequisites
-- Python 3.10+ (tested on Python 3.13)
-- Required packages: `pandas`, `openpyxl`, `numpy`, `matplotlib`, `seaborn`, `scipy`
+### Local input setup
+Place the Mendeley survey workbook and its codebook/questionnaire under `data/raw/survey/` as documented in `data/README.md`. Do not commit the workbook, questionnaire-level rows, or any row-level derived data. Dataset source: [Mendeley Data, DOI 10.17632/cw88nb7822.1](https://data.mendeley.com/datasets/cw88nb7822/1).
 
-Install dependencies:
-```bash
-pip install pandas openpyxl numpy matplotlib seaborn scipy
-```
-
-### Run Survey Data Audit (Gate 0 Verification)
+### Run sequence
 ```bash
 python scripts/audit_survey_data.py --file data/raw/survey/Data.xlsx --sheet Data --output docs/gates/GATE_0_SURVEY_AUDIT_SUMMARY.json
-```
-
-### Run Exploratory Data Analysis Pipeline (Gate 1A)
-```bash
 python scripts/run_eda.py --file data/raw/survey/Data.xlsx --sheet Data
-```
-
-### Run Automated Test Suite
-```bash
+python scripts/run_segmentation_experiments.py --survey-file data/raw/survey/Data.xlsx
 python -m unittest discover tests
 ```
 
----
+The segmentation experiment prepares its feature matrices and holdout locally if missing, then writes aggregate outputs under `reports/segmentation/`. Gate 1C.1 is not closed until the full local run succeeds and its regenerated reports reconcile.
+
+**Open reproducibility issue:** package versions are not yet pinned in a verified lock file, and parts of the test suite still rely on local prepared matrices. Clean-clone environment setup and tests independent of the original workbook are explicit Gate 1C.1 acceptance criteria. Existing committed aggregate reports are evidence of prior runs, not proof the current branch has been rerun end-to-end.
 
 ## 6. Project Governance & Working Rules
 
