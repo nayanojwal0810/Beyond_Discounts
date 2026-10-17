@@ -21,9 +21,12 @@ import unittest
 import os
 import re
 import json
+from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from sklearn.metrics import silhouette_score, silhouette_samples
+
+import scripts.run_segmentation_experiments as segmentation_module
 
 from scripts.run_segmentation_experiments import (
     compute_gower_distance_matrix,
@@ -135,17 +138,76 @@ class TestSegmentationExperiments(unittest.TestCase):
         self.assertLessEqual(n_neg, 50)
 
     def test_05_subsampling_stability_structure(self):
-        """Verify stability pipeline produces valid ARI metrics."""
+        """Verify run-level ARIs reproduce the summary when all subsamples succeed."""
         sub_df = self.df_a.head(50)
         D, _ = compute_gower_distance_matrix(sub_df, self.spec_a["features"])
+        run_rows = []
 
         res = run_subsampling_stability(
-            D, k=3, n_subsamples=3, subsample_ratio=0.8, seed_base=42
+            D, k=3, n_subsamples=3, subsample_ratio=0.8, seed_base=42,
+            run_records=run_rows
         )
         self.assertEqual(res["n_subsamples"], 3)
+        self.assertEqual(res["n_successful_runs"], 3)
+        self.assertEqual(res["n_failed_runs"], 0)
+        self.assertEqual(len(run_rows), 3)
+        self.assertTrue(all(row["status"] == "SUCCESS" for row in run_rows))
+        self.assertTrue(all(-1.0 <= row["ari"] <= 1.0 for row in run_rows))
+        self.assertAlmostEqual(res["median_ari"], round(float(np.median([r["ari"] for r in run_rows])), 4))
         self.assertGreaterEqual(res["median_ari"], -1.0)
         self.assertLessEqual(res["median_ari"], 1.0)
         self.assertIn("stability_verdict", res)
+
+    def test_05b_failed_subsample_is_not_counted_as_zero_ari(self):
+        """A failed resample is logged separately and makes the summary incomplete."""
+        sub_df = self.df_a.head(50)
+        D, _ = compute_gower_distance_matrix(sub_df, self.spec_a["features"])
+        original_pam = segmentation_module.pam_kmedoids
+        calls = {"n": 0}
+
+        def fail_one_subsample(distance_matrix, k, max_iter=100):
+            calls["n"] += 1
+            # Call 1 is the baseline. Fail exactly the second sampled run (call 3).
+            if calls["n"] == 3:
+                raise RuntimeError("synthetic resample failure")
+            return original_pam(distance_matrix, k, max_iter=max_iter)
+
+        run_rows = []
+        with patch.object(segmentation_module, "pam_kmedoids", side_effect=fail_one_subsample):
+            res = run_subsampling_stability(
+                D, k=3, n_subsamples=3, subsample_ratio=0.8, seed_base=42,
+                run_records=run_rows
+            )
+
+        self.assertEqual(res["n_successful_runs"], 2)
+        self.assertEqual(res["n_failed_runs"], 1)
+        self.assertEqual(res["stability_verdict"], "INCOMPLETE")
+        self.assertEqual(run_rows[1]["status"], "FAILED")
+        self.assertEqual(run_rows[1]["error_type"], "RuntimeError")
+        self.assertIsNone(run_rows[1]["ari"])
+        self.assertNotEqual(run_rows[1]["ari"], 0.0)
+
+    def test_05c_multiple_testing_does_not_round_raw_p_values_to_zero(self):
+        """Holm and Bonferroni use unrounded raw p-values and preserve small positive values."""
+        raw_p = [1.2e-12, 1.0e-8, 0.03, 0.20]
+        records = [{
+            "specification": "SPEC_A",
+            "algorithm": "PAM",
+            "holdout_variable": "QA 46",
+            "p_value": p,
+            "circularity_status": "Independent stated-intention benchmark",
+            "substantive_interpretation": ""
+        } for p in raw_p]
+
+        corrected = apply_multiple_testing_corrections(records)
+        by_raw = sorted(corrected, key=lambda row: row["p_value"])
+
+        self.assertGreater(by_raw[0]["p_value"], 0.0)
+        self.assertAlmostEqual(by_raw[0]["p_value"], 1.2e-12)
+        self.assertGreater(by_raw[0]["bonferroni_p_value"], 0.0)
+        self.assertGreater(by_raw[0]["holm_bonferroni_p_value"], 0.0)
+        self.assertAlmostEqual(by_raw[0]["holm_bonferroni_p_value"], 4.8e-12)
+        self.assertAlmostEqual(by_raw[1]["holm_bonferroni_p_value"], 3.0e-8)
 
     def test_06_cluster_profiling_retains_nominal_proportions(self):
         """Verify cluster profiling retains category distributions for nominal features without averaging codes."""
