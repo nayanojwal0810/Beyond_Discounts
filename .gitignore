@@ -29,11 +29,16 @@ ENV/
 # Data and Raw Review Files (do not commit large / third-party raw review dumps)
 data/raw/*
 !data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
 *.csv.bak
 *.jsonl
 *.zip
 *.xlsx
 *.docx
+*.parquet
 
 # Environment & Credentials
 .env

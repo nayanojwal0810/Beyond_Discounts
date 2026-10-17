@@ -1,0 +1,467 @@
+{
+  "specification_name": "Specification B: Discount Intention Included",
+  "specification_code": "SPEC_B",
+  "purpose": "Constructs customer segments by directly embedding stated price elasticity (QA 47 Continue If Discounts Reduced) alongside behavioral and attitudinal features. Generates segments explicitly partitioned by discount sensitivity.",
+  "qa47_status": "INCLUDED as segment-defining feature (feat_18). WARNING: Prohibits treating post-cluster differences in QA 47 as independent external validation.",
+  "qa46_status": "EXCLUDED from clustering inputs; reserved as stated future-use intention holdout.",
+  "target_population": {
+    "name": "Current Active Quick-Commerce Users",
+    "sample_size": 807,
+    "filter_rule": "Ever Ordered == 1 and Order Frequency > 1",
+    "excluded_groups": [
+      "Never-Users (Ever Ordered == 0 & Order Frequency == 1, n=376)",
+      "Previous Users (Ever Ordered == 1 & Order Frequency == 1, n=80)"
+    ]
+  },
+  "feature_count": 18,
+  "features": [
+    {
+      "feature_id": "feat_01",
+      "name": "order_frequency",
+      "question_id": "QA 15",
+      "source_column": "Order Frequency",
+      "data_type": "ordinal",
+      "active_domain": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "encoding": "ordinal_integer_or_rank",
+      "range": [
+        2,
+        7
+      ],
+      "special_codes": "None (all active respondents report 2..7)",
+      "description": "Current order frequency from Less than once a month (2) to Daily (7)."
+    },
+    {
+      "feature_id": "feat_02",
+      "name": "usage_duration",
+      "question_id": "QA 13",
+      "source_column": "Usage Duration",
+      "data_type": "ordinal",
+      "active_domain": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "encoding": "ordinal_integer_or_rank",
+      "range": [
+        2,
+        6
+      ],
+      "special_codes": "None (code 1 Never Used is absent in active users)",
+      "description": "Quick commerce customer tenure from <3 months (2) to >2 years (6)."
+    },
+    {
+      "feature_id": "feat_03",
+      "name": "order_spend",
+      "question_id": "QA 25",
+      "source_column": "Order Spend",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "encoding": "ordinal_integer_or_rank",
+      "range": [
+        1,
+        7
+      ],
+      "special_codes": "None (code 8 N/A absent in active users)",
+      "description": "Typical single-order spend bracket from Below \u20b9200 (1) to \u20b91,500+ (7)."
+    },
+    {
+      "feature_id": "feat_04",
+      "name": "monthly_spend_ordinal",
+      "question_id": "QA 26",
+      "source_column": "Monthly Spend",
+      "data_type": "ordinal",
+      "active_domain": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "encoding": "substantive_spend_rank",
+      "range": [
+        1,
+        6
+      ],
+      "special_codes": "Code 8 ('Not sure', n=24) mapped to neutral median rank 2 (\u20b91,000\u2013\u20b92,499) for ordinal distance calculation.",
+      "description": "Typical monthly quick-commerce spend brackets 2-7 mapped monotonically to ranks 1-6."
+    },
+    {
+      "feature_id": "feat_05",
+      "name": "monthly_spend_not_sure",
+      "question_id": "QA 26",
+      "source_column": "Monthly Spend",
+      "data_type": "binary_indicator",
+      "active_domain": [
+        0,
+        1
+      ],
+      "encoding": "binary_flag",
+      "range": [
+        0,
+        1
+      ],
+      "special_codes": "1 if Monthly Spend == 8 ('Not sure', n=24), 0 otherwise.",
+      "description": "Explicit non-ordinal indicator preserving spending uncertainty without distorting distance metrics."
+    },
+    {
+      "feature_id": "feat_06",
+      "name": "items_per_order_ordinal",
+      "question_id": "QA 19",
+      "source_column": "Items per Order",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "substantive_basket_rank",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "Code 6 ('Varies considerably', n=100) mapped to neutral median rank 3 ('4\u20135 items') for ordinal distance calculation.",
+      "description": "Typical items per order from 1 item (1) to >10 items (5)."
+    },
+    {
+      "feature_id": "feat_07",
+      "name": "items_varies_considerably",
+      "question_id": "QA 19",
+      "source_column": "Items per Order",
+      "data_type": "binary_indicator",
+      "active_domain": [
+        0,
+        1
+      ],
+      "encoding": "binary_flag",
+      "range": [
+        0,
+        1
+      ],
+      "special_codes": "1 if Items per Order == 6 ('Varies considerably', n=100), 0 otherwise.",
+      "description": "Explicit non-ordinal indicator capturing basket size volatility."
+    },
+    {
+      "feature_id": "feat_08",
+      "name": "discount_overspend",
+      "question_id": "QA 28",
+      "source_column": "Discount Overspend",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "How often discounts/coupons cause overspending (1=Never to 5=Very often). Measures deal-driven basket inflation."
+    },
+    {
+      "feature_id": "feat_09",
+      "name": "threshold_extra_items",
+      "question_id": "QA 29",
+      "source_column": "Threshold Extra Items",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "How often extra items are added to reach free delivery thresholds (1=Never to 5=Very often). Measures fee avoidance gaming."
+    },
+    {
+      "feature_id": "feat_10",
+      "name": "compare_platform_prices",
+      "question_id": "QA 33",
+      "source_column": "Compare Platform Prices",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "Frequency of comparing prices across quick-commerce apps (1=Never to 5=Always). Measures cross-app deal shopping."
+    },
+    {
+      "feature_id": "feat_11",
+      "name": "compare_physical_prices",
+      "question_id": "QA 34",
+      "source_column": "Compare Physical Prices",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "Frequency of comparing quick-commerce prices with physical stores (1=Never to 5=Always). Measures offline-online arbitrage."
+    },
+    {
+      "feature_id": "feat_12",
+      "name": "fast_delivery_importance",
+      "question_id": "QA 35",
+      "source_column": "Fast Delivery Importance",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "Stated importance of 10-20 minute delivery (1=Not at all important to 5=Extremely important)."
+    },
+    {
+      "feature_id": "feat_13",
+      "name": "service_satisfaction_composite",
+      "question_id": "QA 37-40",
+      "source_column": "Composite Service Satisfaction (Mean QA 37, 38, 39, 40)",
+      "data_type": "continuous_composite",
+      "active_domain": [
+        1.75,
+        5.0
+      ],
+      "encoding": "continuous_scale",
+      "range": [
+        1.0,
+        5.0
+      ],
+      "special_codes": "Constructed mean across 4 items; Cronbach's alpha = 0.863 demonstrates high reliability.",
+      "description": "Unidimensional composite service experience sentiment."
+    },
+    {
+      "feature_id": "feat_14",
+      "name": "shopping_routine_role",
+      "question_id": "QA 43",
+      "source_column": "Shopping Routine Role",
+      "data_type": "nominal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "nominal_categorical_or_gower_nominal",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "Code 6 ('Do not use') is 0 in active users.",
+      "description": "Nominal quick commerce role (1=Large grocery replacement, 2=Some replacement, 3=Top-up, 4=Urgent/emergencies, 5=Offers/convenience)."
+    },
+    {
+      "feature_id": "feat_15",
+      "name": "platforms_used_count",
+      "question_id": "QA 12",
+      "source_column": "Derived sum of 6 major platforms used",
+      "data_type": "discrete_count",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "encoding": "discrete_integer",
+      "range": [
+        1,
+        6
+      ],
+      "special_codes": "None",
+      "description": "Multi-homing footprint count (1 to 6 apps ever used). Captures platform promiscuity vs single-app loyalty."
+    },
+    {
+      "feature_id": "feat_16",
+      "name": "unplanned_purchase",
+      "question_id": "QA 44",
+      "source_column": "Unplanned Purchase",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "How often quick commerce encourages impulse purchases (1=Never to 5=Very often)."
+    },
+    {
+      "feature_id": "feat_17",
+      "name": "new_brand_trial",
+      "question_id": "QA 45",
+      "source_column": "New Brand Trial",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "None (code 6 N/A absent in active users)",
+      "description": "Propensity to try new brands through quick commerce (1=Strongly disagree to 5=Strongly agree)."
+    },
+    {
+      "feature_id": "feat_18",
+      "name": "continue_if_discounts_reduced",
+      "question_id": "QA 47",
+      "source_column": "Continue If Discounts Reduced",
+      "data_type": "ordinal",
+      "active_domain": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "encoding": "ordinal_likert",
+      "range": [
+        1,
+        5
+      ],
+      "special_codes": "Code 6 N/A is absent in active users. Substantive Likert 1=Definitely no to 5=Definitely yes.",
+      "description": "Segment-defining price elasticity feature in Specification B. Stated continuation intention if discounts reduced."
+    }
+  ],
+  "holdout_and_profiling": {
+    "qa47_external_validation": {
+      "question_id": "QA 47",
+      "source_column": "Continue If Discounts Reduced",
+      "role_in_spec_a": "Primary external validation benchmark (independent evaluation).",
+      "role_in_spec_b": "Construct-defining feature (CIRCULAR; cannot be used for independent validation).",
+      "domain_active": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "qa46_future_use_intention": {
+      "question_id": "QA 46",
+      "source_column": "Next 3 Month Use",
+      "role": "External validation benchmark across BOTH Specification A and Specification B.",
+      "methodological_boundary": "STATED future-use intention, NOT realized retention or observed purchase history.",
+      "domain_active": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "qa49_preferred_improvement": {
+      "question_id": "QA 49",
+      "source_column": "Improvement",
+      "role": "Post-cluster CRM retention action profiling (10 substantive choices).",
+      "domain_active": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    "demographic_profiling": [
+      "Age Group",
+      "Gender",
+      "Education",
+      "Occupation",
+      "Personal Income",
+      "Area of Residence",
+      "Region",
+      "Household Size"
+    ],
+    "platform_footprint_profiling": [
+      "Used Blinkit",
+      "Used Zepto",
+      "Used Swiggy Instamart",
+      "Used BigBasket BBNow",
+      "Used Flipkart Minutes",
+      "Used Amazon Rapid"
+    ],
+    "satisfaction_dimensions_profiling": [
+      "Overall Satisfaction",
+      "Product Quality Satisfaction",
+      "Delivery Reliability Satisfaction",
+      "Value Money Satisfaction"
+    ]
+  },
+  "recommended_clustering_methodology": {
+    "method": "Gower Distance Matrix + Partitioning Around Medoids (PAM)",
+    "alternative": "Hierarchical Agglomerative Clustering (HAC) with Gower Distance",
+    "rationale": "Respects mixed ordinal, nominal, and binary data natively; provides interpretable real-customer medoids without fractional coordinate distortion."
+  }
+}
