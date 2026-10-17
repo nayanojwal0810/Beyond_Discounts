@@ -222,6 +222,23 @@ class TestSegmentationExperiments(unittest.TestCase):
         self.assertGreaterEqual(n_neg, 0)
         self.assertLessEqual(n_neg, 50)
 
+    def test_02c_qa49_cluster_profiles_use_independent_stated_preference(self):
+        """Verify the QA49 cluster profile covers every cluster/choice and returns a bounded association test."""
+        labels = np.arange(len(self.df_hold)) % 4
+        result, profile_rows = segmentation_module.evaluate_qa49_preference_profiles(
+            self.df_hold, labels, "SPEC_A", "PAM", k=4, n_resamples=999, seed=31
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["holdout_variable"], "QA 49 Preferred Improvement")
+        self.assertEqual(result["circularity_status"], "Independent stated-preference benchmark")
+        self.assertTrue(0.0 <= result["p_value"] <= 1.0)
+        self.assertIn("cramers_v", result["effect_size_metric"])
+        self.assertEqual(len(profile_rows), 4 * 10)
+        for cluster_id in range(4):
+            rows = [r for r in profile_rows if r["cluster_id"] == cluster_id]
+            self.assertEqual(len(rows), 10)
+            self.assertAlmostEqual(sum(r["percent_within_cluster"] for r in rows), 100.0, places=5)
+
     def test_05_subsampling_stability_structure(self):
         """Verify run-level ARIs reproduce the summary when all subsamples succeed."""
         sub_df = self.df_a.head(50)
