@@ -7,7 +7,7 @@ This document defines the data assets evaluated and governed during **Gate 0**, 
 ## 1. Approved Project Direction & Scope Status
 
 Under the controlling decisions of the Principal Project Lead:
-- **Approved Working Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
+- **Approved Working Title:** *Beyond Discounts: A Lifecycle-Based CRM Decision Framework for Indian Quick Commerce*
 - **Current Research Question:** *Which lifecycle-based CRM actions are best supported by the observed sample's stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements? Do exploratory behavioral clusters add actionable differentiation beyond lifecycle cohorts?*
 - **Problem Investigated:** Quick-commerce consumers may differ in the importance they place on discounts, shopping convenience, spending behaviour, service experience, and other factors. A single retention strategy may not suit every consumer. We investigate these differences using the survey data and determine whether defensible, interpretable customer segments can be developed.
 - **Proposed Business Value:** The eventual project should translate observed customer differences into evidence-based recommendations for customer acquisition, reactivation, and retention (intended applications, not established results).
