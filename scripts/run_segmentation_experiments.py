@@ -569,8 +569,8 @@ def apply_multiple_testing_corrections(records):
             bonf_pvals[idx] = min(1.0, p_raw * m)
 
         for idx, p_raw in items:
-            records[idx]["bonferroni_p_value"] = round(float(bonf_pvals[idx]), 6)
-            records[idx]["holm_bonferroni_p_value"] = round(float(holm_pvals[idx]), 6)
+            records[idx]["bonferroni_p_value"] = float(bonf_pvals[idx])
+            records[idx]["holm_bonferroni_p_value"] = float(holm_pvals[idx])
             records[idx]["correction_family_size"] = m
 
             circ = records[idx]["circularity_status"]
