@@ -315,39 +315,89 @@ def pam_kmedoids(D, k, max_iter=100, initial_medoids=None):
     return medoids, labels, objective
 
 
-def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_base=101):
+def run_subsampling_stability(
+    D, k, n_subsamples=20, subsample_ratio=0.8, seed_base=101, run_records=None
+):
     """
-    Evaluates cluster solution stability via repeated 80% subsampling:
-    - Draws 20 independent subsamples with recorded seeds.
-    - Re-runs PAM on each subsample distance matrix.
-    - Measures Adjusted Rand Index (ARI) on overlapping respondent assignments.
+    Evaluates clustering stability via repeated subsampling without conflating
+    failed computations with measured low stability.
+
+    Successful runs contribute their ARI to the summary. Failed runs are recorded
+    separately, excluded from ARI statistics, and force an INCOMPLETE verdict.
+    If run_records is supplied, append one aggregate diagnostic row per seed;
+    no respondent identifiers or sampled row indices are exported.
     """
+    if not isinstance(n_subsamples, int) or n_subsamples < 1:
+        raise ValueError("n_subsamples must be a positive integer")
+    if not np.isfinite(subsample_ratio) or not (0.0 < subsample_ratio <= 1.0):
+        raise ValueError("subsample_ratio must be in (0, 1]")
+    if D.ndim != 2 or D.shape[0] != D.shape[1]:
+        raise ValueError("D must be a square distance matrix")
+
     n = D.shape[0]
     n_sub = int(round(subsample_ratio * n))
+    if k < 2 or k >= n_sub:
+        raise ValueError(f"k must be between 2 and n_sub-1; got k={k}, n_sub={n_sub}")
+
+    # A baseline is required to define ARI. If this fails, propagate the error:
+    # no stability comparison can be made without a reference partition.
     _, baseline_labels, _ = pam_kmedoids(D, k)
 
     aris = []
-    unstable_runs = 0
-
+    failed_runs = 0
     for idx, seed in enumerate(range(seed_base, seed_base + n_subsamples)):
         rng = np.random.RandomState(seed)
         sub_idx = np.sort(rng.choice(n, size=n_sub, replace=False))
         D_sub = D[np.ix_(sub_idx, sub_idx)]
+        run_record = {
+            "run_index": idx + 1,
+            "seed": int(seed),
+            "sample_size": int(n_sub),
+            "status": "SUCCESS",
+            "ari": None,
+            "error_type": "",
+            "error_message": ""
+        }
 
         try:
             _, sub_labels, _ = pam_kmedoids(D_sub, k)
-            # Compare overlapping points
             ari = float(adjusted_rand_score(baseline_labels[sub_idx], sub_labels))
             aris.append(ari)
-            if ari < 0.50:
-                unstable_runs += 1
-        except Exception:
-            unstable_runs += 1
-            aris.append(0.0)
+            run_record["ari"] = ari
+        except Exception as exc:
+            failed_runs += 1
+            run_record["status"] = "FAILED"
+            run_record["error_type"] = type(exc).__name__
+            run_record["error_message"] = str(exc)[:240]
 
-    aris = np.array(aris)
+        if run_records is not None:
+            run_records.append(run_record)
+
+    successful_runs = len(aris)
+    unstable_runs = sum(ari < 0.50 for ari in aris)
+
+    if not aris:
+        return {
+            "n_subsamples": n_subsamples,
+            "n_successful_runs": 0,
+            "n_failed_runs": failed_runs,
+            "subsample_ratio": subsample_ratio,
+            "seed_policy": f"Deterministic range({seed_base}, {seed_base + n_subsamples})",
+            "median_ari": None,
+            "mean_ari": None,
+            "std_ari": None,
+            "min_ari": None,
+            "max_ari": None,
+            "iqr_ari": None,
+            "unstable_runs_count": 0,
+            "stability_verdict": "FAILED"
+        }
+
+    aris = np.asarray(aris, dtype=float)
     q25, q75 = np.percentile(aris, [25, 75])
-    if np.median(aris) >= 0.70 and unstable_runs == 0:
+    if failed_runs > 0:
+        verdict = "INCOMPLETE"
+    elif np.median(aris) >= 0.70 and unstable_runs == 0:
         verdict = "HIGH_STABILITY"
     elif np.median(aris) >= 0.60:
         verdict = "PROVISIONALLY_STABLE" if unstable_runs > 0 else "STABLE"
@@ -358,6 +408,8 @@ def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_b
 
     return {
         "n_subsamples": n_subsamples,
+        "n_successful_runs": successful_runs,
+        "n_failed_runs": failed_runs,
         "subsample_ratio": subsample_ratio,
         "seed_policy": f"Deterministic range({seed_base}, {seed_base + n_subsamples})",
         "median_ari": round(float(np.median(aris)), 4),
@@ -366,10 +418,9 @@ def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_b
         "min_ari": round(float(np.min(aris)), 4),
         "max_ari": round(float(np.max(aris)), 4),
         "iqr_ari": round(float(q75 - q25), 4),
-        "unstable_runs_count": unstable_runs,
+        "unstable_runs_count": int(unstable_runs),
         "stability_verdict": verdict
     }
-
 
 def compute_cluster_profiles(df, labels, feature_specs, spec_name, algorithm, k):
     """
@@ -476,7 +527,7 @@ def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k):
             "holdout_variable": var_label,
             "test_method": "Kruskal-Wallis H-test",
             "test_statistic": round(float(h_stat), 4),
-            "p_value": round(float(p_raw), 6),
+            "p_value": float(p_raw),
             "bonferroni_p_value": None,
             "holm_bonferroni_p_value": None,
             "correction_family_size": 4,
@@ -530,11 +581,11 @@ def apply_multiple_testing_corrections(records):
                 )
             elif p_holm < 0.05:
                 records[idx]["substantive_interpretation"] = (
-                    f"Statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.4f} < 0.05)"
+                    f"Statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.3g} < 0.05)"
                 )
             else:
                 records[idx]["substantive_interpretation"] = (
-                    f"No statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.4f} >= 0.05; clusters are homogeneous)"
+                    f"No statistically detectable cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.3g} >= 0.05; this is not proof of equivalence)"
                 )
 
     return records
@@ -602,6 +653,7 @@ def run_experiments(args=None):
     candidate_ks = [3, 4, 5, 6]
     metrics_records = []
     stability_records = []
+    stability_run_records = []
     profile_records = []
     validation_records = []
 
@@ -654,7 +706,17 @@ def run_experiments(args=None):
             print(f"  PAM {spec_name} k={k}: sil={sil_avg:.4f}, neg_sil={pct_neg}%, obj={obj:.2f}, sizes={cluster_sizes}, warning={small_warning}")
 
             # Subsampling Stability
-            stab = run_subsampling_stability(D, k, n_subsamples=parsed.subsamples, subsample_ratio=parsed.subsample_ratio)
+            stab_run_batch = []
+            stab = run_subsampling_stability(
+                D, k, n_subsamples=parsed.subsamples,
+                subsample_ratio=parsed.subsample_ratio,
+                run_records=stab_run_batch
+            )
+            for run_rec in stab_run_batch:
+                run_rec["specification"] = spec_name
+                run_rec["algorithm"] = "PAM"
+                run_rec["k"] = k
+            stability_run_records.extend(stab_run_batch)
             stab_rec = dict(stab)
             stab_rec["specification"] = spec_name
             stab_rec["algorithm"] = "PAM"
@@ -751,6 +813,12 @@ def run_experiments(args=None):
     stability_path = os.path.join(parsed.reports_dir, "stability_summary.csv")
     stability_df.to_csv(stability_path, index=False)
     print(f"Saved stability summary to: {stability_path} ({len(stability_df)} rows)")
+
+    # One diagnostic row per seed makes the summary independently auditable.
+    stability_runs_df = pd.DataFrame(stability_run_records)
+    stability_runs_path = os.path.join(parsed.reports_dir, "stability_runs.csv")
+    stability_runs_df.to_csv(stability_runs_path, index=False)
+    print(f"Saved stability run diagnostics to: {stability_runs_path} ({len(stability_runs_df)} rows)")
 
     profile_df = pd.DataFrame(profile_records)
     profile_path = os.path.join(parsed.reports_dir, "cluster_profile_summary.csv")
