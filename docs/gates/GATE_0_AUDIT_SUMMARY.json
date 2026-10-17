@@ -1,0 +1,180 @@
+{
+  "status": "SUCCESS",
+  "window_start": "2024-08-14",
+  "window_end": "2024-12-31",
+  "boundary_convention": "inclusive (start_date <= review_date <= end_date)",
+  "usable_definition": "A record is usable iff it falls within the inclusive date window, has recognized platform ('blinkit', 'zepto', 'jiomart'), contains non-null non-whitespace review text, has an integer rating in range 1..5, and has a valid parseable date.",
+  "full_dataset_summary": {
+    "total_rows": 4620,
+    "columns": [
+      "rating",
+      "date",
+      "review",
+      "platform"
+    ],
+    "exact_duplicate_rows": 0,
+    "duplicate_review_texts": 1,
+    "field_health": {
+      "review": {
+        "missing_null": 0,
+        "blank_whitespace": 0,
+        "valid": 4620
+      },
+      "rating": {
+        "missing_null": 0,
+        "invalid_not_integer_1_to_5": 0,
+        "valid": 4620
+      },
+      "date": {
+        "missing_null": 0,
+        "unparseable": 0,
+        "valid": 4620
+      },
+      "platform": {
+        "missing_null": 0,
+        "unknown_unclassified": 0,
+        "recognized": 4620
+      }
+    },
+    "platform_raw_counts": {
+      "zepto": 1740,
+      "jiomart": 1500,
+      "blinkit": 1380
+    }
+  },
+  "common_window_summary": {
+    "total_window_source_rows": 4290,
+    "total_out_of_window_exclusions": 330,
+    "total_unparseable_date_exclusions": 0,
+    "total_usable_rows": 4290,
+    "unknown_platform_rows_in_window": 0,
+    "platform_metrics": {
+      "blinkit": {
+        "role": "Focal Company",
+        "raw_total_rows": 1380,
+        "window_source_rows": 1376,
+        "out_of_window_exclusions": 4,
+        "in_window_invalid_or_missing": 0,
+        "usable_rows": 1376,
+        "missing_text_null": 0,
+        "blank_text_whitespace": 0,
+        "missing_rating_null": 0,
+        "invalid_rating_not_1_to_5": 0,
+        "exact_duplicate_rows": 0,
+        "duplicate_review_text": 0,
+        "min_date": "2024-08-15",
+        "max_date": "2024-12-31",
+        "calendar_days_covered": 139,
+        "day_span": 138,
+        "rating_distribution_counts": {
+          "1": 711,
+          "2": 83,
+          "3": 78,
+          "4": 120,
+          "5": 384
+        },
+        "rating_distribution_percentages": {
+          "1": "51.7%",
+          "2": "6.0%",
+          "3": "5.7%",
+          "4": "8.7%",
+          "5": "27.9%"
+        },
+        "mean_rating": 2.55,
+        "threshold_requirement": 500,
+        "meets_threshold": true
+      },
+      "zepto": {
+        "role": "Primary Competitor",
+        "raw_total_rows": 1740,
+        "window_source_rows": 1740,
+        "out_of_window_exclusions": 0,
+        "in_window_invalid_or_missing": 0,
+        "usable_rows": 1740,
+        "missing_text_null": 0,
+        "blank_text_whitespace": 0,
+        "missing_rating_null": 0,
+        "invalid_rating_not_1_to_5": 0,
+        "exact_duplicate_rows": 0,
+        "duplicate_review_text": 1,
+        "min_date": "2024-08-14",
+        "max_date": "2024-12-31",
+        "calendar_days_covered": 140,
+        "day_span": 139,
+        "rating_distribution_counts": {
+          "1": 1376,
+          "2": 117,
+          "3": 63,
+          "4": 53,
+          "5": 131
+        },
+        "rating_distribution_percentages": {
+          "1": "79.1%",
+          "2": "6.7%",
+          "3": "3.6%",
+          "4": "3.0%",
+          "5": "7.5%"
+        },
+        "mean_rating": 1.53,
+        "threshold_requirement": 500,
+        "meets_threshold": true
+      },
+      "jiomart": {
+        "role": "Secondary Context",
+        "raw_total_rows": 1500,
+        "window_source_rows": 1174,
+        "out_of_window_exclusions": 326,
+        "in_window_invalid_or_missing": 0,
+        "usable_rows": 1174,
+        "missing_text_null": 0,
+        "blank_text_whitespace": 0,
+        "missing_rating_null": 0,
+        "invalid_rating_not_1_to_5": 0,
+        "exact_duplicate_rows": 0,
+        "duplicate_review_text": 0,
+        "min_date": "2024-08-14",
+        "max_date": "2024-12-31",
+        "calendar_days_covered": 140,
+        "day_span": 139,
+        "rating_distribution_counts": {
+          "1": 938,
+          "2": 54,
+          "3": 38,
+          "4": 43,
+          "5": 101
+        },
+        "rating_distribution_percentages": {
+          "1": "79.9%",
+          "2": "4.6%",
+          "3": "3.2%",
+          "4": "3.7%",
+          "5": "8.6%"
+        },
+        "mean_rating": 1.56,
+        "threshold_requirement": 500,
+        "meets_threshold": true
+      }
+    }
+  },
+  "feasibility_evaluation": {
+    "blinkit_usable_count": 1376,
+    "blinkit_threshold": 500,
+    "blinkit_meets_threshold": true,
+    "zepto_usable_count": 1740,
+    "zepto_threshold": 500,
+    "zepto_meets_threshold": true,
+    "jiomart_usable_count": 1174,
+    "jiomart_threshold": 500,
+    "jiomart_meets_threshold": true,
+    "total_usable_count": 4290,
+    "total_usable_threshold": 1500,
+    "total_meets_threshold": true,
+    "overall_status": "PASS_UNDER_AUTHORIZED_CONDITIONAL_SCOPE",
+    "statistical_caveat": "Record-count thresholds verify qualitative failure-theme feasibility. They do NOT establish statistical power or population representativeness.",
+    "scope_enforcement": "STATIC complaint-theme and expressed-switching analysis ONLY. Temporal trend modeling and seasonality claims are strictly prohibited."
+  },
+  "input_file_path": "data\\raw\\reviews.csv",
+  "input_file_sha256": "5d3bb24ee7185612e66f57cf2e21d99e9d628a15d3d68989b8cf560996e9f138",
+  "input_file_size_bytes": 1898980,
+  "audit_timestamp_utc": "2026-10-17T07:49:07.973083+00:00"
+}
