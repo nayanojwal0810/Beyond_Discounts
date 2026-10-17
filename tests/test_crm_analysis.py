@@ -195,6 +195,13 @@ class TestCRMAnalysis(unittest.TestCase):
             self.assertEqual(len(out["qa49_families"]), 28)
             self.assertEqual(len(out["qa48_prevalence"]), 20)
             self.assertEqual(len(out["qa48_comparison"]), 10)
+            qa49_tests = out["qa49_tests"]
+            self.assertEqual(len(qa49_tests), 4)
+            self.assertIn("holm_adjusted_p_value", qa49_tests.columns)
+            self.assertTrue(
+                (qa49_tests["holm_adjusted_p_value"] >= qa49_tests["monte_carlo_p_value"]).all()
+            )
+            self.assertTrue(qa49_tests["significant_after_holm_0_05"].isin([True, False]).all())
             saved_files = os.listdir(tmp)
             self.assertFalse(any("respondent" in name.lower() or "assignment" in name.lower() for name in saved_files))
             metadata = pd.read_csv(os.path.join(tmp, "crm_analysis_run_metadata.csv"))
