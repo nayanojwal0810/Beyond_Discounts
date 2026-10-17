@@ -33,15 +33,15 @@ def make_synthetic_survey(seed=64, n_never=30, n_previous=20, n_current=120):
             np.ones(n_never + n_previous, dtype=int),
             2 + (np.arange(n_current) % 6)
         ],
-        "Next 3 Month Use": 1 + (np.arange(n) % 5),
+        "Next 3 Month Use": rng.integers(1, 6, size=n),
         "Continue If Discounts Reduced": np.r_[
             np.full(n_never + n_previous, 6, dtype=int),
             1 + (np.arange(n_current) % 5)
         ],
-        "Improvement": 1 + (np.arange(n) % 10),
+        "Improvement": rng.integers(1, 11, size=n),
         "Shopping Routine Role": np.r_[
             np.full(n_never + n_previous, 6, dtype=int),
-            1 + (np.arange(n_current) % 5)
+            rng.integers(1, 6, size=n_current)
         ],
     })
 
@@ -54,18 +54,17 @@ def make_synthetic_survey(seed=64, n_never=30, n_previous=20, n_current=120):
         "Discount Overspend", "Threshold Extra Items", "Compare Platform Prices",
         "Compare Physical Prices", "Fast Delivery Importance",
     ]:
-        values = np.r_[np.full(n_never + n_previous, 6), 1 + (np.arange(n_current) % 5)]
+        values = np.r_[np.full(n_never + n_previous, 6), rng.integers(1, 6, size=n_current)]
         df[col] = values.astype(int)
 
     # Source-defined N/A code for non-current respondents on the satisfaction battery.
-    satisfaction = np.r_[
-        np.full(n_never + n_previous, 6), 1 + ((np.arange(n_current) + 1) % 5)
-    ].astype(int)
     for col in [
         "Overall Satisfaction", "Product Quality Satisfaction",
         "Delivery Reliability Satisfaction", "Value Money Satisfaction",
     ]:
-        df[col] = satisfaction.copy()
+        df[col] = np.r_[
+            np.full(n_never + n_previous, 6), rng.integers(1, 6, size=n_current)
+        ].astype(int)
 
     for col, _ in QA48_BARRIERS:
         # Binary multi-response indicators. These are synthetic and intentionally varied.
@@ -147,6 +146,31 @@ class TestCRMAnalysis(unittest.TestCase):
         self.assertIsNotNone(result, msg=info.get("detail", "ordered model failed"))
         self.assertEqual(info["status"], "COMPLETED")
         self.assertTrue(np.isfinite(info["aic"]))
+
+    def test_qa47_model_pipeline_writes_fit_and_assumption_diagnostics(self):
+        """Exercise the full model-selection/reporting path using randomized synthetic-only data."""
+        from scripts.run_crm_analysis import fit_qa47_models
+        source = make_synthetic_survey(seed=71, n_never=376, n_previous=80, n_current=807)
+        data = derive_cohorts(source)
+        with tempfile.TemporaryDirectory() as tmp:
+            fit_qa47_models(data, tmp)
+            fit_path = os.path.join(tmp, "qa47_model_fit_summary.csv")
+            coef_path = os.path.join(tmp, "qa47_model_coefficients.csv")
+            diag_path = os.path.join(tmp, "qa47_model_diagnostics.csv")
+            status_path = os.path.join(tmp, "qa47_multinomial_sensitivity_status.csv")
+            self.assertTrue(os.path.exists(fit_path))
+            self.assertTrue(os.path.exists(coef_path))
+            self.assertTrue(os.path.exists(diag_path))
+            self.assertTrue(os.path.exists(status_path))
+            fit = pd.read_csv(fit_path)
+            self.assertGreaterEqual(len(fit), 3)
+            primary = fit[fit["model"] == "QA47 ordered logit — prespecified trend model"]
+            self.assertEqual(len(primary), 1)
+            self.assertEqual(int(primary.iloc[0]["n"]), 807)
+            diagnostics = pd.read_csv(diag_path)
+            self.assertGreaterEqual(len(diagnostics), 2)
+            self.assertTrue(set(diagnostics["status"]).issubset({"COMPLETED", "INCONCLUSIVE"}))
+            self.assertTrue(os.path.exists(os.path.join(tmp, "qa47_multinomial_sensitivity.csv")))
 
     def test_analysis_writes_only_aggregate_tables_without_model(self):
         with tempfile.TemporaryDirectory() as tmp:
