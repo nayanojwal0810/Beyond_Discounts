@@ -45,7 +45,7 @@ import json
 import argparse
 import numpy as np
 import pandas as pd
-from scipy.stats import kruskal, chi2_contingency
+from scipy.stats import kruskal, chi2_contingency, random_table
 from sklearn.metrics import silhouette_score, silhouette_samples, adjusted_rand_score
 from sklearn.cluster import AgglomerativeClustering
 
@@ -541,6 +541,106 @@ def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k):
     return records
 
 
+def evaluate_qa49_preference_profiles(
+    df_holdout, labels, spec_name, algorithm, k, n_resamples=9999, seed=20261017
+):
+    """Profile held-out QA49 preference choices by cluster and test categorical differentiation."""
+    col = "qa49_preferred_improvement"
+    if col not in df_holdout.columns:
+        return None, []
+    values = pd.to_numeric(df_holdout[col], errors="coerce").to_numpy()
+    labels = np.asarray(labels)
+    if len(values) != len(labels):
+        raise ValueError("QA49 holdout rows do not align with the cluster labels.")
+    if not np.isfinite(values).all() or not np.isin(values, np.arange(1, 11)).all():
+        raise ValueError("QA49 holdout must contain substantive choice codes 1..10.")
+    if n_resamples < 999:
+        raise ValueError("QA49 Monte Carlo inference requires at least 999 resamples.")
+
+    option_labels = {
+        1: "Lower product prices",
+        2: "More discounts and coupons",
+        3: "Lower or no delivery fees",
+        4: "Better product quality and freshness",
+        5: "Wider product range / assortment",
+        6: "More reliable product availability",
+        7: "Faster delivery times",
+        8: "Better refunds / customer support",
+        9: "Service availability in my area",
+        10: "None / I do not intend to use it",
+    }
+    cluster_ids = sorted(np.unique(labels).tolist())
+    codes = np.arange(1, 11)
+    table = np.vstack([
+        np.array([(values[labels == cluster_id] == code).sum() for code in codes], dtype=int)
+        for cluster_id in cluster_ids
+    ])
+    table = table[table.sum(axis=1) > 0, :]
+    table = table[:, table.sum(axis=0) > 0]
+    if table.shape[0] < 2 or table.shape[1] < 2:
+        return {
+            "specification": spec_name, "algorithm": algorithm, "k": k,
+            "holdout_variable": "QA 49 Preferred Improvement",
+            "test_method": "Pearson chi-square with fixed-margin Monte Carlo inference",
+            "test_statistic": np.nan, "p_value": 1.0, "bonferroni_p_value": None,
+            "holm_bonferroni_p_value": None, "correction_family_size": 4,
+            "effect_size_metric": "cramers_v", "effect_size_value": 0.0,
+            "cluster_means_or_proportions": "{}", "substantive_interpretation": "Insufficient non-empty categories for an association test.",
+            "circularity_status": "Independent stated-preference benchmark",
+        }, []
+
+    row_sums, col_sums = table.sum(axis=1), table.sum(axis=0)
+    n = int(table.sum())
+    expected = np.outer(row_sums, col_sums) / n
+    observed_stat = float(np.sum((table - expected) ** 2 / expected))
+    rng = np.random.default_rng(seed)
+    simulated = random_table.rvs(row_sums, col_sums, size=n_resamples, random_state=rng)
+    simulated_stats = np.sum(
+        (simulated - expected[None, :, :]) ** 2 / expected[None, :, :],
+        axis=(1, 2),
+    )
+    p_raw = (int(np.count_nonzero(simulated_stats >= observed_stat - 1e-12)) + 1) / (n_resamples + 1)
+    cramers_v = float(np.sqrt(observed_stat / (n * min(table.shape[0] - 1, table.shape[1] - 1))))
+
+    profile_rows = []
+    profile_json = {}
+    for row_index, cluster_id in enumerate(cluster_ids):
+        cluster_mask = labels == cluster_id
+        cluster_n = int(cluster_mask.sum())
+        profile_json[f"cluster_{cluster_id}"] = {}
+        for code in codes:
+            count = int(np.sum(values[cluster_mask] == code))
+            proportion = count / cluster_n if cluster_n else np.nan
+            profile_json[f"cluster_{cluster_id}"][str(int(code))] = round(float(100 * proportion), 3) if cluster_n else None
+            profile_rows.append({
+                "specification": spec_name,
+                "algorithm": algorithm,
+                "k": int(k),
+                "cluster_id": int(cluster_id),
+                "cluster_size": cluster_n,
+                "cluster_proportion": cluster_n / len(labels),
+                "feature_name": "qa49_preferred_improvement",
+                "response_code": int(code),
+                "response_label": option_labels[int(code)],
+                "count": count,
+                "percent_within_cluster": 100 * proportion if cluster_n else np.nan,
+            })
+
+    record = {
+        "specification": spec_name, "algorithm": algorithm, "k": int(k),
+        "holdout_variable": "QA 49 Preferred Improvement",
+        "test_method": "Pearson chi-square with fixed-margin Monte Carlo inference",
+        "test_statistic": round(observed_stat, 6), "p_value": float(p_raw),
+        "bonferroni_p_value": None, "holm_bonferroni_p_value": None,
+        "correction_family_size": 4, "effect_size_metric": "cramers_v",
+        "effect_size_value": round(cramers_v, 6),
+        "cluster_means_or_proportions": json.dumps(profile_json, sort_keys=True),
+        "substantive_interpretation": "",
+        "circularity_status": "Independent stated-preference benchmark",
+    }
+    return record, profile_rows
+
+
 def apply_multiple_testing_corrections(records):
     """
     Applies exact family-wise Bonferroni and Holm-Bonferroni step-down corrections
@@ -655,6 +755,7 @@ def run_experiments(args=None):
     stability_records = []
     stability_run_records = []
     profile_records = []
+    qa49_profile_records = []
     validation_records = []
 
     # Store label assignments locally
@@ -731,6 +832,14 @@ def run_experiments(args=None):
             # External Validation
             ext_val = evaluate_external_validation(df_holdout, labels, spec_name, "PAM", k)
             validation_records.extend(ext_val)
+            qa49_validation, qa49_profiles = evaluate_qa49_preference_profiles(
+                df_holdout, labels, spec_name, "PAM", k,
+                n_resamples=parsed.validation_resamples,
+                seed=20261017 + k + (0 if spec_name == "SPEC_A" else 1000)
+            )
+            if qa49_validation is not None:
+                validation_records.append(qa49_validation)
+                qa49_profile_records.extend(qa49_profiles)
 
         # 2. Benchmark Algorithm: HAC Average Linkage
         for k in candidate_ks:
@@ -830,6 +939,11 @@ def run_experiments(args=None):
     validation_path = os.path.join(parsed.reports_dir, "external_validation_summary.csv")
     validation_df.to_csv(validation_path, index=False)
     print(f"Saved external validation summary to: {validation_path} ({len(validation_df)} rows)")
+
+    qa49_profile_path = os.path.join(parsed.reports_dir, "cluster_preferred_improvement_profile.csv")
+    qa49_profile_df = pd.DataFrame(qa49_profile_records)
+    qa49_profile_df.to_csv(qa49_profile_path, index=False)
+    print(f"Saved QA49 cluster preference profile to: {qa49_profile_path} ({len(qa49_profile_df)} rows)")
 
     print("\n[Step 5/5] All experiments and aggregate reports successfully generated.")
     print("=" * 80)
