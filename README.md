@@ -68,23 +68,27 @@ The 1,263 respondents are partitioned into three mutually exclusive, verified su
 ```text
 Beyond_Discounts/
 ├── README.md
-├── data/README.md                                  # Provenance, routing semantics, input setup and privacy
+├── requirements.txt
+├── data/
+│   └── README.md                                   # Provenance, routing semantics, input setup and privacy
 ├── docs/
-│   ├── data/DATA_SOURCE_REGISTER.csv               # Evaluated sources and provenance register
+│   ├── data/DATA_SOURCE_REGISTER.csv               # Source evaluation and provenance register
+│   ├── research/LITERATURE_EVIDENCE_REGISTER.md     # Literature screening register; critical synthesis pending
 │   └── gates/
-│       ├── GATE_0_DECISION_LOG.md                  # Scope and dataset decisions
-│       ├── GATE_0_SURVEY_CANDIDATE_AUDIT.md        # Survey audit and limitations
+│       ├── GATE_0_DECISION_LOG.md                  # Dataset and scope decision history
+│       ├── GATE_0_SURVEY_CANDIDATE_AUDIT.md        # Source survey audit and limitations
 │       └── GATE_1C1_TECHNICAL_REVIEW.md            # Current technical QA and closure criteria
 ├── scripts/
-│   ├── audit_survey_data.py                        # Schema and questionnaire-routing audit
+│   ├── audit_survey_data.py                        # Survey schema and routing audit
 │   ├── run_eda.py                                  # Gate 1A EDA
 │   ├── prepare_segmentation_features.py            # Typed features/specifications/holdouts
-│   └── run_segmentation_experiments.py              # Gower/PAM/HAC experiment
+│   ├── run_segmentation_experiments.py              # Gower/PAM/HAC + QA49 holdout profiles
+│   └── run_crm_analysis.py                         # Lifecycle CRM tables and QA47 ordinal model
 ├── reports/
 │   ├── eda/                                        # Aggregate EDA tables, figures and report
-│   ├── segmentation/                               # Aggregate clustering metrics and profiles
-│   └── crm/CRM_DECISION_ANALYSIS_PLAN.md            # Gate 1D decision-analysis plan
-│   └── crm/CRM_DECISION_ANALYSIS_PLAN.md            # Gate 1D plan\n├── scripts/run_crm_analysis.py                      # Aggregate-only lifecycle CRM analysis\n└── tests/                                          # Automated audit, EDA, segmentation and CRM tests
+│   ├── segmentation/                               # Aggregate clustering metrics/profiles
+│   └── crm/                                        # Decision-analysis plan and generated aggregate tables
+└── tests/                                          # Automated audit, segmentation and CRM tests
 ```
 
 Historical app-review feasibility artifacts and scripts remain for auditability but are **superseded for primary quantitative analysis**. The survey workbook, codebook, questionnaire, processed matrices, and respondent-level assignments are local-only and must stay outside Git.
@@ -96,10 +100,13 @@ Place the Mendeley survey workbook and its codebook/questionnaire under `data/ra
 
 ### Run sequence
 ```bash
+python -m pip install -r requirements.txt
 python scripts/audit_survey_data.py --file data/raw/survey/Data.xlsx --sheet Data --output docs/gates/GATE_0_SURVEY_AUDIT_SUMMARY.json
 python scripts/run_eda.py --file data/raw/survey/Data.xlsx --sheet Data
 python scripts/run_segmentation_experiments.py --survey-file data/raw/survey/Data.xlsx
-python -m unittest discover tests
+python -m unittest discover -s tests -v
+# Only after Gate 1C.1 is approved:
+python scripts/run_crm_analysis.py --file data/raw/survey/Data.xlsx --sheet Data --out-dir reports/crm/tables
 ```
 
 The segmentation experiment prepares its feature matrices and holdout locally if missing, then writes aggregate outputs under `reports/segmentation/`. Gate 1C.1 is not closed until the full local run succeeds and its regenerated reports reconcile. The Gate 1D runner is implemented but is not yet accepted as evidence until it has been executed on the real workbook and its diagnostics reviewed.
