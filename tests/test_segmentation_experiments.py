@@ -428,10 +428,7 @@ class TestSegmentationExperiments(unittest.TestCase):
                                    msg=f"Cluster proportions in {spec} {algo} k={k} sum to {sum(props)}, expected ~1.0")
 
     def test_12_reported_stability_summaries_match_saved_results(self):
-        """
-        Regression Test: Verify stability summary statistics are internally valid and match
-        actual calculations across all candidate configurations.
-        """
+        """Validate summary ranges and, when available, reconstruct metrics from run-level ARIs."""
         stab_df = pd.read_csv(self.stability_csv_path)
 
         for _, row in stab_df.iterrows():
@@ -443,44 +440,72 @@ class TestSegmentationExperiments(unittest.TestCase):
             self.assertGreaterEqual(row["unstable_runs_count"], 0)
             self.assertLessEqual(row["unstable_runs_count"], row["n_subsamples"])
 
-        # Specific check for SPEC_A PAM k=4:
-        row_a4 = stab_df[(stab_df["specification"] == "SPEC_A") & (stab_df["k"] == 4)].iloc[0]
-        self.assertEqual(row_a4["median_ari"], 0.6787)
-        self.assertEqual(row_a4["mean_ari"], 0.6425)
-        self.assertEqual(row_a4["min_ari"], 0.2853)
-        self.assertEqual(row_a4["unstable_runs_count"], 8)
-        self.assertEqual(row_a4["stability_verdict"], "PROVISIONALLY_STABLE")
+        # New runs must be reconstructible from one diagnostic row per seed.
+        # Existing committed summaries predate this file; the real-data Gate 1C.1
+        # rerun is required to produce it before that gate can close.
+        if os.path.exists(self.stability_runs_path):
+            runs = pd.read_csv(self.stability_runs_path)
+            required = {"specification", "algorithm", "k", "status", "ari"}
+            self.assertTrue(required.issubset(runs.columns))
+            self.assertEqual(len(runs), int(stab_df["n_subsamples"].sum()))
+            for _, summary in stab_df.iterrows():
+                subset = runs[
+                    (runs["specification"] == summary["specification"]) &
+                    (runs["algorithm"] == summary["algorithm"]) &
+                    (runs["k"] == summary["k"])
+                ]
+                successful = subset[subset["status"] == "SUCCESS"]["ari"].dropna().to_numpy(float)
+                failures = int((subset["status"] == "FAILED").sum())
+                self.assertEqual(len(successful), int(summary["n_successful_runs"]))
+                self.assertEqual(failures, int(summary["n_failed_runs"]))
+                if len(successful):
+                    self.assertAlmostEqual(float(np.median(successful)), float(summary["median_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.mean(successful)), float(summary["mean_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.std(successful)), float(summary["std_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.min(successful)), float(summary["min_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.max(successful)), float(summary["max_ari"]), places=4)
+                    self.assertEqual(int(np.sum(successful < 0.50)), int(summary["unstable_runs_count"]))
 
-    def test_13_persona_feature_claims_match_aggregate_profiles(self):
-        """
-        Regression Test: Persona claims in SEGMENTATION_EXPERIMENT_DECISION.md must strictly match
-        the aggregate profile values in cluster_profile_summary.csv.
-        """
+    def test_13_exploratory_profile_table_matches_aggregates_and_rejects_persona_overclaim(self):
+        """Validate exact profile-to-report mapping and the current no-targeting decision."""
         self.assertTrue(os.path.exists(self.decision_md_path))
         with open(self.decision_md_path, "r", encoding="utf-8") as f:
             md_content = f.read()
+
+        self.assertIn("Exploratory Cluster Profiles — Not CRM Personas", md_content)
+        self.assertIn("Do not use the current hard clusters as operational CRM segments", md_content)
+        self.assertIn("equivalence not established", md_content.lower())
+        self.assertNotIn("Multi-App Emergency Fill-in Shoppers", md_content)
+        self.assertNotIn("Stated discount sensitivity is totally invariant", md_content)
 
         prof_df = pd.read_csv(self.profiles_csv_path)
         sub_prof = prof_df[(prof_df["specification"] == "SPEC_A") &
                            (prof_df["algorithm"] == "PAM") &
                            (prof_df["k"] == 4)]
 
-        # Check cluster sizes: 243, 224, 179, 161
-        expected_sizes = [243, 224, 179, 161]
-        for c, sz in enumerate(expected_sizes):
-            self.assertIn(str(sz), md_content, f"Cluster {c} size {sz} not found in decision report")
+        def parse_report_row(label):
+            prefix = "| " + label + " |"
+            for line in md_content.splitlines():
+                if line.startswith(prefix):
+                    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+            self.fail(f"Could not find exact cluster profile row {label!r}")
 
-        # Check fast_delivery_importance means: [3.88, 3.49, 3.34, 3.91]
-        fast_del = sub_prof[(sub_prof["feature_name"] == "fast_delivery_importance") & (sub_prof["metric_type"] == "mean")]
-        for c in range(4):
-            val = round(fast_del[fast_del["cluster_id"] == c]["metric_value"].iloc[0], 2)
-            self.assertIn(f"{val:.2f}", md_content, f"Fast delivery mean {val:.2f} for cluster {c} missing from report")
+        # Parse report table cells instead of checking values anywhere in the document.
+        size_cells = parse_report_row("Cluster size")
+        self.assertEqual([int(size_cells[i]) for i in range(1, 5)],
+                         [int(sub_prof[sub_prof["cluster_id"] == k]["cluster_size"].iloc[0]) for k in range(4)])
 
-        # Check service_satisfaction_composite means: [3.76, 3.89, 3.99, 3.82]
-        sat = sub_prof[(sub_prof["feature_name"] == "service_satisfaction_composite") & (sub_prof["metric_type"] == "mean")]
-        for c in range(4):
-            val = round(float(sat[sat["cluster_id"] == c]["metric_value"].iloc[0]), 2)
-            self.assertIn(f"{val:.2f}", md_content, f"Satisfaction mean {val:.2f} for cluster {c} missing from report")
+        fast_cells = parse_report_row("Fast-delivery importance mean")
+        fast_del = sub_prof[(sub_prof["feature_name"] == "fast_delivery_importance") &
+                            (sub_prof["metric_type"] == "mean")]
+        self.assertEqual([round(float(fast_cells[i]), 2) for i in range(1, 5)],
+                         [round(float(fast_del[fast_del["cluster_id"] == k]["metric_value"].iloc[0]), 2) for k in range(4)])
+
+        sat_cells = parse_report_row("Service satisfaction composite mean")
+        sat = sub_prof[(sub_prof["feature_name"] == "service_satisfaction_composite") &
+                       (sub_prof["metric_type"] == "mean")]
+        self.assertEqual([round(float(sat_cells[i]), 2) for i in range(1, 5)],
+                         [round(float(sat[sat["cluster_id"] == k]["metric_value"].iloc[0]), 2) for k in range(4)])
 
     def test_14_corrected_p_values_match_multiple_testing_procedure(self):
         """
