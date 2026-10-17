@@ -39,6 +39,7 @@ from scripts.prepare_segmentation_features import (
     get_codebook_domains,
     validate_survey_domains,
     compute_pairwise_gower_distance,
+    validate_prepared_feature_matrices,
     DEFAULT_SURVEY_PATH,
     DEFAULT_SHEET,
     EXPECTED_TOTAL_ROWS,
@@ -562,6 +563,95 @@ class TestPairwiseGowerContract(unittest.TestCase):
             self.assertIn('qa19_basket_size_contract', contract)
             self.assertIn('qa26_monthly_spend_contract', contract)
             self.assertIn('construct_weight_invariance', contract)
+
+    def test_11_invalid_feature_data_type_raises_error(self):
+        """Verify that an unknown or unsupported data_type raises a clear ValueError."""
+        invalid_spec = {
+            "name": "bogus_feature",
+            "data_type": "unknown_custom_type",
+            "range": [0, 1]
+        }
+        r1 = {"bogus_feature": 1}
+        r2 = {"bogus_feature": 1}
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r1, r2, [invalid_spec])
+        self.assertIn("unknown or unsupported data_type", str(ctx.exception).lower())
+
+    def test_12_invalid_asymmetric_binary_values_raise_error(self):
+        """Verify that asymmetric binary features reject non-binary values (not in {0, 1})."""
+        r_valid = {"items_varies_considerably": 0}
+        r_invalid_2 = {"items_varies_considerably": 2}
+        r_invalid_neg = {"items_varies_considerably": -1}
+        r_invalid_str = {"items_varies_considerably": "yes"}
+
+        for r_bad in [r_invalid_2, r_invalid_neg, r_invalid_str]:
+            with self.assertRaises(ValueError) as ctx:
+                compute_pairwise_gower_distance(r_valid, r_bad, [self.qa19_asym])
+            self.assertIn("accepts only values in {0, 1}", str(ctx.exception))
+
+    def test_13_invalid_weights_raise_error(self):
+        """Verify that negative, non-finite, or non-numeric weights raise ValueError."""
+        r1 = {"items_per_order_ordinal": 2.0}
+        r2 = {"items_per_order_ordinal": 3.0}
+
+        # Negative weight
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r1, r2, [self.qa19_ord], weights={"items_per_order_ordinal": -0.5})
+        self.assertIn("finite and non-negative", str(ctx.exception).lower())
+
+        # Non-finite weight (inf, nan)
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r1, r2, [self.qa19_ord], weights={"items_per_order_ordinal": np.nan})
+        self.assertIn("finite and non-negative", str(ctx.exception).lower())
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r1, r2, [self.qa19_ord], weights={"items_per_order_ordinal": np.inf})
+        self.assertIn("finite and non-negative", str(ctx.exception).lower())
+
+        # Non-numeric weight
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r1, r2, [self.qa19_ord], weights={"items_per_order_ordinal": "heavy"})
+        self.assertIn("numeric", str(ctx.exception).lower())
+
+    def test_14_out_of_range_numeric_values_raise_error(self):
+        """Verify that ordinal/continuous values falling outside predeclared range raise ValueError."""
+        # Range is [1.0, 5.0]
+        r_normal = {"items_per_order_ordinal": 3.0}
+        r_too_high = {"items_per_order_ordinal": 6.0}
+        r_too_low = {"items_per_order_ordinal": 0.0}
+        r_inf = {"items_per_order_ordinal": np.inf}
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r_normal, r_too_high, [self.qa19_ord])
+        self.assertIn("outside allowed range", str(ctx.exception).lower())
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r_normal, r_too_low, [self.qa19_ord])
+        self.assertIn("outside allowed range", str(ctx.exception).lower())
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_pairwise_gower_distance(r_normal, r_inf, [self.qa19_ord])
+        self.assertIn("must be finite", str(ctx.exception).lower())
+
+    def test_15_prepared_matrices_structural_alignment_and_mask_validity(self):
+        """Verify that validate_prepared_feature_matrices confirms clean active matrices and detects corruptions."""
+        full_df, active_df = load_and_filter_active_users(DEFAULT_SURVEY_PATH, DEFAULT_SHEET)
+        prep_results = prepare_feature_matrices(active_df, os.path.join("data", "processed"))
+
+        # Clean baseline validation
+        self.assertTrue(validate_prepared_feature_matrices(
+            prep_results['spec_a'], prep_results['spec_b'], prep_results['holdout'], active_df
+        ))
+
+        # Injected NaN corruption in an ordinary feature must fail
+        corrupted_spec_a = prep_results['spec_a'].copy()
+        corrupted_spec_a.loc[0, 'discount_overspend'] = np.nan
+        with self.assertRaises(ValueError) as ctx:
+            validate_prepared_feature_matrices(
+                corrupted_spec_a, prep_results['spec_b'], prep_results['holdout'], active_df
+            )
+        self.assertIn("unexpected nan", str(ctx.exception).lower())
 
 
 if __name__ == "__main__":

@@ -1127,28 +1127,34 @@ def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_
     """
     Computes Gower dissimilarity D_ij in [0, 1] between two respondent records.
 
-    Implements the mandatory Gate 1C pairwise distance contract:
-    1. Ordinal and continuous features:
+    Implements the mandatory Gate 1C pairwise distance contract with fail-fast validation:
+    1. Predeclared Ranges:
+       - Uses the predeclared Code Book-backed range R_k = range[1] - range[0] specified in feature_specs
+         (rather than sample-dependent observed ranges) to guarantee consistent, reproducible distance scaling.
+    2. Ordinal and continuous features:
+       - Validates that defined numeric values are finite and within the predeclared [range[0], range[1]].
        - If both respondents have defined values (non-NaN):
          s_ijk = 1.0 - |x_ik - x_jk| / R_k, delta_ijk = 1.0.
        - If either respondent has NaN (e.g. Code 6 on QA19, Code 8 on QA26):
          delta_ijk = 0.0, s_ijk = 0.0 (omitted from denominator).
-    2. Nominal and symmetric binary features:
+    3. Nominal and symmetric binary features:
        - If both respondents have defined values (non-NaN):
          s_ijk = 1.0 if x_ik == x_jk else 0.0, delta_ijk = 1.0.
        - If either respondent has NaN:
          delta_ijk = 0.0, s_ijk = 0.0.
-    3. Asymmetric binary features (QA19 items_varies_considerably, QA26 monthly_spend_not_sure):
+    4. Asymmetric binary features (QA19 items_varies_considerably, QA26 monthly_spend_not_sure):
+       - Accepts ONLY values in {0, 1} or documented missing (NaN); any other value raises ValueError.
        - (0, 0): jointly absent -> delta_ijk = 0.0, s_ijk = 0.0 (omitted from distance denominator).
        - (1, 1): jointly present -> delta_ijk = 1.0, s_ijk = 1.0 (match).
        - (1, 0) or (0, 1): present/absent -> delta_ijk = 1.0, s_ijk = 0.0 (mismatch).
        - If either is NaN -> delta_ijk = 0.0, s_ijk = 0.0.
-    4. Denominator contract:
-       denom = sum_k w_k * delta_ijk
-       Sum only feature weights for components eligible to contribute to that respondent pair.
-       If denom == 0.0:
+    5. Weights and Denominator contract:
+       - Weights must be finite and non-negative numbers; non-finite or negative weights raise ValueError.
+       - denom = sum_k w_k * delta_ijk
+       - Sum only feature weights for components eligible to contribute to that respondent pair.
+       - If denom == 0.0:
            raise ValueError("Zero comparable features available for respondent pair: distance denominator is zero.")
-       D_ij = 1.0 - (sum_k w_k * delta_ijk * s_ijk) / denom
+       - D_ij = 1.0 - (sum_k w_k * delta_ijk * s_ijk) / denom
 
     Parameters:
     -----------
@@ -1171,9 +1177,19 @@ def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_
     numerator = 0.0
     denominator = 0.0
 
+    valid_types = {
+        "asymmetric_binary", "ordinal", "continuous", "continuous_composite",
+        "discrete_count", "nominal", "binary", "binary_indicator"
+    }
+
     for spec in feature_specs:
-        name = spec["name"]
+        name = spec.get("name", "unnamed_feature")
         fid = spec.get("feature_id", name)
+        dtype = spec.get("data_type", "")
+
+        # Fail-fast on unknown data_type
+        if dtype not in valid_types:
+            raise ValueError(f"Unknown or unsupported data_type '{dtype}' for feature '{name}'")
 
         # Access value for respondent 1
         if isinstance(r1, dict):
@@ -1187,18 +1203,27 @@ def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_
         else:
             val2 = r2[name] if name in r2 else (r2[fid] if fid in r2 else np.nan)
 
-        # Analytical feature weight
+        # Analytical feature weight validation
         if weights is None:
             w = 1.0
         elif isinstance(weights, dict):
-            w = float(weights.get(name, weights.get(fid, 1.0)))
+            raw_w = weights.get(name, weights.get(fid, 1.0))
+            try:
+                w = float(raw_w)
+            except (ValueError, TypeError):
+                raise ValueError(f"Weight for feature '{name}' must be numeric; got {raw_w}")
         else:
-            w = 1.0
+            try:
+                w = float(weights)
+            except (ValueError, TypeError):
+                raise ValueError(f"Weight must be numeric; got {weights}")
 
-        if w <= 0.0:
+        if not np.isfinite(w) or w < 0.0:
+            raise ValueError(f"Weight for feature '{name}' must be finite and non-negative; got {w}")
+
+        if w == 0.0:
             continue
 
-        dtype = spec.get("data_type", "")
         val1_missing = pd.isna(val1)
         val2_missing = pd.isna(val2)
 
@@ -1207,8 +1232,15 @@ def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_
                 delta = 0.0
                 s = 0.0
             else:
-                b1 = int(val1)
-                b2 = int(val2)
+                try:
+                    f1 = float(val1)
+                    f2 = float(val2)
+                except (ValueError, TypeError):
+                    raise ValueError(f"Asymmetric binary feature '{name}' accepts only values in {{0, 1}} or missing; got val1={val1}, val2={val2}")
+                if f1 not in (0.0, 1.0) or f2 not in (0.0, 1.0):
+                    raise ValueError(f"Asymmetric binary feature '{name}' accepts only values in {{0, 1}} or missing; got val1={val1}, val2={val2}")
+                b1 = int(f1)
+                b2 = int(f2)
                 if b1 == 0 and b2 == 0:
                     # Jointly absent: omitted from denominator
                     delta = 0.0
@@ -1222,33 +1254,40 @@ def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_
                     delta = 1.0
                     s = 0.0
                 else:
-                    # Non-binary value fallback
-                    delta = 0.0
-                    s = 0.0
+                    raise ValueError(f"Unexpected asymmetric binary state for feature '{name}': {b1}, {b2}")
+
         elif dtype in ("ordinal", "continuous", "continuous_composite", "discrete_count"):
             if val1_missing or val2_missing:
                 delta = 0.0
                 s = 0.0
             else:
+                try:
+                    f1 = float(val1)
+                    f2 = float(val2)
+                except (ValueError, TypeError):
+                    raise ValueError(f"Numeric feature '{name}' values must be numeric; got val1={val1}, val2={val2}")
+                if not np.isfinite(f1) or not np.isfinite(f2):
+                    raise ValueError(f"Numeric feature '{name}' values must be finite; got val1={val1}, val2={val2}")
+
                 rng = spec.get("range", None)
                 if rng is not None and len(rng) == 2:
-                    R = float(rng[1] - rng[0])
+                    min_val, max_val = float(rng[0]), float(rng[1])
+                    if f1 < min_val - 1e-9 or f1 > max_val + 1e-9:
+                        raise ValueError(f"Value {val1} for feature '{name}' falls outside allowed range {rng}")
+                    if f2 < min_val - 1e-9 or f2 > max_val + 1e-9:
+                        raise ValueError(f"Value {val2} for feature '{name}' falls outside allowed range {rng}")
+                    R = max_val - min_val
                 else:
                     R = 1.0
+
                 if R <= 0.0:
                     R = 1.0
+
                 delta = 1.0
-                s = 1.0 - (abs(float(val1) - float(val2)) / R)
+                s = 1.0 - (abs(f1 - f2) / R)
                 s = max(0.0, min(1.0, s))
+
         elif dtype in ("nominal", "binary", "binary_indicator"):
-            if val1_missing or val2_missing:
-                delta = 0.0
-                s = 0.0
-            else:
-                delta = 1.0
-                s = 1.0 if val1 == val2 else 0.0
-        else:
-            # General fallback
             if val1_missing or val2_missing:
                 delta = 0.0
                 s = 0.0
@@ -1268,6 +1307,62 @@ def compute_pairwise_gower_distance(r1, r2, feature_specs, weights=None, return_
     if return_details:
         return clipped_distance, float(numerator), float(denominator)
     return clipped_distance
+
+
+def validate_prepared_feature_matrices(df_spec_a, df_spec_b, df_holdout, raw_active_df):
+    """
+    Validates structural integrity, row alignment, domain bounds, and missingness masks
+    across prepared feature representations for Gate 1C:
+    1. Total active population is exactly 807 rows across all three matrices.
+    2. survey_row_id is perfectly aligned.
+    3. Only QA19 Code 6 and QA26 Code 8 have structurally undefined ranks (NaN).
+    4. Missing masks align exactly with binary flags and source responses.
+    5. Zero missing values exist across all other features.
+    """
+    n_expected = EXPECTED_ACTIVE_USERS
+    if len(df_spec_a) != n_expected or len(df_spec_b) != n_expected or len(df_holdout) != n_expected:
+        raise ValueError(f"Row count mismatch: Spec A={len(df_spec_a)}, Spec B={len(df_spec_b)}, Holdout={len(df_holdout)} (expected {n_expected})")
+
+    if not (df_spec_a['survey_row_id'].values == df_spec_b['survey_row_id'].values).all():
+        raise ValueError("survey_row_id mismatch between Specification A and Specification B")
+    if not (df_spec_a['survey_row_id'].values == df_holdout['survey_row_id'].values).all():
+        raise ValueError("survey_row_id mismatch between Specification A and Holdout")
+
+    # QA19 alignment
+    qa19_raw = raw_active_df['Items per Order'].values
+    qa19_nan = df_spec_a['items_per_order_ordinal'].isna().values
+    qa19_flag = (df_spec_a['items_varies_considerably'] == 1).values
+    if not ((qa19_raw == 6) == qa19_nan).all():
+        raise ValueError("QA19 NaN ordinal positions do not align with raw Code 6 responses")
+    if not ((qa19_raw == 6) == qa19_flag).all():
+        raise ValueError("QA19 binary flag items_varies_considerably does not align with raw Code 6")
+    if qa19_nan.sum() != 100:
+        raise ValueError(f"Expected exactly 100 QA19 Code 6 responses, got {qa19_nan.sum()}")
+
+    # QA26 alignment
+    qa26_raw = raw_active_df['Monthly Spend'].values
+    qa26_nan = df_spec_a['monthly_spend_ordinal'].isna().values
+    qa26_flag = (df_spec_a['monthly_spend_not_sure'] == 1).values
+    if not ((qa26_raw == 8) == qa26_nan).all():
+        raise ValueError("QA26 NaN ordinal positions do not align with raw Code 8 responses")
+    if not ((qa26_raw == 8) == qa26_flag).all():
+        raise ValueError("QA26 binary flag monthly_spend_not_sure does not align with raw Code 8")
+    if qa26_nan.sum() != 24:
+        raise ValueError(f"Expected exactly 24 QA26 Code 8 responses, got {qa26_nan.sum()}")
+
+    # Zero missing values elsewhere
+    allowed_nans = {'items_per_order_ordinal', 'monthly_spend_ordinal'}
+    for col in df_spec_a.columns:
+        if col not in allowed_nans and df_spec_a[col].isna().any():
+            raise ValueError(f"Unexpected NaN values in Specification A column '{col}'")
+    for col in df_spec_b.columns:
+        if col not in allowed_nans and df_spec_b[col].isna().any():
+            raise ValueError(f"Unexpected NaN values in Specification B column '{col}'")
+    for col in df_holdout.columns:
+        if df_holdout[col].isna().any():
+            raise ValueError(f"Unexpected NaN values in Holdout column '{col}'")
+
+    return True
 
 
 def main(args=None):

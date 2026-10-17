@@ -76,7 +76,7 @@ where:
     *Mandatory Contract:* Jointly absent flags $(0, 0)$ represent the mutual non-occurrence of an exceptional or uncertain condition, NOT a substantive shared attribute. They are strictly omitted from that pair's distance denominator ($\delta_{ijk} = 0$). This prevents ordinary respondents with defined responses from accumulating fictitious matching similarity.
   - **Ordinal & Continuous Variables** (`order_frequency`, `order_spend`, `discount_overspend`, `service_satisfaction_composite`):
     $$s_{ijk} = 1 - \frac{|x_{ik} - x_{jk}|}{R_k}, \quad \delta_{ijk} = \begin{cases} 1 & \text{if both } x_{ik}, x_{jk} \text{ defined (non-NaN)} \\ 0 & \text{if either is NaN} \end{cases}$$
-    where $R_k = \max(x_k) - \min(x_k)$ is the observed active range of feature $k$. This scales all ordinal and interval differences strictly into $[0, 1]$.
+    where $R_k = \text{range}_k[1] - \text{range}_k[0]$ is the **predeclared range in the machine-readable feature specification** (Code Book-backed theoretical domain span, e.g. $R = 4.0$ for QA 19 basket size, $R = 5.0$ for QA 26 monthly spend, $R = 4.0$ for 1–5 Likert scales). This guarantees reproducible, consistent metric scaling independent of sample variations or subsampling splits.
 
 ### 4.2. Mandatory Gate 1C Distance Contract for QA 19 and QA 26
 
