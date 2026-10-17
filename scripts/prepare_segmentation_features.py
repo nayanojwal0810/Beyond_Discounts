@@ -21,8 +21,8 @@ Description:
          has structurally undefined ordinal rank (NaN) and sets items_varies_considerably = 1 (asymmetric binary).
        - QA 26 (Monthly Spend): Source codes 2-7 map to ordinal ranks 1-6; Code 8 ("Not sure")
          has structurally undefined ordinal rank (NaN) and sets monthly_spend_not_sure = 1 (asymmetric binary).
-       - QA 15 (Order Frequency): Valid ordinal categories 2-7 for active users.
-       - QA 14 (First Trial Reason): Nominal categories 1-7 for active users.
+       - QA 15 (Order Frequency): Valid ordinal categories 2-7 for current-user cohort.
+       - QA 14 (First Trial Reason): Nominal categories 1-7 for current-user cohort.
        - QA 43 (Shopping Routine Role): Explicitly typed as nominal categorical (1-5).
        - QA 47 (Continue If Discounts Reduced): Stated continuation intention (1-5).
        - QA 46 (Next 3 Month Use): Stated future-use intention held out across all specifications.
@@ -31,7 +31,7 @@ Description:
        - QA 49 (Preferred Improvement): Reserved for post-cluster action profiling.
     5. Formulates two distinct segmentation specifications:
        - Specification A: Core behavioral and attitudinal features EXCLUDING QA 47 (independent validation).
-       - Specification B: Specification A PLUS QA 47 (price-elasticity segment-defining specification).
+       - Specification B: Specification A plus QA47 stated continuation intention; QA47 is construct-defining and cannot be independently validated within this specification.
     6. Produces machine-readable JSON specifications and deterministic local feature representations.
     7. Ensures all row-level respondent matrices remain local and excluded from Git.
 
@@ -72,7 +72,7 @@ def parse_arguments(args=None):
 def load_and_filter_active_users(file_path, sheet_name):
     """
     Loads survey workbook, validates schema dimensions and subgroup partition counts,
-    and returns full DataFrame along with strictly filtered current active users (n=807).
+    and returns full DataFrame along with strictly filtered current-user cohort (n=807).
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Survey dataset not found at: {file_path}")
@@ -324,8 +324,8 @@ def get_column_metadata_mapping():
         'Area of Residence': ('QA 6', 'City tier / urbanization level', 'Ordinal', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Geographic urbanization proxy; reserved for post-cluster profiling.'),
         'Region': ('QA 7', 'Geographic region in India', 'Nominal', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Geographic macro-region; reserved for post-cluster profiling.'),
         'Household Size': ('QA 8', 'Number of persons in household', 'Ordinal', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Demographic household structure; reserved for post-cluster profiling.'),
-        'Awareness of Quick Commerce Services': ('QA 9', 'Awareness screening flag', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'screening_filter', 'Screening filter; constant 1 for active users.'),
-        'Ever Ordered through a Quick-Commerce Platform': ('QA 10', 'Adoption trial screening flag', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'screening_filter', 'Subgroup partition filter; constant 1 for active users.'),
+        'Awareness of Quick Commerce Services': ('QA 9', 'Awareness screening flag', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'screening_filter', 'Screening filter; constant 1 for current-user cohort.'),
+        'Ever Ordered through a Quick-Commerce Platform': ('QA 10', 'Adoption trial screening flag', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'screening_filter', 'Subgroup partition filter; constant 1 for current-user cohort.'),
         'Aware Blinkit': ('QA 11', 'Aided awareness: Blinkit', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Brand awareness; reserved for platform footprint profiling.'),
         'Aware Zepto': ('QA 11', 'Aided awareness: Zepto', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Brand awareness; reserved for platform footprint profiling.'),
         'Aware Swiggy Instamart': ('QA 11', 'Aided awareness: Swiggy Instamart', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Brand awareness; reserved for platform footprint profiling.'),
@@ -333,14 +333,14 @@ def get_column_metadata_mapping():
         'Aware Flipkart Minutes': ('QA 11', 'Aided awareness: Flipkart Minutes', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Brand awareness; reserved for platform footprint profiling.'),
         'Aware Amazon Rapid': ('QA 11', 'Aided awareness: Amazon Rapid', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Brand awareness; reserved for platform footprint profiling.'),
         'Aware Other': ('QA 11', 'Aided awareness: Other platforms', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Brand awareness; reserved for platform footprint profiling.'),
-        'Aware None': ('QA 11', 'Aided awareness: None', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'excluded_constant_active', 'Constant 0 for active users; excluded from clustering.'),
+        'Aware None': ('QA 11', 'Aided awareness: None', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'excluded_constant_active', 'Constant 0 for current-user cohort; excluded from clustering.'),
         'Used Blinkit': ('QA 12', 'Platform ever used: Blinkit', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Platform-specific usage; aggregated into platforms_used_count to avoid platform-tied clusters.'),
         'Used Zepto': ('QA 12', 'Platform ever used: Zepto', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Platform-specific usage; aggregated into platforms_used_count to avoid platform-tied clusters.'),
         'Used Swiggy Instamart': ('QA 12', 'Platform ever used: Swiggy Instamart', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Platform-specific usage; aggregated into platforms_used_count to avoid platform-tied clusters.'),
         'Used BigBasket BBNow': ('QA 12', 'Platform ever used: BigBasket BBNow', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Platform-specific usage; aggregated into platforms_used_count to avoid platform-tied clusters.'),
         'Used Flipkart Minutes': ('QA 12', 'Platform ever used: Flipkart Minutes', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Platform-specific usage; aggregated into platforms_used_count to avoid platform-tied clusters.'),
         'Used Amazon Rapid': ('QA 12', 'Platform ever used: Amazon Rapid', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Platform-specific usage; aggregated into platforms_used_count to avoid platform-tied clusters.'),
-        'Used Never Used': ('QA 12', 'Platform ever used: Never used flag', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'excluded_constant_active', 'Constant 0 for active users; partition validation flag.'),
+        'Used Never Used': ('QA 12', 'Platform ever used: Never used flag', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'excluded_constant_active', 'Constant 0 for current-user cohort; partition validation flag.'),
         'Usage Duration': ('QA 13', 'Quick-commerce usage tenure', 'Ordinal', 'Ever-Users (n=887)', 887, 807, 0, 'Code 1=Never used (0 in active)', 'primary_candidate_spec_a_b', 'Key engagement velocity and customer maturity measure; codes 2-6 ordered from <3 months to >2 years.'),
         'First Trial Reason': ('QA 14', 'Primary motivation for first trial', 'Nominal', 'Ever-Users (n=887)', 887, 807, 0, 'Code 8=N/A (0 in active)', 'post_cluster_profiling', 'Nominal trial origin (codes 1-7); reserved for post-cluster profiling to trace adoption pathways.'),
         'Order Frequency': ('QA 15', 'Current ordering frequency', 'Ordinal', 'All Respondents (N=1263)', 1263, 807, 0, 'Code 1=Never (0 in active)', 'primary_candidate_spec_a_b', 'Core behavioral velocity metric; ordered categories 2-7 from <once/month to daily.'),
@@ -355,7 +355,7 @@ def get_column_metadata_mapping():
         'Reason Hosting Guests': ('QA 18', 'Usual order occasion: Hosting guests', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Occasion multi-response; reserved for profiling order contexts without overweighting binary inputs.'),
         'Reason Avoid Travel Queues': ('QA 18', 'Usual order occasion: Avoid travel/queues', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Occasion multi-response; reserved for profiling order contexts without overweighting binary inputs.'),
         'Reason Promotion Discount': ('QA 18', 'Usual order occasion: Promotion/discount', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Occasion multi-response; promo sensitivity captured directly by QA 28/29.'),
-        'Reason Not Applicable': ('QA 18', 'Usual order occasion: Skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for active users; skip routing flag.'),
+        'Reason Not Applicable': ('QA 18', 'Usual order occasion: Skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for current-user cohort; skip routing flag.'),
         'Items per Order': ('QA 19', 'Typical basket size items', 'Mixed Ordinal/Nominal', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 6=Varies (n=100); Code 7=N/A (0)', 'primary_candidate_spec_a_b', 'Audited semantic rule: Codes 1-5 map to ordinal ranks 1-5; Code 6 (Varies considerably, n=100) has structurally undefined ordinal rank (NaN). Handled with separate asymmetric binary volatility flag items_varies_considerably.'),
         'Expected Delivery': ('QA 20', 'Expected delivery window', 'Mixed Ordinal/Nominal', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 6=No expectation (n=68); Code 7=N/A (0)', 'post_cluster_profiling', 'Delivery expectation interval; reserved for profiling. Speed importance captured directly by QA 35 Likert.'),
         'Spontaneous Frequency': ('QA 21', 'Frequency of spontaneous orders', 'Ordinal', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'post_cluster_profiling', 'Impulse frequency; correlated with QA 44 (Unplanned purchase) which is retained as primary attitudinal Likert.'),
@@ -376,7 +376,7 @@ def get_column_metadata_mapping():
         'Category Small Household Kitchen': ('QA 22', 'Purchased: Small kitchen/home', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Category adoption dummy; reserved for profiling product mix without bloating feature dimensionality.'),
         'Category Ready Eat Cook': ('QA 22', 'Purchased: Ready-to-eat/cook', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Category adoption dummy; reserved for profiling product mix without bloating feature dimensionality.'),
         'Category Festival Occasion': ('QA 22', 'Purchased: Festival items', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Category adoption dummy; reserved for profiling product mix without bloating feature dimensionality.'),
-        'Category Not Applicable': ('QA 22', 'Purchased: Skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for active users; skip routing flag.'),
+        'Category Not Applicable': ('QA 22', 'Purchased: Skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for current-user cohort; skip routing flag.'),
         'Most Frequent Category': ('QA 23', 'Single most frequent category', 'Nominal', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 8=N/A (0 in active)', 'post_cluster_profiling', 'Nominal primary category; reserved for profiling dominant basket type.'),
         'Physical Fresh Fruit Veg': ('QA 24', 'Physical store preference: Fresh produce', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Physical store channel preference; substantive offline preference, reserved for profiling.'),
         'Physical Dairy Breakfast': ('QA 24', 'Physical store preference: Dairy/breakfast', 'Binary', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Physical store channel preference; substantive offline preference, reserved for profiling.'),
@@ -422,7 +422,7 @@ def get_column_metadata_mapping():
         'Problem App Technical': ('QA 36', 'Problem experienced: Technical glitch', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Operational friction dummy; reserved for service quality profiling.'),
         'Problem Customer Service': ('QA 36', 'Problem experienced: Customer service', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Operational friction dummy; reserved for service quality profiling.'),
         'Problem No Major Problem': ('QA 36', 'Problem experienced: No major problem', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'None', 'post_cluster_profiling', 'Operational friction dummy; reserved for service quality profiling.'),
-        'Problem Not Applicable': ('QA 36', 'Problem experienced: Skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for active users; skip routing flag.'),
+        'Problem Not Applicable': ('QA 36', 'Problem experienced: Skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 1=N/A (0 in active)', 'excluded_constant_active', 'Constant 0 for current-user cohort; skip routing flag.'),
         'Overall Satisfaction': ('QA 37', 'Overall satisfaction rating', 'Ordinal Likert', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'post_cluster_profiling', 'Individual satisfaction item (2-5); integrated into service_satisfaction_composite (alpha=0.863).'),
         'Product Quality Satisfaction': ('QA 38', 'Product quality satisfaction rating', 'Ordinal Likert', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'post_cluster_profiling', 'Individual satisfaction item (2-5); integrated into service_satisfaction_composite (alpha=0.863).'),
         'Delivery Reliability Satisfaction': ('QA 39', 'Delivery reliability satisfaction rating', 'Ordinal Likert', 'Current-User Cohort (n=807)', 807, 807, 0, 'Code 6=N/A (0 in active)', 'post_cluster_profiling', 'Individual satisfaction item (1-5); integrated into service_satisfaction_composite (alpha=0.863).'),
@@ -437,17 +437,17 @@ def get_column_metadata_mapping():
 
         # QA 48 Non-Use Barriers: Routed strictly to non-current respondents (n=456)
         # For active cohort (n=807): eligible_count_active = 0, ineligible_skip_count_active = 807!
-        'Reason Service Unavailable': ('QA 48', 'Non-use barrier: Area unavailable', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Prefer Physical': ('QA 48', 'Non-use barrier: Prefer physical stores', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Prices High': ('QA 48', 'Non-use barrier: Prices high', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Delivery Fees': ('QA 48', 'Non-use barrier: Delivery fees', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Distrust Quality': ('QA 48', 'Non-use barrier: Distrust quality', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Prefer Inspect': ('QA 48', 'Non-use barrier: Prefer inspect items', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Impulsive Spending Concern': ('QA 48', 'Non-use barrier: Impulsive spending concern', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason No Need Rapid': ('QA 48', 'Non-use barrier: No need rapid', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Privacy Payment Concern': ('QA 48', 'Non-use barrier: Privacy/payment concern', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Unfamiliar Apps': ('QA 48', 'Non-use barrier: Unfamiliar with apps', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; active users structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
-        'Reason Not Applicable Current User': ('QA 48', 'Non-use barrier: Current user skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Constant 1 for active users', 'excluded_constant_active', 'Constant 1 for active users; audited skip flag, excluded from clustering.'),
+        'Reason Service Unavailable': ('QA 48', 'Non-use barrier: Area unavailable', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Prefer Physical': ('QA 48', 'Non-use barrier: Prefer physical stores', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Prices High': ('QA 48', 'Non-use barrier: Prices high', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Delivery Fees': ('QA 48', 'Non-use barrier: Delivery fees', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Distrust Quality': ('QA 48', 'Non-use barrier: Distrust quality', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Prefer Inspect': ('QA 48', 'Non-use barrier: Prefer inspect items', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Impulsive Spending Concern': ('QA 48', 'Non-use barrier: Impulsive spending concern', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason No Need Rapid': ('QA 48', 'Non-use barrier: No need rapid', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Privacy Payment Concern': ('QA 48', 'Non-use barrier: Privacy/payment concern', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Unfamiliar Apps': ('QA 48', 'Non-use barrier: Unfamiliar with apps', 'Binary', 'Non-Current Users (n=456)', 456, 0, 807, 'Routed to non-current; current-user cohort structurally skip-coded (0)', 'excluded_non_current_skip', 'Routed strictly to non-current users; eligible active count = 0 (807 skip-coded). Excluded from clustering.'),
+        'Reason Not Applicable Current User': ('QA 48', 'Non-use barrier: Current user skip flag', 'Binary', 'Current-User Cohort (n=807)', 807, 807, 0, 'Constant 1 for current-user cohort', 'excluded_constant_active', 'Constant 1 for current-user cohort; audited skip flag, excluded from clustering.'),
 
         # QA 49
         'Improvement': ('QA 49', 'Single preferred service improvement', 'Nominal', 'All Respondents (N=1263)', 1263, 807, 0, 'None', 'post_cluster_profiling', 'Audited rule: Universal single choice (1-10); reserved for post-cluster CRM retention action mapping rather than cluster construction.')
@@ -542,7 +542,7 @@ def generate_feature_quality_audit(full_df, active_df, reports_dir):
         if col == 'Expected Delivery' and 6 in val_counts:
             special_notes.append("Code 6='No specific expectation' (n=68); non-ordinal.")
         if col == 'Continue If Discounts Reduced' and 6 in full_df[col].unique():
-            special_notes.append("Code 6='Not applicable' in full sample (n=456), 0 in active users.")
+            special_notes.append("Code 6='Not applicable' in full sample (n=456), 0 in current-user cohort.")
         if col.startswith('Reason ') and col != 'Reason Not Applicable Current User' and is_const and col in [
             'Reason Service Unavailable', 'Reason Prefer Physical', 'Reason Prices High',
             'Reason Delivery Fees', 'Reason Distrust Quality', 'Reason Prefer Inspect',
@@ -551,7 +551,7 @@ def generate_feature_quality_audit(full_df, active_df, reports_dir):
         ]:
             special_notes.append("QA 48 non-use barrier; active eligible count = 0, 807 structurally skip-coded rows.")
         if col == 'Reason Not Applicable Current User':
-            special_notes.append("QA 48 skip flag; constant 1 for all 807 active users.")
+            special_notes.append("QA 48 skip flag; constant 1 for all 807 current-user cohort.")
 
         special_str = "; ".join(special_notes) if special_notes else "None"
 
@@ -605,7 +605,7 @@ def generate_feature_quality_audit(full_df, active_df, reports_dir):
 def generate_feature_specifications(reports_dir):
     """
     Generates version-controlled, machine-readable JSON specifications:
-    - feature_spec_a.json (Independent discount-sensitivity evaluation)
+    - feature_spec_a.json (independent QA47 holdout evaluation)
     - feature_spec_b.json (Discount intention included)
     """
     # Specification A feature definitions (17 features)
@@ -619,7 +619,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [2, 3, 4, 5, 6, 7],
             "encoding": "ordinal_integer_or_rank",
             "range": [2, 7],
-            "special_codes": "None (all active respondents report 2..7)",
+            "special_codes": "None (all respondents in the current-user cohort report 2..7)",
             "description": "Current order frequency from Less than once a month (2) to Daily (7)."
         },
         {
@@ -631,7 +631,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [2, 3, 4, 5, 6],
             "encoding": "ordinal_integer_or_rank",
             "range": [2, 6],
-            "special_codes": "None (code 1 Never Used is absent in active users)",
+            "special_codes": "None (code 1 Never Used is absent in current-user cohort)",
             "description": "Quick commerce customer tenure from <3 months (2) to >2 years (6)."
         },
         {
@@ -643,7 +643,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5, 6, 7],
             "encoding": "ordinal_integer_or_rank",
             "range": [1, 7],
-            "special_codes": "None (code 8 N/A absent in active users)",
+            "special_codes": "None (code 8 N/A absent in current-user cohort)",
             "description": "Typical single-order spend bracket from Below ₹200 (1) to ₹1,500+ (7)."
         },
         {
@@ -703,7 +703,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "How often discounts/coupons cause overspending (1=Never to 5=Very often). Measures deal-driven basket inflation."
         },
         {
@@ -715,7 +715,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "How often extra items are added to reach free delivery thresholds (1=Never to 5=Very often). Measures fee avoidance gaming."
         },
         {
@@ -727,7 +727,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "Frequency of comparing prices across quick-commerce apps (1=Never to 5=Always). Measures cross-app deal shopping."
         },
         {
@@ -739,7 +739,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "Frequency of comparing quick-commerce prices with physical stores (1=Never to 5=Always). Measures offline-online arbitrage."
         },
         {
@@ -751,7 +751,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "Stated importance of 10-20 minute delivery (1=Not at all important to 5=Extremely important)."
         },
         {
@@ -775,7 +775,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "nominal_categorical_or_gower_nominal",
             "range": [1, 5],
-            "special_codes": "Code 6 ('Do not use') is 0 in active users.",
+            "special_codes": "Code 6 ('Do not use') is 0 in current-user cohort.",
             "description": "Explicitly nominal quick commerce role (1=Large grocery replacement, 2=Some replacement, 3=Top-up, 4=Urgent/emergencies, 5=Offers/convenience)."
         },
         {
@@ -799,7 +799,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "How often quick commerce encourages impulse purchases (1=Never to 5=Very often)."
         },
         {
@@ -811,7 +811,7 @@ def generate_feature_specifications(reports_dir):
             "active_domain": [1, 2, 3, 4, 5],
             "encoding": "ordinal_likert",
             "range": [1, 5],
-            "special_codes": "None (code 6 N/A absent in active users)",
+            "special_codes": "None (code 6 N/A absent in current-user cohort)",
             "description": "Propensity to try new brands through quick commerce (1=Strongly disagree to 5=Strongly agree)."
         }
     ]
@@ -826,7 +826,7 @@ def generate_feature_specifications(reports_dir):
         "active_domain": [1, 2, 3, 4, 5],
         "encoding": "ordinal_likert",
         "range": [1, 5],
-        "special_codes": "Code 6 N/A is absent in active users. Substantive Likert 1=Definitely no to 5=Definitely yes.",
+        "special_codes": "Code 6 N/A is absent in current-user cohort. Substantive Likert 1=Definitely no to 5=Definitely yes.",
         "description": "Segment-defining stated continuation-intention feature in Specification B. Measures stated intention if discounts/promotions are reduced; not observed price elasticity."
     }
     features_b = list(features_a) + [feature_b_qa47]
