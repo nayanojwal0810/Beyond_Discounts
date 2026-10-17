@@ -53,15 +53,74 @@ class TestSegmentationExperiments(unittest.TestCase):
         with open(cls.spec_b_path, "r", encoding="utf-8") as f:
             cls.spec_b = json.load(f)
 
-        cls.df_a = pd.read_csv(cls.mat_a_path)
-        cls.df_b = pd.read_csv(cls.mat_b_path)
-        cls.df_hold = pd.read_csv(cls.holdout_path)
+        cls.using_synthetic_fixture = not all(
+            os.path.exists(path)
+            for path in (cls.mat_a_path, cls.mat_b_path, cls.holdout_path)
+        )
+        if cls.using_synthetic_fixture:
+            # Clean-clone fallback: deterministic synthetic rows test software behavior only.
+            # These rows never reproduce or stand in for the real survey results.
+            cls.df_a, cls.df_b, cls.df_hold = cls._build_synthetic_fixture(
+                cls.spec_a["features"], cls.spec_b["features"], n_rows=80, seed=1907
+            )
+        else:
+            cls.df_a = pd.read_csv(cls.mat_a_path)
+            cls.df_b = pd.read_csv(cls.mat_b_path)
+            cls.df_hold = pd.read_csv(cls.holdout_path)
 
         cls.metrics_csv_path = os.path.join("reports", "segmentation", "clustering_metrics.csv")
         cls.profiles_csv_path = os.path.join("reports", "segmentation", "cluster_profile_summary.csv")
         cls.stability_csv_path = os.path.join("reports", "segmentation", "stability_summary.csv")
         cls.validation_csv_path = os.path.join("reports", "segmentation", "external_validation_summary.csv")
         cls.decision_md_path = os.path.join("reports", "segmentation", "SEGMENTATION_EXPERIMENT_DECISION.md")
+
+    @staticmethod
+    def _build_synthetic_fixture(specs_a, specs_b, n_rows=80, seed=1907):
+        """Build deterministic synthetic inputs for code tests when private survey data is absent."""
+        rng = np.random.RandomState(seed)
+        df_a = pd.DataFrame({"survey_row_id": np.arange(1, n_rows + 1)})
+        for spec in specs_a:
+            name = spec["name"]
+            dtype = spec["data_type"]
+            value_range = spec.get("range", [0, 1])
+            lo, hi = float(value_range[0]), float(value_range[1])
+
+            if dtype == "asymmetric_binary":
+                values = rng.binomial(1, 0.20, size=n_rows).astype(float)
+            elif dtype in ("nominal", "binary", "binary_indicator"):
+                domain = spec.get("active_domain", [int(lo), int(hi)])
+                values = rng.choice(domain, size=n_rows)
+            elif dtype in ("ordinal", "continuous", "continuous_composite", "discrete_count"):
+                if name in ("monthly_spend_ordinal", "items_per_order_ordinal"):
+                    values = rng.randint(int(lo), int(hi) + 1, size=n_rows).astype(float)
+                else:
+                    # Use integer ranks for the survey's coded ordinal fields.
+                    values = rng.randint(int(lo), int(hi) + 1, size=n_rows).astype(float)
+            else:
+                raise ValueError(f"Unsupported synthetic fixture type: {dtype}")
+            df_a[name] = values
+
+        # Special categories are paired with their separate indicators as specified by the contract.
+        if "monthly_spend_not_sure" in df_a and "monthly_spend_ordinal" in df_a:
+            df_a.loc[df_a["monthly_spend_not_sure"] == 1, "monthly_spend_ordinal"] = np.nan
+        if "items_varies_considerably" in df_a and "items_per_order_ordinal" in df_a:
+            df_a.loc[df_a["items_varies_considerably"] == 1, "items_per_order_ordinal"] = np.nan
+
+        df_b = df_a.copy()
+        df_b["continue_if_discounts_reduced"] = rng.randint(1, 6, size=n_rows)
+        df_hold = pd.DataFrame({
+            "survey_row_id": np.arange(1, n_rows + 1),
+            "qa47_continue_if_discounts_reduced": rng.randint(1, 6, size=n_rows),
+            "qa46_next_3_month_use": rng.randint(1, 6, size=n_rows),
+            "qa49_preferred_improvement": rng.randint(1, 11, size=n_rows)
+        })
+        expected_a = [item["name"] for item in specs_a]
+        expected_b = [item["name"] for item in specs_b]
+        if list(df_a.columns[1:]) != expected_a:
+            raise AssertionError("Synthetic Spec A columns do not match feature specification")
+        if list(df_b.columns[1:]) != expected_a + ["continue_if_discounts_reduced"]:
+            raise AssertionError("Synthetic Spec B columns do not match feature specification")
+        return df_a, df_b, df_hold
 
     def test_01_feature_spec_exclusions_and_inclusions(self):
         """Verify Spec A excludes QA47, both exclude QA46, Spec B includes QA47."""
