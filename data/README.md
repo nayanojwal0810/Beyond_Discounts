@@ -8,7 +8,7 @@ This document defines the data assets evaluated and governed during **Gate 0**, 
 
 Under the controlling decisions of the Principal Project Lead:
 - **Approved Working Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
-- **Research Question:** *How do quick-commerce consumers differ in their discount sensitivity, usage behaviour, and stated future-use intentions, and what adoption, reactivation, or retention actions are supported by these differences?*
+- **Current Research Question:** *Which lifecycle-based CRM actions are best supported by the observed sample's stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements? Do exploratory behavioral clusters add actionable differentiation beyond lifecycle cohorts?*
 - **Problem Investigated:** Quick-commerce consumers may differ in the importance they place on discounts, shopping convenience, spending behaviour, service experience, and other factors. A single retention strategy may not suit every consumer. We investigate these differences using the survey data and determine whether defensible, interpretable customer segments can be developed.
 - **Proposed Business Value:** The eventual project should translate observed customer differences into evidence-based recommendations for customer acquisition, reactivation, and retention (intended applications, not established results).
 - **Scope:** General Indian Quick-Commerce Industry. (Earlier framing applied to Blinkit as a focal case has been formally superseded because the survey measures general quick-commerce behaviour, not firm-specific satisfaction or retention).
@@ -18,6 +18,8 @@ Under the controlling decisions of the Principal Project Lead:
 ---
 
 ## 2. Primary Exploratory Dataset: Mendeley Survey Microdata
+
+**Interpretation guardrail:** This is an exploratory, cross-sectional secondary-data analysis. The source's actual recruitment process, fieldwork dates, and sampling frame are not verified in the available source materials; the sample is not claimed to be nationally representative. QA46/QA47 are stated intentions, QA48 is a stated current non-use reason, and QA49 is a single stated preferred improvement. None is an observed transaction outcome or causal intervention effect.
 
 ### 2.1 Asset Identification & Provenance
 - **Title:** *A Large-Scale Survey Dataset on Quick-Commerce Adoption, Ordering Patterns, Product Categories and Spending Behaviour among Indian Consumers*
@@ -29,10 +31,10 @@ Under the controlling decisions of the Principal Project Lead:
 - **Dimensions:** Exactly **1,263 data rows $\times$ 130 columns**; 0 physical null/blank cells; 0 full duplicate rows.
 
 ### 2.2 Subgroup Derivation & Questionnaire Routing Architecture
-The survey contains 1,263 respondents partitioned into three distinct behavioral subgroups via QA 10 (*Ever Ordered*) and QA 15 (*Current Order Frequency*):
+The survey contains 1,263 respondents partitioned into three questionnaire-defined lifecycle cohorts via QA 10 (*Ever Ordered*) and QA 15 (*Current Order Frequency*):
 1. **Never Users ($n=376$, 29.8%):** `Ever Ordered = 0`, `Order Frequency = 1 (Never)`.
 2. **Previous Users Currently Reporting No Orders ($n=80$, 6.3%):** `Ever Ordered = 1`, `Order Frequency = 1 (Never)`.
-3. **Current Active Users ($n=807$, 63.9%):** `Ever Ordered = 1`, `Order Frequency > 1 (Active)`.
+3. **Current-User Cohort ($n=807$, 63.9%):** `Ever Ordered = 1`, `Order Frequency > 1 (not coded 'Never')`.
 
 #### Module Classifications & Variable Availability:
 - **QA 16–QA 45 Response Classifications for Non-Current Respondents ($n=456$):**
