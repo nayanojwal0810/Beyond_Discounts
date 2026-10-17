@@ -467,6 +467,89 @@ def compute_cluster_profiles(df, labels, feature_specs, spec_name, algorithm, k)
     return profiles
 
 
+def compute_post_cluster_categorical_profiles(
+    df_holdout,
+    labels,
+    spec_name,
+    algorithm,
+    k,
+    variable="qa49_preferred_improvement",
+    categories=tuple(range(1, 11)),
+    reference_row_ids=None
+):
+    """
+    Profile a held-out categorical variable after cluster formation.
+
+    QA49 is not a clustering input. The function outputs only aggregate category
+    counts and percentages by cluster, and enforces row alignment with the labels'
+    source representation when reference_row_ids is supplied.
+    """
+    if variable not in df_holdout.columns:
+        raise ValueError(f"Post-cluster profiling variable '{variable}' is missing from holdout data.")
+
+    labels = np.asarray(labels)
+    if len(df_holdout) != len(labels):
+        raise ValueError(
+            f"Post-cluster profile row mismatch: holdout={len(df_holdout)}, labels={len(labels)}."
+        )
+
+    if reference_row_ids is not None:
+        if "survey_row_id" not in df_holdout.columns:
+            raise ValueError("Holdout data lacks survey_row_id needed for alignment validation.")
+        reference_row_ids = np.asarray(reference_row_ids)
+        holdout_row_ids = df_holdout["survey_row_id"].to_numpy()
+        if len(reference_row_ids) != len(holdout_row_ids) or not np.array_equal(reference_row_ids, holdout_row_ids):
+            raise ValueError("Post-cluster profile row IDs do not align with clustering labels.")
+
+    values = pd.to_numeric(df_holdout[variable], errors="coerce")
+    if values.isna().any():
+        raise ValueError(f"Post-cluster profiling variable '{variable}' contains missing/non-numeric values.")
+
+    allowed = set(categories)
+    observed = set(values.unique().tolist())
+    unexpected = observed - allowed
+    if unexpected:
+        raise ValueError(
+            f"Post-cluster profiling variable '{variable}' contains unexpected categories: {sorted(unexpected)}"
+        )
+
+    profiles = []
+    for cluster_id in sorted(np.unique(labels)):
+        mask = labels == cluster_id
+        cluster_values = values.iloc[np.flatnonzero(mask)]
+        cluster_size = int(mask.sum())
+        if cluster_size == 0:
+            raise ValueError(f"Cluster {cluster_id} is empty.")
+        cluster_proportion = round(cluster_size / len(labels), 4)
+
+        for category in categories:
+            count = int((cluster_values == category).sum())
+            pct = (count / cluster_size) * 100.0
+            common = {
+                "specification": spec_name,
+                "algorithm": algorithm,
+                "k": k,
+                "cluster_id": int(cluster_id),
+                "cluster_size": cluster_size,
+                "cluster_proportion": cluster_proportion,
+                "feature_id": "post_cluster_qa49",
+                "feature_name": variable,
+                "data_type": "nominal"
+            }
+            profiles.append({
+                **common,
+                "metric_type": f"cat_{category}_count",
+                "metric_value": count
+            })
+            profiles.append({
+                **common,
+                "metric_type": f"cat_{category}_pct",
+                "metric_value": round(pct, 4)
+            })
+
+    return profiles
+
+
 def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k):
     """
     Evaluates cluster solutions against held-out variables:
@@ -712,6 +795,18 @@ def run_experiments(args=None):
             # Profiles
             profiles = compute_cluster_profiles(df_spec, labels, feature_specs, spec_name, "PAM", k)
             profile_records.extend(profiles)
+
+            # QA49 is reserved for post-cluster CRM action profiling, never as a cluster input.
+            qa49_profiles = compute_post_cluster_categorical_profiles(
+                df_holdout,
+                labels,
+                spec_name,
+                "PAM",
+                k,
+                variable="qa49_preferred_improvement",
+                reference_row_ids=df_spec["survey_row_id"].to_numpy()
+            )
+            profile_records.extend(qa49_profiles)
 
             # External Validation
             ext_val = evaluate_external_validation(df_holdout, labels, spec_name, "PAM", k)
