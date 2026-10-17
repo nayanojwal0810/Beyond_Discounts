@@ -22,7 +22,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install analytical runtime
-        run: python -m pip install --upgrade pip numpy pandas scipy scikit-learn
+          cache: pip
+      - name: Install pinned analytical runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
       - name: Run data-independent gate contracts
         run: python -m unittest discover -s tests -p "test_gate1d_contracts.py" -v
