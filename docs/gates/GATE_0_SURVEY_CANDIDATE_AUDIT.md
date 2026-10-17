@@ -86,8 +86,8 @@ Total Workbook Cells: 164,190 (1,263 rows x 130 columns)
 | Information Tier | Definition & Analytical Significance | Observed Count in Survey Data |
 | :--- | :--- | :--- |
 | **Physical Blank / Null Cells** | Missing cell coordinates (`pd.isna()`). | **0 cells** across all 164,190 coordinates. |
-| **Explicit Not-Applicable (N/A) Codes** | Dedicated numerical codes (e.g., Code 6, 7, 8, or 9) assigned when a question is logically inapplicable to the respondent. | - **QA 16–45 Skip Modules:** 456 respondents.<br/>- **QA 37–40 Satisfaction (Code 6):** 456 respondents.<br/>- **QA 47 Discount Reduction (Code 6):** 456 respondents.<br/>- **QA 48 Current-User Skip Flag (Code 1):** 807 respondents.<br/>- **Category / Problem N/A Dummies (Code 1):** 456 respondents. |
-| **Substantive Observed Responses** | Meaningful self-reported measures within legitimate codebook ranges. | - **Demographics (QA 1–8):** 1,263 respondents.<br/>- **Platform Awareness & Usage (QA 11, 12):** 1,263 respondents.<br/>- **QA 46 Stated Future Intention:** **1,263 respondents (100%)**.<br/>- **QA 47 Discount Reduction Continuation:** **807 current users**.<br/>- **QA 48 Non-Use Reasons:** **456 non-current users**.<br/>- **QA 49 Preferred Improvement:** **1,263 respondents (100%)**. |
+| **Explicit Not-Applicable (N/A) Codes** | Dedicated numerical codes (e.g., Code 6, 7, 8, or 9) assigned when a question is logically inapplicable to the respondent. | - **QA 16–45 Source-Defined N/A Questions:** 456 non-current respondents across applicable questions (QA 24, QA 26, QA 43 remain substantive).<br/>- **QA 37–40 Satisfaction (Code 6):** 456 respondents.<br/>- **QA 47 Discount Reduction (Code 6):** 456 respondents.<br/>- **QA 48 Current-User Skip Flag (Code 1):** 807 respondents.<br/>- **Category / Problem N/A Dummies (Code 1):** 456 respondents. |
+| **Substantive Observed Responses** | Meaningful self-reported measures within legitimate codebook ranges. | - **Demographics (QA 1–8):** 1,263 respondents.<br/>- **Platform Awareness & Usage (QA 11, 12):** 1,263 respondents.<br/>- **Physical-Store Category Preferences (QA 24):** 1,263 respondents (not skip-coded).<br/>- **QA 26 Monthly Spend ₹0 (Code 1):** 456 non-current respondents.<br/>- **QA 43 Shopping Routine Non-Use (Code 6):** 456 non-current respondents.<br/>- **QA 46 Stated Future Intention:** **1,263 respondents (100%)**.<br/>- **QA 47 Discount Reduction Continuation:** **807 current users**.<br/>- **QA 48 Non-Use Reasons:** **456 non-current users**.<br/>- **QA 49 Preferred Improvement:** **1,263 respondents (100%)**. |
 
 *Critical Principle:* A workbook can have zero physical nulls while lacking substantive information on specific variables. The satisfaction and operational problem fields for the 456 non-current respondents are **not fully observed**; they are skip-coded.
 
@@ -131,8 +131,11 @@ The questionnaire routing operates across four distinct modular blocks:
 [QA 15 == 1: Never (n=456)]                                         [QA 15 >= 2: Active (n=807)]
 (376 Never Users + 80 Previous Users)                                          │
        │                                                                       ├── QA 16-45: Orders, Categories,
-       ├── QA 16-45: SKIPPED (Populated with N/A codes)                        │   Problems & Satisfaction
-       │   - Historical satisfaction & problems unobserved                     │   (n=807 substantive)
+       ├── QA 16-23, 25, 27-36, 41-42, 44-45: Source-Defined N/A Codes        │   Problems & Satisfaction
+       │   - Historical satisfaction (QA 37-40) & problems (QA 36) unobserved  │   (n=807 substantive)
+       ├── QA 24: Physical-Store Preferences (Substantive for all 456)         │
+       ├── QA 26: Monthly Spend = ₹0 (Code 1 substantive zero spend)           │
+       ├── QA 43: Shopping Routine = "Do not use" (Code 6 substantive non-use) │
        │                                                                       │
        ├── QA 46: Stated Future Intention (n=456 substantive 1-5)              ├── QA 46: Stated Future Intention (n=807 substantive 1-5)
        │                                                                       │
