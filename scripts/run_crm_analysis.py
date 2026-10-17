@@ -349,9 +349,14 @@ def build_qa48_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def monte_carlo_chi_square(table: np.ndarray, *, n_resamples: int = 10000, seed: int = 20261017) -> dict[str, Any]:
     """Pearson test of independence with fixed-margin Monte Carlo calibration."""
-    table = np.asarray(table, dtype=int)
+    table = np.asarray(table)
     if table.ndim != 2:
         raise ValueError("Contingency table must be two-dimensional.")
+    if not np.isfinite(table).all():
+        raise ValueError("Contingency table contains missing or non-finite cells; repair zero-count categories before testing.")
+    if (table < 0).any() or not np.equal(table, np.floor(table)).all():
+        raise ValueError("Contingency table must contain non-negative integer counts.")
+    table = table.astype(int)
     # Drop empty margins so no zero expected counts enter the statistic.
     table = table[table.sum(axis=1) > 0, :]
     table = table[:, table.sum(axis=0) > 0]
@@ -409,7 +414,7 @@ def build_qa49_association_tests(df: pd.DataFrame, *, n_resamples: int, seed: in
     action = pd.DataFrame({family: df.loc[df["qa49_action_family"] == family].groupby("user_subgroup").size()
                            for family in dict.fromkeys(QA49_ACTION_FAMILIES.values())}).reindex(
         index=["Never User", "Previous User", "Current Active User"], fill_value=0
-    )
+    ).fillna(0).astype(int)
     current = df[df["user_subgroup"] == "Current Active User"]
     tier_order = ["Lower intention (1-2)", "Uncertain (3)", "Higher intention (4-5)"]
     tier_full = pd.crosstab(current["qa47_tier"], current["Improvement"]).reindex(
@@ -418,7 +423,7 @@ def build_qa49_association_tests(df: pd.DataFrame, *, n_resamples: int, seed: in
     tier_action = pd.DataFrame({
         family: current.loc[current["qa49_action_family"] == family].groupby("qa47_tier").size()
         for family in dict.fromkeys(QA49_ACTION_FAMILIES.values())
-    }).reindex(index=tier_order, fill_value=0)
+    }).reindex(index=tier_order, fill_value=0).fillna(0).astype(int)
 
     tests = [
         ("Lifecycle cohort × QA49 option (10 categories)", full.to_numpy(), seed),
