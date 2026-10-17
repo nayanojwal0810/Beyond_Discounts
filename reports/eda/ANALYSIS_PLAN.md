@@ -1,10 +1,10 @@
 # Gate 1A Analysis Plan: Exploratory Data Analysis & Feasibility Roadmap
 
-**Canonical Project Title:** Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce  
-**Phase:** Gate 1A — Exploratory Data Analysis & Customer Segmentation Feasibility  
-**Dataset:** `data/raw/survey/Data.xlsx` (Worksheet `Data`, 1,263 respondents × 130 features)  
-**Governing Documents:** [`VARIABLE_REGISTER.md`](VARIABLE_REGISTER.md), [`GATE_0_DECISION_LOG.md`](../../docs/gates/GATE_0_DECISION_LOG.md)  
-**Assigned Role:** Implementation Worker (under Principal Project Lead)  
+**Canonical Project Title:** Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce
+**Phase:** Gate 1A — Exploratory Data Analysis & Customer Segmentation Feasibility
+**Dataset:** `data/raw/survey/Data.xlsx` (Worksheet `Data`, 1,263 respondents × 130 features)
+**Governing Documents:** [`VARIABLE_REGISTER.md`](VARIABLE_REGISTER.md), [`GATE_0_DECISION_LOG.md`](../../docs/gates/GATE_0_DECISION_LOG.md)
+**Assigned Role:** Implementation Worker (under Principal Project Lead)
 
 ---
 
@@ -55,7 +55,7 @@ The EDA pipeline must reproducibly compute and report the following empirical ba
   * Code 4 (Probably yes): Count, percentage.
   * Code 5 (Definitely yes): Count, percentage.
 - Summary metrics: Mean, standard deviation, median, interquartile range (IQR).
-- Distribution across derived resilience tiers: Discount-Sensitive (Codes 1–2), Uncertain (Code 3), Discount-Resilient (Codes 4–5).
+- Distribution across derived operational continuation intention tiers: Lower continuation intention (Codes 1–2), Uncertain (Code 3), Higher continuation intention (Codes 4–5).
 
 ### E. Future Intention (QA 46) & Non-Use Barriers (QA 48)
 - QA 46 distribution across the 3 subgroups (Never, Previous, Current).
@@ -84,16 +84,16 @@ To investigate customer differentiation, the EDA pipeline evaluates the followin
 
 The following hypotheses are formulated based on industry literature and survey structure, to be formally tested in Gate 1B (Feature Engineering) and Gate 2 (Segmentation):
 
-1. **Hypothesis 1 (Habitual Inelasticity):**  
+1. **Hypothesis 1 (Habitual Inelasticity):**
    *Current users with high order frequency (weekly+) and integration into household routines (QA 43 Codes 1–2) exhibit significantly higher discount resilience (QA 47 $\ge 4$) than low-frequency occasional top-up shoppers.*
 
-2. **Hypothesis 2 (Convenience-Driven Insulation):**  
+2. **Hypothesis 2 (Convenience-Driven Insulation):**
    *Consumers who cite delivery speed and urgent need as their primary choice factors (QA 31/32) are less discount-sensitive than consumers who cite promotional coupons and low delivery fees.*
 
-3. **Hypothesis 3 (Category Basket Differentiation):**  
+3. **Hypothesis 3 (Category Basket Differentiation):**
    *Consumers whose primary category is fresh produce/dairy (daily essentials) have higher repeat-order stability but stricter quality requirements than consumers ordering packaged snacks/beverages.*
 
-4. **Hypothesis 4 (Lapsed User Reactivation vs Non-User Adoption):**  
+4. **Hypothesis 4 (Lapsed User Reactivation vs Non-User Adoption):**
    *Previous users ($n=80$) are primarily driven away by perceived pricing/fee friction or unmet expectations, whereas never-users ($n=376$) are held back by habit inertia and preference for physical inspection.*
 
 ---
@@ -115,8 +115,8 @@ The Implementation Worker explicitly flags the following methodological question
 
 3. **Handling of QA 47 Scale in Downstream Modeling:**
    - Option A: Continuous / numeric treatement (1 to 5).
-   - Option B: Binary classification target (0 = Sensitive/Uncertain $\le 3$, 1 = Resilient $\ge 4$).
-   - Option C: 3-tier ordinal grouping (Sensitive 1–2, Neutral 3, Resilient 4–5).
+   - Option B: Binary classification target (0 = Lower/Uncertain $\le 3$, 1 = Higher intention $\ge 4$).
+   - Option C: 3-tier ordinal grouping (Lower intention 1–2, Uncertain 3, Higher intention 4–5).
 
 4. **Feature Selection Thresholds:**
    - Minimum variance filter and multicollinearity exclusion rules for multi-response items (e.g., categories with $<5\%$ endorsement).

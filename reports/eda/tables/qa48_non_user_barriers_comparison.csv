@@ -1,11 +1,11 @@
-Non-Use Barrier Dimension,Never Users Count (n=376),Never Users Share (%),Previous Users Count (n=80),Previous Users Share (%),Percentage Point Difference (Prev - Nev),Odds Ratio,Fisher Exact p-value,Statistically Significant (p < 0.05)
-Service not available in my area,102,27.13,22,27.5,0.37,0.98,1.0000,No
-Prefer shopping in physical stores,183,48.67,33,41.25,-7.42,1.35,0.2673,No
-Prices are too high,121,32.18,31,38.75,6.57,0.75,0.2961,No
-Delivery charges / fees too high,115,30.59,22,27.5,-3.09,1.16,0.6872,No
-Do not trust product quality,99,26.33,20,25.0,-1.33,1.07,0.8889,No
-Prefer to inspect products before purchase,151,40.16,28,35.0,-5.16,1.25,0.4498,No
-Concern about excessive / impulsive spending,74,19.68,16,20.0,0.32,0.98,1.0000,No
-Do not need rapid 10-15m delivery,95,25.27,23,28.75,3.48,0.84,0.5740,No
-Privacy / digital payment concerns,61,16.22,18,22.5,6.28,0.67,0.1935,No
-Unfamiliar with the apps,48,12.77,15,18.75,5.98,0.63,0.1575,No
+Non-Use Barrier Dimension,Never Users Count (n=376),Never Users Share (%),Previous Users Count (n=80),Previous Users Share (%),Percentage Point Difference (Prev - Nev),Odds Ratio,Fisher Exact p-value,Statistically Significant (p < 0.05),Exploratory Methodological Note
+Service not available in my area,102,27.13,22,27.5,0.37,0.98,1.0000,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Prefer shopping in physical stores,183,48.67,33,41.25,-7.42,1.35,0.2673,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Prices are too high,121,32.18,31,38.75,6.57,0.75,0.2961,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Delivery charges / fees too high,115,30.59,22,27.5,-3.09,1.16,0.6872,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Do not trust product quality,99,26.33,20,25.0,-1.33,1.07,0.8889,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Prefer to inspect products before purchase,151,40.16,28,35.0,-5.16,1.25,0.4498,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Concern about excessive / impulsive spending,74,19.68,16,20.0,0.32,0.98,1.0000,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Do not need rapid 10-15m delivery,95,25.27,23,28.75,3.48,0.84,0.5740,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Privacy / digital payment concerns,61,16.22,18,22.5,6.28,0.67,0.1935,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.
+Unfamiliar with the apps,48,12.77,15,18.75,5.98,0.63,0.1575,No,No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason.

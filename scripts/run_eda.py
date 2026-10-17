@@ -114,9 +114,9 @@ def load_and_preprocess_data(file_path, sheet_name):
     # Derive discount resilience tier for current active users
     resilience_tier = pd.Series(index=df.index, dtype='object')
     curr_mask = df['user_subgroup'] == 'Current Active User'
-    resilience_tier.loc[curr_mask & df['Continue If Discounts Reduced'].isin([1, 2])] = 'Discount-Sensitive (1-2)'
-    resilience_tier.loc[curr_mask & (df['Continue If Discounts Reduced'] == 3)] = 'Neutral / Uncertain (3)'
-    resilience_tier.loc[curr_mask & df['Continue If Discounts Reduced'].isin([4, 5])] = 'Discount-Resilient (4-5)'
+    resilience_tier.loc[curr_mask & df['Continue If Discounts Reduced'].isin([1, 2])] = 'Lower continuation intention (1-2)'
+    resilience_tier.loc[curr_mask & (df['Continue If Discounts Reduced'] == 3)] = 'Uncertain (3)'
+    resilience_tier.loc[curr_mask & df['Continue If Discounts Reduced'].isin([4, 5])] = 'Higher continuation intention (4-5)'
     df['discount_resilience_tier'] = resilience_tier
 
     # Multi-platform footprint (sum of ever-used major 6 platforms)
@@ -205,48 +205,98 @@ def generate_table3_usage_behavior(df, tables_dir):
     behavior_vars = {
         'Order Frequency (QA 15)': {
             'col': 'Order Frequency',
-            'labels': {2: 'Less than once a month', 3: '2–3 times a month', 4: 'Once or twice a week', 5: 'Almost daily / 3+ times a week'},
+            'labels': {
+                2: 'Less than once a month',
+                3: '1–3 times a month',
+                4: 'About once a week',
+                5: '2–3 times a week',
+                6: '4–6 times a week',
+                7: 'Daily or almost daily'
+            },
             'pop': n_curr
         },
         'Usage Duration (QA 13)': {
             'col': 'Usage Duration',
-            'labels': {1: 'Less than 3 months', 2: '3–6 months', 3: '6–12 months', 4: 'More than 1 year'},
+            'labels': {
+                2: 'Less than 3 months',
+                3: '3–6 months',
+                4: '7–12 months',
+                5: '1–2 years',
+                6: 'More than 2 years'
+            },
             'pop': n_curr
         },
         'Items per Order (QA 19)': {
             'col': 'Items per Order',
-            'labels': {1: '1–2 items', 2: '3–5 items', 3: '6–10 items', 4: 'More than 10 items'},
-            'pop': n_curr
-        },
-        'Order Spend INR (QA 25)': {
-            'col': 'Order Spend',
-            'labels': {1: 'Under ₹200', 2: '₹200–₹499', 3: '₹500–₹999', 4: '₹1,000–₹1,999', 5: '₹2,000 or more'},
-            'pop': n_curr
-        },
-        'Monthly Spend INR (QA 26 - Current Users)': {
-            'col': 'Monthly Spend',
-            'labels': {2: 'Under ₹1,000', 3: '₹1,000–₹2,499', 4: '₹2,500–₹4,999', 5: '₹5,000–₹9,999', 6: '₹10,000–₹19,999', 7: '₹20,000 or more'},
+            'labels': {
+                1: '1 item',
+                2: '2–3 items',
+                3: '4–5 items',
+                4: '6–10 items',
+                5: 'More than 10 items',
+                6: 'Varies considerably'
+            },
             'pop': n_curr
         },
         'Expected Delivery Time (QA 20)': {
             'col': 'Expected Delivery',
-            'labels': {1: 'Under 10 minutes', 2: '10–15 minutes', 3: '15–30 minutes', 4: '30–60 minutes'},
+            'labels': {
+                1: '10 minutes or less',
+                2: '11–20 minutes',
+                3: '21–30 minutes',
+                4: '31–45 minutes',
+                5: 'More than 45 minutes is acceptable',
+                6: 'I do not have a specific expectation'
+            },
+            'pop': n_curr
+        },
+        'Order Spend INR (QA 25)': {
+            'col': 'Order Spend',
+            'labels': {
+                1: 'Below ₹200',
+                2: '₹200–₹399',
+                3: '₹400–₹599',
+                4: '₹600–₹799',
+                5: '₹800–₹999',
+                6: '₹1,000–₹1,499',
+                7: '₹1,500 or above'
+            },
+            'pop': n_curr
+        },
+        'Monthly Spend INR (QA 26 - Current Users)': {
+            'col': 'Monthly Spend',
+            'labels': {
+                2: 'Below ₹1,000',
+                3: '₹1,000–₹2,499',
+                4: '₹2,500–₹4,999',
+                5: '₹5,000–₹7,499',
+                6: '₹7,500–₹9,999',
+                7: '₹10,000 or above',
+                8: 'Not sure'
+            },
             'pop': n_curr
         },
         'Shopping Routine Role (QA 43 - Current Users)': {
             'col': 'Shopping Routine Role',
             'labels': {
-                1: 'Primary mode for groceries/daily essentials',
-                2: 'Secondary mode alongside physical stores',
-                3: 'Used only for emergency / last-minute needs',
-                4: 'Used occasionally for special treats/cravings',
-                5: 'Rarely used'
+                1: 'It has replaced a large part of my regular shopping',
+                2: 'It has replaced some regular shopping',
+                3: 'It is mainly used for top-up purchases',
+                4: 'It is mainly used for emergencies / urgent needs',
+                5: 'It is used occasionally for offers / convenience'
             },
             'pop': n_curr
         },
         'Payment Method (QA 30)': {
             'col': 'Payment Method',
-            'labels': {1: 'UPI (Google Pay, PhonePe, Paytm)', 2: 'Credit / Debit Card', 3: 'Cash on Delivery (COD)', 4: 'Net Banking', 5: 'Digital Wallets / BNPL'},
+            'labels': {
+                1: 'UPI',
+                2: 'Debit card',
+                3: 'Credit card',
+                4: 'Digital wallet',
+                5: 'Cash on delivery',
+                6: 'Pay later / BNPL'
+            },
             'pop': n_curr
         }
     }
@@ -398,11 +448,11 @@ def generate_table6_qa47_distribution(df, tables_dir):
     n_curr = len(curr_df)
 
     code_labels = {
-        1: "Definitely no (Severe Churn Risk)",
-        2: "Probably no (Discount-Sensitive)",
-        3: "Not sure (Neutral / Uncertain)",
-        4: "Probably yes (Discount-Resilient)",
-        5: "Definitely yes (Highly Resilient)"
+        1: "Definitely no",
+        2: "Probably no",
+        3: "Not sure",
+        4: "Probably yes",
+        5: "Definitely yes"
     }
 
     rows = []
@@ -447,28 +497,28 @@ def generate_table6_qa47_distribution(df, tables_dir):
         "Cumulative Percentage (%)": np.nan
     })
 
-    # Tier breakdown
+    # Neutral operational tier breakdown
     sens_cnt = (qa47_series.isin([1, 2])).sum()
     neut_cnt = (qa47_series == 3).sum()
     resil_cnt = (qa47_series.isin([4, 5])).sum()
 
     rows.append({
-        "Likert Code": "Tier: Discount-Sensitive (1-2)",
-        "Response Meaning": "Unlikely to continue without discounts",
+        "Likert Code": "Tier: Lower continuation intention (Codes 1-2)",
+        "Response Meaning": "Lower stated likelihood of continuing without discounts",
         "Count (n)": sens_cnt,
         "Percentage (%)": round((sens_cnt / n_curr) * 100.0, 2),
         "Cumulative Percentage (%)": np.nan
     })
     rows.append({
-        "Likert Code": "Tier: Neutral / Uncertain (3)",
-        "Response Meaning": "Indifferent / threshold vulnerable",
+        "Likert Code": "Tier: Uncertain (Code 3)",
+        "Response Meaning": "Neutral / uncertain stated continuation intention",
         "Count (n)": neut_cnt,
         "Percentage (%)": round((neut_cnt / n_curr) * 100.0, 2),
         "Cumulative Percentage (%)": np.nan
     })
     rows.append({
-        "Likert Code": "Tier: Discount-Resilient (4-5)",
-        "Response Meaning": "Willing to continue without discounts",
+        "Likert Code": "Tier: Higher continuation intention (Codes 4-5)",
+        "Response Meaning": "Higher stated likelihood of continuing without discounts",
         "Count (n)": resil_cnt,
         "Percentage (%)": round((resil_cnt / n_curr) * 100.0, 2),
         "Cumulative Percentage (%)": np.nan
@@ -490,45 +540,60 @@ def generate_table7_qa47_associations(df, tables_dir):
     curr_df['satisfaction_composite'] = curr_df[sat_cols].mean(axis=1)
 
     association_tests = [
-        ('Order Frequency (QA 15)', 'Order Frequency', 'Ordinal Likert (2-5)'),
-        ('Monthly Spend Tier (QA 26)', 'Monthly Spend', 'Ordinal Tier (2-7)'),
-        ('Typical Basket Items (QA 19)', 'Items per Order', 'Ordinal Count (1-4)'),
-        ('Typical Spend per Order (QA 25)', 'Order Spend', 'Ordinal Spend (1-5)'),
-        ('Discount-Induced Overspending (QA 28)', 'Discount Overspend', 'Ordinal Likert (1-4)'),
-        ('Basket Building to Reach Threshold (QA 29)', 'Threshold Extra Items', 'Ordinal Likert (1-4)'),
-        ('Price Comparison across QC Apps (QA 33)', 'Compare Platform Prices', 'Ordinal Likert (1-4)'),
-        ('Price Comparison vs Physical Stores (QA 34)', 'Compare Physical Prices', 'Ordinal Likert (1-4)'),
-        ('Fast Delivery Importance (QA 35)', 'Fast Delivery Importance', 'Ordinal Likert (1-4)'),
-        ('Composite Service Satisfaction', 'satisfaction_composite', 'Continuous Mean (1.0-5.0)'),
-        ('Multi-Platform Usage Count (QA 12)', 'platforms_used_count', 'Discrete Count (1-6)'),
-        ('Unplanned Impulse Purchasing (QA 44)', 'Unplanned Purchase', 'Ordinal Likert (1-4)'),
-        ('New Brand Trial Propensity (QA 45)', 'New Brand Trial', 'Ordinal Likert (1-4)')
+        ('Order Frequency (QA 15)', 'Order Frequency', 'Ordinal Category (2–7)'),
+        ('Monthly Spend Tier (QA 26)', 'Monthly Spend', 'Ordinal Spend (2–8)'),
+        ('Typical Basket Items (QA 19)', 'Items per Order', 'Ordinal Category (1–6)'),
+        ('Typical Spend per Order (QA 25)', 'Order Spend', 'Ordinal Spend (1–7)'),
+        ('Discount-Induced Overspending (QA 28)', 'Discount Overspend', 'Ordinal Likert (1–5)'),
+        ('Basket Building to Reach Threshold (QA 29)', 'Threshold Extra Items', 'Ordinal Likert (1–5)'),
+        ('Price Comparison across QC Apps (QA 33)', 'Compare Platform Prices', 'Ordinal Likert (1–5)'),
+        ('Price Comparison vs Physical Stores (QA 34)', 'Compare Physical Prices', 'Ordinal Likert (1–5)'),
+        ('Fast Delivery Importance (QA 35)', 'Fast Delivery Importance', 'Ordinal Likert (1–5)'),
+        ('Composite Service Satisfaction', 'satisfaction_composite', 'Continuous Mean (1.0–5.0)'),
+        ('Multi-Platform Usage Count (QA 12)', 'platforms_used_count', 'Discrete Count (1–6)'),
+        ('Unplanned Impulse Purchasing (QA 44)', 'Unplanned Purchase', 'Ordinal Likert (1–5)'),
+        ('New Brand Trial Propensity (QA 45)', 'New Brand Trial', 'Ordinal Likert (1–5)')
     ]
 
     rows = []
+    bonf_alpha = 0.05 / len(association_tests)  # 0.05 / 13 ~ 0.0038
+
     for var_title, col_name, var_type in association_tests:
         x = curr_df[col_name]
         # Spearman rank correlation
         rho, p_val = stats.spearmanr(x, qa47)
 
-        # Kruskal-Wallis across the 3 discount resilience tiers
-        g_sens = curr_df.loc[curr_df['discount_resilience_tier'] == 'Discount-Sensitive (1-2)', col_name]
-        g_neut = curr_df.loc[curr_df['discount_resilience_tier'] == 'Neutral / Uncertain (3)', col_name]
-        g_resil = curr_df.loc[curr_df['discount_resilience_tier'] == 'Discount-Resilient (4-5)', col_name]
+        # Kruskal-Wallis across the 3 operational discount continuation intention tiers
+        g_low = curr_df.loc[curr_df['discount_resilience_tier'] == 'Lower continuation intention (1-2)', col_name]
+        g_unc = curr_df.loc[curr_df['discount_resilience_tier'] == 'Uncertain (3)', col_name]
+        g_high = curr_df.loc[curr_df['discount_resilience_tier'] == 'Higher continuation intention (4-5)', col_name]
 
-        kw_stat, kw_p = stats.kruskal(g_sens, g_neut, g_resil)
+        kw_stat, kw_p = stats.kruskal(g_low, g_unc, g_high)
+
+        # Formulate neutral statistical interpretation distinguishing effect size, significance, and multiple-testing limitation
+        is_raw_sig = (p_val < 0.05) or (kw_p < 0.05)
+        is_bonf_sig = (p_val < bonf_alpha)
+
+        if not is_raw_sig:
+            interp = f"Inconclusive: No statistically significant monotonic relationship (|ρ|={abs(rho):.3f} <= 0.06, p={p_val:.3f} >= 0.05; KW p={kw_p:.3f} >= 0.05; exploratory test)"
+        else:
+            direction = "positive" if rho > 0 else "negative"
+            bonf_text = "survives Bonferroni" if is_bonf_sig else "does not survive multiple-testing correction"
+            interp = f"Raw exploratory {direction} correlation (|ρ|={abs(rho):.3f}, p={p_val:.4f}; {bonf_text})"
 
         rows.append({
             "Predictor / Behavioral Factor": var_title,
             "Variable Type": var_type,
             "Spearman Rho (ρ)": round(rho, 3),
             "Spearman p-value": f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}",
-            f"Sensitive Tier Mean (n={len(g_sens)})": round(g_sens.mean(), 2),
-            f"Neutral Tier Mean (n={len(g_neut)})": round(g_neut.mean(), 2),
-            f"Resilient Tier Mean (n={len(g_resil)})": round(g_resil.mean(), 2),
+            f"Lower Intention Tier Mean (n={len(g_low)})": round(g_low.mean(), 2),
+            f"Uncertain Tier Mean (n={len(g_unc)})": round(g_unc.mean(), 2),
+            f"Higher Intention Tier Mean (n={len(g_high)})": round(g_high.mean(), 2),
             "Kruskal-Wallis H-stat": round(kw_stat, 2),
             "Kruskal-Wallis p-value": f"{kw_p:.4e}" if kw_p < 0.001 else f"{kw_p:.4f}",
-            "Substantive Interpretation": "Positive association: higher value relates to higher discount resilience" if rho > 0 else "Negative association: higher value relates to discount sensitivity"
+            "Multiple Testing Adjusted α (m=13)": f"{bonf_alpha:.4f}",
+            "Significant after Multiple Testing?": "Yes" if is_bonf_sig else "No",
+            "Substantive Interpretation": interp
         })
 
     t7 = pd.DataFrame(rows)
@@ -619,7 +684,8 @@ def generate_table9_qa48_barriers(df, tables_dir):
             "Percentage Point Difference (Prev - Nev)": round(prev_pct - nev_pct, 2),
             "Odds Ratio": round(odds_ratio, 2),
             "Fisher Exact p-value": f"{p_val:.4e}" if p_val < 0.001 else f"{p_val:.4f}",
-            "Statistically Significant (p < 0.05)": "Yes" if p_val < 0.05 else "No"
+            "Statistically Significant (p < 0.05)": "Yes" if p_val < 0.05 else "No",
+            "Exploratory Methodological Note": "No statistically significant difference (p >= 0.15). Limited previous-user sample size (n=80) precludes proof of equivalence; stated barriers do not establish causal lapse reason."
         })
 
     t9 = pd.DataFrame(rows)
@@ -681,9 +747,9 @@ def generate_table11_segmentation_candidates(df, tables_dir):
             "Feature Name": "Order Frequency",
             "Question ID": "QA 15",
             "Analytical Dimension": "Behavioral Engagement",
-            "Data Type": "Ordinal (2-5 for active)",
+            "Data Type": "Ordinal Category (2–7 for active)",
             "Eligible Population (n)": "Current Active Users (807)",
-            "Variance / Cardinality": "4 active levels (Monthly to Daily)",
+            "Variance / Cardinality": "6 active levels (Less than monthly to daily)",
             "Segmentation Rationale": "Separates habitual high-velocity shoppers from occasional top-up buyers.",
             "Measurement Limitations": "Self-reported category buckets rather than exact order counts."
         },
@@ -691,19 +757,19 @@ def generate_table11_segmentation_candidates(df, tables_dir):
             "Feature Name": "Monthly Spend",
             "Question ID": "QA 26",
             "Analytical Dimension": "Monetary Value / Wallet Share",
-            "Data Type": "Ordinal (2-7 for active)",
+            "Data Type": "Ordinal Spend (2–8 for active)",
             "Eligible Population (n)": "Current Active Users (807)",
-            "Variance / Cardinality": "6 active spend tiers",
+            "Variance / Cardinality": "7 active spend tiers (Below ₹1,000 to ₹10,000+ & Not sure)",
             "Segmentation Rationale": "Identifies high-value accounts for dedicated retention investments.",
-            "Measurement Limitations": "Broad categorical intervals; top-coded at >₹20,000."
+            "Measurement Limitations": "Broad categorical intervals; code 1 ₹0 for non-current users."
         },
         {
             "Feature Name": "Items per Order",
             "Question ID": "QA 19",
             "Analytical Dimension": "Basket Architecture",
-            "Data Type": "Ordinal (1-4)",
+            "Data Type": "Ordinal Category (1–6)",
             "Eligible Population (n)": "Current Active Users (807)",
-            "Variance / Cardinality": "4 basket size levels",
+            "Variance / Cardinality": "6 basket size levels (1–2 to >12 items + Varies)",
             "Segmentation Rationale": "Differentiates single-item distress purchases from multi-item household baskets.",
             "Measurement Limitations": "Item count does not capture category diversity or unit price."
         },
@@ -711,9 +777,9 @@ def generate_table11_segmentation_candidates(df, tables_dir):
             "Feature Name": "Discount Overspending Propensity",
             "Question ID": "QA 28",
             "Analytical Dimension": "Deal Proneness",
-            "Data Type": "Ordinal Likert (1-4)",
+            "Data Type": "Ordinal Likert (1–5)",
             "Eligible Population (n)": "Current Active Users (807)",
-            "Variance / Cardinality": "4 levels (Never to Always)",
+            "Variance / Cardinality": "5 levels (Never to Always)",
             "Segmentation Rationale": "Identifies consumers whose order value expands specifically in response to promos.",
             "Measurement Limitations": "Potential subjective desirability bias."
         },
@@ -721,9 +787,9 @@ def generate_table11_segmentation_candidates(df, tables_dir):
             "Feature Name": "Threshold Item Addition",
             "Question ID": "QA 29",
             "Analytical Dimension": "Deal Seeking Behavior",
-            "Data Type": "Ordinal Likert (1-4)",
+            "Data Type": "Ordinal Likert (1–5)",
             "Eligible Population (n)": "Current Active Users (807)",
-            "Variance / Cardinality": "4 levels (Never to Always)",
+            "Variance / Cardinality": "5 levels (Never to Always)",
             "Segmentation Rationale": "Direct proxy for delivery fee sensitivity and threshold gaming.",
             "Measurement Limitations": "Correlated with QA 28 (deal proneness)."
         },
@@ -895,7 +961,7 @@ def generate_fig2_demographics(df, figures_dir):
 
 
 def generate_fig3_qa47_distribution(df, figures_dir):
-    """Figure 3: QA 47 Stated Continuation Resilience Distribution among Current Active Users."""
+    """Figure 3: QA 47 Stated Continuation Intention Distribution among Current Active Users."""
     curr_df = df[df['user_subgroup'] == 'Current Active User']
     qa47 = curr_df['Continue If Discounts Reduced']
 
@@ -904,11 +970,11 @@ def generate_fig3_qa47_distribution(df, figures_dir):
     # 5-point Likert distribution
     counts = [ (qa47 == c).sum() for c in range(1, 6) ]
     labels = [
-        '1: Definitely No\n(Severe Risk)',
-        '2: Probably No\n(Sensitive)',
-        '3: Not Sure\n(Neutral)',
-        '4: Probably Yes\n(Resilient)',
-        '5: Definitely Yes\n(Highly Resilient)'
+        '1: Definitely no',
+        '2: Probably no',
+        '3: Not sure',
+        '4: Probably yes',
+        '5: Definitely yes'
     ]
     bar_colors = [PALETTE['warning'], '#e67e22', PALETTE['neutral'], PALETTE['secondary'], PALETTE['primary']]
 
@@ -916,7 +982,7 @@ def generate_fig3_qa47_distribution(df, figures_dir):
     ax1.set_xticks(range(5))
     ax1.set_xticklabels(labels, fontsize=10)
     ax1.set_ylabel('Number of Active Users', fontsize=12)
-    ax1.set_title('Full 5-Point Likert Distribution\n(Mean = 3.44, Median = 4.0, SD = 1.17)', fontsize=12, fontweight='bold')
+    ax1.set_title('Full 5-Point Likert Distribution\n(Mean = 3.44, Median = 4.0, SD = 1.16)', fontsize=12, fontweight='bold')
     ax1.set_ylim(0, 320)
 
     for bar in bars:
@@ -924,16 +990,16 @@ def generate_fig3_qa47_distribution(df, figures_dir):
         ax1.text(bar.get_x() + bar.get_width()/2., h + 6, f"{h}\n({h/807*100:.1f}%)",
                  ha='center', va='bottom', fontsize=10, fontweight='bold')
 
-    # 3-tier resilience grouping
+    # 3-tier operational grouping
     tier_counts = [
         (qa47.isin([1, 2])).sum(),
         (qa47 == 3).sum(),
         (qa47.isin([4, 5])).sum()
     ]
     tier_labels = [
-        f'Discount-Sensitive\n(Codes 1–2, n={tier_counts[0]})',
-        f'Neutral / Uncertain\n(Code 3, n={tier_counts[1]})',
-        f'Discount-Resilient\n(Codes 4–5, n={tier_counts[2]})'
+        f'Lower continuation intention\n(Codes 1–2, n={tier_counts[0]})',
+        f'Uncertain\n(Code 3, n={tier_counts[1]})',
+        f'Higher continuation intention\n(Codes 4–5, n={tier_counts[2]})'
     ]
     tier_colors = [PALETTE['warning'], PALETTE['neutral'], PALETTE['accent']]
 
@@ -951,9 +1017,9 @@ def generate_fig3_qa47_distribution(df, figures_dir):
         at.set_fontweight('bold')
         at.set_color('#ffffff')
 
-    ax2.set_title('Discount Resilience Tiers\n(Analytical CRM Grouping)', fontsize=12, fontweight='bold')
+    ax2.set_title('Continuation Intention Tiers\n(Operational CRM Grouping)', fontsize=12, fontweight='bold')
 
-    plt.suptitle('Figure 3: QA 47 — Willingness to Continue Using Quick Commerce if Discounts are Reduced\n(Eligible Base: Current Active Users strictly, n = 807; Code 6 Not Applicable n = 456 Excluded)',
+    plt.suptitle('Figure 3: QA 47 — Stated Likelihood to Continue Using Quick Commerce if Discounts are Reduced\n(Current Active Users strictly, n = 807; Code 6 Not Applicable n = 456 Excluded; Stated Intention, Not Realized Churn)',
                  fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
     plt.savefig(os.path.join(figures_dir, "fig3_qa47_discount_continuation.png"), dpi=300, bbox_inches='tight')
@@ -961,49 +1027,64 @@ def generate_fig3_qa47_distribution(df, figures_dir):
 
 
 def generate_fig4_discount_bivariate(df, figures_dir):
-    """Figure 4: Bivariate Relationships with QA 47 Discount Continuation Resilience."""
+    """Figure 4: Bivariate Exploration of QA 47 Discount Continuation Intention."""
     curr_df = df[df['user_subgroup'] == 'Current Active User'].copy()
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
-    # 1. Order Frequency vs QA 47
-    freq_labels = {2: '< Monthly', 3: '2–3x / Mo', 4: '1–2x / Wk', 5: 'Daily / 3+x Wk'}
+    # 1. Order Frequency vs QA 47 (all 6 active categories: 2 to 7)
+    freq_labels = {
+        2: '< 1x/mo',
+        3: '1–3x/mo',
+        4: '~1x/wk',
+        5: '2–3x/wk',
+        6: '4–6x/wk',
+        7: 'Daily'
+    }
     curr_df['freq_label'] = curr_df['Order Frequency'].map(freq_labels)
-    freq_order = ['< Monthly', '2–3x / Mo', '1–2x / Wk', 'Daily / 3+x Wk']
+    freq_order = ['< 1x/mo', '1–3x/mo', '~1x/wk', '2–3x/wk', '4–6x/wk', 'Daily']
     sns.boxplot(data=curr_df, x='freq_label', y='Continue If Discounts Reduced', order=freq_order,
                 hue='freq_label', legend=False,
                 ax=axes[0, 0], palette="Blues_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho1, p1 = stats.spearmanr(curr_df['Order Frequency'], curr_df['Continue If Discounts Reduced'])
     p1_str = f"p = {p1:.3f}" if p1 >= 0.001 else "p < 0.001"
-    axes[0, 0].set_title(f'QA 47 by Order Frequency (QA 15)\n(Spearman ρ = {rho1:+.3f}, {p1_str})', fontsize=12, fontweight='bold')
-    axes[0, 0].set_xlabel('Current Order Frequency', fontsize=11)
+    axes[0, 0].set_title(f'QA 47 by Order Frequency (QA 15, Codes 2–7)\n(Spearman ρ = {rho1:+.3f}, {p1_str}; Inconclusive)', fontsize=12, fontweight='bold')
+    axes[0, 0].set_xlabel('Current Order Frequency Category', fontsize=11)
     axes[0, 0].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[0, 0].set_yticks(range(1, 6))
 
-    # 2. Monthly Spend vs QA 47
-    spend_labels = {2: '<₹1k', 3: '₹1k–₹2.5k', 4: '₹2.5k–₹5k', 5: '₹5k–₹10k', 6: '₹10k–₹20k', 7: '₹20k+'}
+    # 2. Monthly Spend vs QA 47 (all 7 active categories: 2 to 8)
+    spend_labels = {
+        2: '<₹1k',
+        3: '₹1k–₹2.5k',
+        4: '₹2.5k–₹5k',
+        5: '₹5k–₹7.5k',
+        6: '₹7.5k–₹10k',
+        7: '₹10k+',
+        8: 'Not sure'
+    }
     curr_df['spend_label'] = curr_df['Monthly Spend'].map(spend_labels)
-    spend_order = ['<₹1k', '₹1k–₹2.5k', '₹2.5k–₹5k', '₹5k–₹10k', '₹10k–₹20k', '₹20k+']
+    spend_order = ['<₹1k', '₹1k–₹2.5k', '₹2.5k–₹5k', '₹5k–₹7.5k', '₹7.5k–₹10k', '₹10k+', 'Not sure']
     sns.boxplot(data=curr_df, x='spend_label', y='Continue If Discounts Reduced', order=spend_order,
                 hue='spend_label', legend=False,
                 ax=axes[0, 1], palette="Blues_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho2, p2 = stats.spearmanr(curr_df['Monthly Spend'], curr_df['Continue If Discounts Reduced'])
     p2_str = f"p = {p2:.3f}" if p2 >= 0.001 else "p < 0.001"
-    axes[0, 1].set_title(f'QA 47 by Monthly Quick-Commerce Spend (QA 26)\n(Spearman ρ = {rho2:+.3f}, {p2_str})', fontsize=12, fontweight='bold')
+    axes[0, 1].set_title(f'QA 47 by Monthly Spend (QA 26, Codes 2–8)\n(Spearman ρ = {rho2:+.3f}, {p2_str}; Inconclusive)', fontsize=12, fontweight='bold')
     axes[0, 1].set_xlabel('Monthly Spend Bracket (INR)', fontsize=11)
     axes[0, 1].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[0, 1].set_yticks(range(1, 6))
 
-    # 3. Deal Seeking: Threshold Extra Items vs QA 47
-    thresh_labels = {1: 'Never', 2: 'Rarely', 3: 'Sometimes', 4: 'Often'}
+    # 3. Deal Seeking: Threshold Extra Items vs QA 47 (all 5 codes: 1 to 5)
+    thresh_labels = {1: 'Never', 2: 'Rarely', 3: 'Sometimes', 4: 'Often', 5: 'Always'}
     curr_df['thresh_label'] = curr_df['Threshold Extra Items'].map(thresh_labels)
-    thresh_order = ['Never', 'Rarely', 'Sometimes', 'Often']
+    thresh_order = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always']
     sns.boxplot(data=curr_df, x='thresh_label', y='Continue If Discounts Reduced', order=thresh_order,
                 hue='thresh_label', legend=False,
                 ax=axes[1, 0], palette="Oranges_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho3, p3 = stats.spearmanr(curr_df['Threshold Extra Items'], curr_df['Continue If Discounts Reduced'])
     p3_str = f"p = {p3:.3f}" if p3 >= 0.001 else "p < 0.001"
-    axes[1, 0].set_title(f'QA 47 by Adding Items for Discount/Free Delivery (QA 29)\n(Spearman ρ = {rho3:+.3f}, {p3_str})', fontsize=12, fontweight='bold')
+    axes[1, 0].set_title(f'QA 47 by Adding Threshold Items (QA 29, Codes 1–5)\n(Spearman ρ = {rho3:+.3f}, {p3_str}; Inconclusive)', fontsize=12, fontweight='bold')
     axes[1, 0].set_xlabel('Frequency of Adding Threshold Items', fontsize=11)
     axes[1, 0].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[1, 0].set_yticks(range(1, 6))
@@ -1014,12 +1095,12 @@ def generate_fig4_discount_bivariate(df, figures_dir):
                 ax=axes[1, 1], palette="Purples_d", width=0.5, boxprops=dict(edgecolor='#333333'))
     rho4, p4 = stats.spearmanr(curr_df['platforms_used_count'], curr_df['Continue If Discounts Reduced'])
     p4_str = f"p = {p4:.3f}" if p4 >= 0.001 else "p < 0.001"
-    axes[1, 1].set_title(f'QA 47 by Multi-Platform Footprint (Ever Used 1–6 Apps)\n(Spearman ρ = {rho4:+.3f}, {p4_str})', fontsize=12, fontweight='bold')
+    axes[1, 1].set_title(f'QA 47 by Multi-Platform Footprint (Ever Used 1–6 Apps)\n(Spearman ρ = {rho4:+.3f}, {p4_str}; Inconclusive)', fontsize=12, fontweight='bold')
     axes[1, 1].set_xlabel('Number of Quick-Commerce Apps Ever Used', fontsize=11)
     axes[1, 1].set_ylabel('QA 47 Likert Score (1–5)', fontsize=11)
     axes[1, 1].set_yticks(range(1, 6))
 
-    plt.suptitle('Figure 4: Bivariate Drivers of QA 47 Stated Post-Discount Continuation Resilience\n(Eligible Base: Current Active Users, n = 807; Cross-Tabulations with Behavioral & Deal-Seeking Features)',
+    plt.suptitle('Figure 4: Bivariate Exploration of QA 47 Stated Post-Discount Continuation Intention\n(Current Active Users n = 807; All Spearman correlations non-significant p >= 0.05; Exploratory analysis, not confirmatory)',
                  fontsize=14, fontweight='bold', y=0.99)
     plt.tight_layout()
     plt.savefig(os.path.join(figures_dir, "fig4_discount_sensitivity_bivariate.png"), dpi=300, bbox_inches='tight')

@@ -179,12 +179,158 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
         total_n = code_rows['Count (n)'].sum()
         self.assertEqual(total_n, 807, "Sum of counts for Likert codes 1-5 must equal exactly 807.")
 
-        # Check sensitive tier (codes 1-2: 52 + 121 = 173)
+        # Check lower intention tier (codes 1-2: 52 + 121 = 173)
         cnt_1 = int(code_rows.loc[code_rows['Likert Code'] == '1', 'Count (n)'].iloc[0])
         cnt_2 = int(code_rows.loc[code_rows['Likert Code'] == '2', 'Count (n)'].iloc[0])
         self.assertEqual(cnt_1, 52, "Code 1 (Definitely no) count must equal 52.")
         self.assertEqual(cnt_2, 121, "Code 2 (Probably no) count must equal 121.")
-        self.assertEqual(cnt_1 + cnt_2, 173, "Sensitive tier count must equal 173 (21.44%).")
+        self.assertEqual(cnt_1 + cnt_2, 173, "Lower intention tier count must equal 173 (21.44%).")
+
+        # Check operational tier labels exist
+        tier_row = tdf[tdf['Likert Code'] == 'Tier: Lower continuation intention (Codes 1-2)']
+        self.assertEqual(len(tier_row), 1, "Must contain 'Tier: Lower continuation intention (Codes 1-2)'.")
+        self.assertEqual(int(tier_row['Count (n)'].iloc[0]), 173)
+
+    def test_qa15_complete_active_distribution(self):
+        """
+        Validates QA 15 Order Frequency:
+        - Active-user distribution contains all 6 valid observed codes (2..7).
+        - Category counts sum to exactly 807.
+        - Percentages sum to approximately 100%.
+        - Code 1 (Never) does not appear among active users.
+        """
+        tpath = os.path.join(DEFAULT_TABLES_DIR, "usage_and_shopping_behavior.csv")
+        tdf = pd.read_csv(tpath)
+        qa15_df = tdf[tdf['Behavioral Domain'] == 'Order Frequency (QA 15)']
+
+        # Must have exactly 6 active categories
+        self.assertEqual(len(qa15_df), 6, "QA 15 must contain exactly 6 active response categories (Codes 2..7).")
+        self.assertEqual(list(qa15_df['Code'].astype(int)), [2, 3, 4, 5, 6, 7], "Codes must be 2, 3, 4, 5, 6, 7.")
+
+        # Expected counts per codebook
+        expected_counts = {
+            2: 87,   # Less than once a month
+            3: 206,  # 1–3 times a month
+            4: 204,  # About once a week
+            5: 177,  # 2–3 times a week
+            6: 91,   # 4–6 times a week
+            7: 42    # Daily or almost daily
+        }
+        for code, exp_cnt in expected_counts.items():
+            obs_cnt = int(qa15_df.loc[qa15_df['Code'].astype(int) == code, 'Count'].iloc[0])
+            self.assertEqual(obs_cnt, exp_cnt, f"QA 15 Code {code} count ({obs_cnt}) does not match expected ({exp_cnt}).")
+
+        self.assertEqual(qa15_df['Count'].sum(), 807, "QA 15 active-user counts must sum to 807.")
+        self.assertAlmostEqual(qa15_df['Percentage (%)'].sum(), 100.0, places=1,
+                               msg="QA 15 category percentages must sum to ~100.0%.")
+
+    def test_qa13_usage_duration_reconciliation(self):
+        """
+        Validates QA 13 Usage Duration:
+        - Active-user distribution contains all 5 valid active codes (2..6).
+        - Category counts sum to 807.
+        - Never-users (n=376) strictly hold Code 1 (Never used).
+        - Previous users (n=80) strictly hold codes in {2..6}.
+        """
+        tpath = os.path.join(DEFAULT_TABLES_DIR, "usage_and_shopping_behavior.csv")
+        tdf = pd.read_csv(tpath)
+        qa13_df = tdf[tdf['Behavioral Domain'] == 'Usage Duration (QA 13)']
+
+        self.assertEqual(len(qa13_df), 5, "QA 13 must contain 5 active categories (Codes 2..6).")
+        self.assertEqual(list(qa13_df['Code'].astype(int)), [2, 3, 4, 5, 6])
+
+        expected_counts = {
+            2: 77,   # Less than 3 months
+            3: 118,  # 3–6 months
+            4: 160,  # 7–12 months
+            5: 238,  # 1–2 years
+            6: 214   # More than 2 years
+        }
+        for code, exp_cnt in expected_counts.items():
+            obs_cnt = int(qa13_df.loc[qa13_df['Code'].astype(int) == code, 'Count'].iloc[0])
+            self.assertEqual(obs_cnt, exp_cnt, f"QA 13 Code {code} count ({obs_cnt}) != expected ({exp_cnt}).")
+
+        self.assertEqual(qa13_df['Count'].sum(), 807, "QA 13 active-user counts must sum to 807.")
+
+        # Validate Code 1 (Never used) in raw data
+        raw_df = load_and_preprocess_data(DEFAULT_SURVEY_PATH, DEFAULT_SHEET)
+        never_users = raw_df[raw_df['user_subgroup'] == 'Never User']
+        prev_users = raw_df[raw_df['user_subgroup'] == 'Previous User']
+
+        self.assertEqual((never_users['Usage Duration'] == 1).sum(), 376,
+                         "All 376 Never-users must have QA 13 Code 1 (Never used).")
+        self.assertEqual((prev_users['Usage Duration'] == 1).sum(), 0,
+                         "Zero previous users should have Code 1 (all used QC prior to lapsing).")
+        self.assertTrue(prev_users['Usage Duration'].isin([2, 3, 4, 5, 6]).all(),
+                        "All 80 previous users must have QA 13 in codes 2..6.")
+
+    def test_all_behavioral_categories_reconciliation(self):
+        """Validates that all behavioral domains in Table 3 have complete categories summing to 807."""
+        tpath = os.path.join(DEFAULT_TABLES_DIR, "usage_and_shopping_behavior.csv")
+        tdf = pd.read_csv(tpath)
+
+        domains = {
+            'Order Frequency (QA 15)': 6,
+            'Usage Duration (QA 13)': 5,
+            'Items per Order (QA 19)': 6,
+            'Expected Delivery Time (QA 20)': 6,
+            'Order Spend INR (QA 25)': 7,
+            'Monthly Spend INR (QA 26 - Current Users)': 7,
+            'Shopping Routine Role (QA 43 - Current Users)': 5,
+            'Payment Method (QA 30)': 6
+        }
+        for domain, expected_cats in domains.items():
+            sub = tdf[tdf['Behavioral Domain'] == domain]
+            self.assertEqual(len(sub), expected_cats, f"Domain '{domain}' must have {expected_cats} categories.")
+            self.assertEqual(sub['Count'].sum(), 807, f"Domain '{domain}' counts must sum to 807.")
+            self.assertAlmostEqual(sub['Percentage (%)'].sum(), 100.0, places=1,
+                                   msg=f"Domain '{domain}' percentages must sum to ~100.0%.")
+
+    def test_demographics_subgroup_distribution_reconciliation(self):
+        """Validates that Table 2 demographics reconcile across all 4 subgroup columns."""
+        tpath = os.path.join(DEFAULT_TABLES_DIR, "demographics_distribution.csv")
+        tdf = pd.read_csv(tpath)
+
+        demo_domains = [
+            'Age Group', 'Gender', 'Education', 'Occupation',
+            'Personal Income', 'Area of Residence', 'Region', 'Household Size'
+        ]
+        for d in demo_domains:
+            sub = tdf[tdf['Demographic Variable'] == d]
+            self.assertGreater(len(sub), 0, f"Domain '{d}' must be present in demographics table.")
+            self.assertEqual(sub['Current Users Count (n=807)'].sum(), 807, f"{d} active count sum != 807")
+            self.assertEqual(sub['Previous Users Count (n=80)'].sum(), 80, f"{d} previous count sum != 80")
+            self.assertEqual(sub['Never Users Count (n=376)'].sum(), 376, f"{d} never count sum != 376")
+            self.assertEqual(sub['Total Count (N=1263)'].sum(), 1263, f"{d} total count sum != 1263")
+
+    def test_association_interpretations_neutrality_and_multiple_testing(self):
+        """
+        Validates that generated association interpretations:
+        - Do not declare associations established purely from correlation sign.
+        - Correctly disclose multiple-testing limitation (Bonferroni alpha ~0.0038).
+        - Confirm all 13 tests are non-significant after multiple testing.
+        - Contain neutral operational descriptions.
+        """
+        tpath = os.path.join(DEFAULT_TABLES_DIR, "qa47_cross_tabs_and_associations.csv")
+        tdf = pd.read_csv(tpath)
+        self.assertEqual(len(tdf), 13, "Must test exactly 13 candidate behavioral associations.")
+
+        # All 13 tests must have 'No' for multiple testing significance
+        self.assertTrue((tdf['Significant after Multiple Testing?'] == 'No').all(),
+                        "All 13 associations must be recognized as non-significant after Bonferroni adjustment.")
+
+        # Adjusted alpha must be documented as 0.0038
+        self.assertTrue((tdf['Multiple Testing Adjusted α (m=13)'].astype(str) == '0.0038').all(),
+                        "Bonferroni adjusted alpha must be 0.0038.")
+
+        # Ensure no unsupported churn/proven loyalty claims in substantive interpretation
+        unsupported_terms = ["severe churn risk", "purely subsidy-driven", "proven loyal", "discount-dependent"]
+        for interp in tdf['Substantive Interpretation']:
+            interp_lower = interp.lower()
+            for term in unsupported_terms:
+                self.assertNotIn(term, interp_lower, f"Unsupported term '{term}' found in interpretation: {interp}")
+            self.assertIn("inconclusive", interp_lower,
+                          f"Non-significant test must be described as inconclusive: {interp}")
 
     def test_qa48_table_denominators(self):
         """Validates that QA 48 barrier comparison table uses denominators 376 and 80."""
@@ -195,6 +341,8 @@ class TestAggregateOutputIntegrity(unittest.TestCase):
         # Ensure all percentage point differences and Fisher p-values are populated
         self.assertTrue(tdf['Percentage Point Difference (Prev - Nev)'].notna().all())
         self.assertTrue(tdf['Fisher Exact p-value'].notna().all())
+        # Ensure exploratory methodological note is present
+        self.assertTrue(tdf['Exploratory Methodological Note'].notna().all())
 
 
 class TestErrorHandlingAndEdgeCases(unittest.TestCase):
@@ -204,6 +352,21 @@ class TestErrorHandlingAndEdgeCases(unittest.TestCase):
         """Non-existent survey file must raise FileNotFoundError."""
         with self.assertRaises(FileNotFoundError):
             load_and_preprocess_data("non_existent_file.xlsx", "Data")
+
+    def test_unexpected_dimensions_raises_error(self):
+        """Dataset with wrong row count must raise ValueError."""
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tf:
+            temp_path = tf.name
+        try:
+            # Write a dummy Excel with incorrect dimensions (10 rows x 5 cols)
+            dummy_df = pd.DataFrame(np.zeros((10, 5)))
+            dummy_df.to_excel(temp_path, sheet_name="Data", index=False)
+            with self.assertRaises(ValueError):
+                load_and_preprocess_data(temp_path, "Data")
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
 
 if __name__ == "__main__":

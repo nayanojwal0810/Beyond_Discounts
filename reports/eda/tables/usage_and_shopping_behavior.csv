@@ -1,38 +1,49 @@
 Behavioral Domain,Code,Response Category,Count,Percentage (%),Denominator
 Order Frequency (QA 15),2,Less than once a month,87,10.78,807
-Order Frequency (QA 15),3,2–3 times a month,206,25.53,807
-Order Frequency (QA 15),4,Once or twice a week,204,25.28,807
-Order Frequency (QA 15),5,Almost daily / 3+ times a week,177,21.93,807
-Usage Duration (QA 13),1,Less than 3 months,0,0.0,807
-Usage Duration (QA 13),2,3–6 months,77,9.54,807
-Usage Duration (QA 13),3,6–12 months,118,14.62,807
-Usage Duration (QA 13),4,More than 1 year,160,19.83,807
-Items per Order (QA 19),1,1–2 items,67,8.3,807
-Items per Order (QA 19),2,3–5 items,298,36.93,807
-Items per Order (QA 19),3,6–10 items,207,25.65,807
-Items per Order (QA 19),4,More than 10 items,105,13.01,807
-Order Spend INR (QA 25),1,Under ₹200,94,11.65,807
-Order Spend INR (QA 25),2,₹200–₹499,243,30.11,807
-Order Spend INR (QA 25),3,₹500–₹999,202,25.03,807
-Order Spend INR (QA 25),4,"₹1,000–₹1,999",117,14.5,807
-Order Spend INR (QA 25),5,"₹2,000 or more",69,8.55,807
-Monthly Spend INR (QA 26 - Current Users),2,"Under ₹1,000",178,22.06,807
+Order Frequency (QA 15),3,1–3 times a month,206,25.53,807
+Order Frequency (QA 15),4,About once a week,204,25.28,807
+Order Frequency (QA 15),5,2–3 times a week,177,21.93,807
+Order Frequency (QA 15),6,4–6 times a week,91,11.28,807
+Order Frequency (QA 15),7,Daily or almost daily,42,5.2,807
+Usage Duration (QA 13),2,Less than 3 months,77,9.54,807
+Usage Duration (QA 13),3,3–6 months,118,14.62,807
+Usage Duration (QA 13),4,7–12 months,160,19.83,807
+Usage Duration (QA 13),5,1–2 years,238,29.49,807
+Usage Duration (QA 13),6,More than 2 years,214,26.52,807
+Items per Order (QA 19),1,1 item,67,8.3,807
+Items per Order (QA 19),2,2–3 items,298,36.93,807
+Items per Order (QA 19),3,4–5 items,207,25.65,807
+Items per Order (QA 19),4,6–10 items,105,13.01,807
+Items per Order (QA 19),5,More than 10 items,30,3.72,807
+Items per Order (QA 19),6,Varies considerably,100,12.39,807
+Expected Delivery Time (QA 20),1,10 minutes or less,148,18.34,807
+Expected Delivery Time (QA 20),2,11–20 minutes,292,36.18,807
+Expected Delivery Time (QA 20),3,21–30 minutes,199,24.66,807
+Expected Delivery Time (QA 20),4,31–45 minutes,75,9.29,807
+Expected Delivery Time (QA 20),5,More than 45 minutes is acceptable,25,3.1,807
+Expected Delivery Time (QA 20),6,I do not have a specific expectation,68,8.43,807
+Order Spend INR (QA 25),1,Below ₹200,94,11.65,807
+Order Spend INR (QA 25),2,₹200–₹399,243,30.11,807
+Order Spend INR (QA 25),3,₹400–₹599,202,25.03,807
+Order Spend INR (QA 25),4,₹600–₹799,117,14.5,807
+Order Spend INR (QA 25),5,₹800–₹999,69,8.55,807
+Order Spend INR (QA 25),6,"₹1,000–₹1,499",56,6.94,807
+Order Spend INR (QA 25),7,"₹1,500 or above",26,3.22,807
+Monthly Spend INR (QA 26 - Current Users),2,"Below ₹1,000",178,22.06,807
 Monthly Spend INR (QA 26 - Current Users),3,"₹1,000–₹2,499",230,28.5,807
 Monthly Spend INR (QA 26 - Current Users),4,"₹2,500–₹4,999",195,24.16,807
-Monthly Spend INR (QA 26 - Current Users),5,"₹5,000–₹9,999",114,14.13,807
-Monthly Spend INR (QA 26 - Current Users),6,"₹10,000–₹19,999",40,4.96,807
-Monthly Spend INR (QA 26 - Current Users),7,"₹20,000 or more",26,3.22,807
-Expected Delivery Time (QA 20),1,Under 10 minutes,148,18.34,807
-Expected Delivery Time (QA 20),2,10–15 minutes,292,36.18,807
-Expected Delivery Time (QA 20),3,15–30 minutes,199,24.66,807
-Expected Delivery Time (QA 20),4,30–60 minutes,75,9.29,807
-Shopping Routine Role (QA 43 - Current Users),1,Primary mode for groceries/daily essentials,60,7.43,807
-Shopping Routine Role (QA 43 - Current Users),2,Secondary mode alongside physical stores,164,20.32,807
-Shopping Routine Role (QA 43 - Current Users),3,Used only for emergency / last-minute needs,308,38.17,807
-Shopping Routine Role (QA 43 - Current Users),4,Used occasionally for special treats/cravings,159,19.7,807
-Shopping Routine Role (QA 43 - Current Users),5,Rarely used,116,14.37,807
-Payment Method (QA 30),1,"UPI (Google Pay, PhonePe, Paytm)",555,68.77,807
-Payment Method (QA 30),2,Credit / Debit Card,55,6.82,807
-Payment Method (QA 30),3,Cash on Delivery (COD),98,12.14,807
-Payment Method (QA 30),4,Net Banking,52,6.44,807
-Payment Method (QA 30),5,Digital Wallets / BNPL,34,4.21,807
+Monthly Spend INR (QA 26 - Current Users),5,"₹5,000–₹7,499",114,14.13,807
+Monthly Spend INR (QA 26 - Current Users),6,"₹7,500–₹9,999",40,4.96,807
+Monthly Spend INR (QA 26 - Current Users),7,"₹10,000 or above",26,3.22,807
+Monthly Spend INR (QA 26 - Current Users),8,Not sure,24,2.97,807
+Shopping Routine Role (QA 43 - Current Users),1,It has replaced a large part of my regular shopping,60,7.43,807
+Shopping Routine Role (QA 43 - Current Users),2,It has replaced some regular shopping,164,20.32,807
+Shopping Routine Role (QA 43 - Current Users),3,It is mainly used for top-up purchases,308,38.17,807
+Shopping Routine Role (QA 43 - Current Users),4,It is mainly used for emergencies / urgent needs,159,19.7,807
+Shopping Routine Role (QA 43 - Current Users),5,It is used occasionally for offers / convenience,116,14.37,807
+Payment Method (QA 30),1,UPI,555,68.77,807
+Payment Method (QA 30),2,Debit card,55,6.82,807
+Payment Method (QA 30),3,Credit card,98,12.14,807
+Payment Method (QA 30),4,Digital wallet,52,6.44,807
+Payment Method (QA 30),5,Cash on delivery,34,4.21,807
+Payment Method (QA 30),6,Pay later / BNPL,13,1.61,807
