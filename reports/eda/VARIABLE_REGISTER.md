@@ -1,5 +1,8 @@
 # Variable & Question Register: Indian Quick-Commerce Survey
 
+> **Stage / interpretation note (17 Oct 2026):** This is the Gate 1A EDA artifact, retained as the historical descriptive-data stage. Its early research-question wording and conceptual persona/action hypotheses are not final findings. Gate 1C's later exploratory clustering results do not justify hard persona targeting; the current controlling decision is the lifecycle-first CRM analysis in [Gate 1D plan](../crm/CRM_DECISION_ANALYSIS_PLAN.md) and the technical gate record in [Gate 1C.1](../../docs/gates/GATE_1C1_TECHNICAL_REVIEW.md). Interpret QA46/QA47 as stated intentions, not behavior or price elasticity.
+
+
 **Canonical Project Title:** *Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce*
 **Controlling Dataset:** `data/raw/survey/Data.xlsx` (Worksheet `Data`, 1,263 rows × 130 columns)
 **Primary Instrument:** `data/raw/survey/Code Book.docx` & `data/raw/survey/Questionairre.docx` (Chandra, Mendeley Data, DOI: `10.17632/cw88nb7822.1`)
@@ -14,7 +17,7 @@ All analytical calculations must respect the respondent eligibility boundaries e
 | Subgroup Identifier | Eligibility Criteria / Logical Predicate | Subgroup Size ($n$) | Population Share (%) | Applicable Questions | Key Routing Restrictions |
 | :--- | :--- | :---: | :---: | :--- | :--- |
 | **All Respondents** | Full Survey Manifest ($N=1,263$) | 1,263 | 100.0% | QA 1–12, 15, 24, 26, 43, 46, 49 | Demographics, platform awareness/trial, offline preferences, spend tier, future intent, preferred improvements. |
-| **Current Active Users** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.89% | QA 13–45, 46, **47**, 49 | **QA 47 substantive Likert (1–5)**; QA 48 holds binary indicator `Reason Not Applicable Current User == 1` (QA 48 option 11). |
+| **Current-User Cohort** | `Ever Ordered == 1` AND `Order Frequency > 1` | 807 | 63.89% | QA 13–45, 46, **47**, 49 | **QA 47 substantive Likert (1–5)**; QA 48 holds binary indicator `Reason Not Applicable Current User == 1` (QA 48 option 11). |
 | **Non-Current Users** | `Ever Ordered == 0` OR (`Ever Ordered == 1` AND `Order Frequency == 1`) | 456 | 36.11% | QA 1–12, 15, 24, 26, 43, 46, **48**, 49 | **QA 48 substantive barrier multi-responses**; **QA 47 coded 6 (Not Applicable)**; historical satisfaction unobserved. |
 | ↳ *Never-Users* | `Ever Ordered == 0` AND `Order Frequency == 1 (Never)` | 376 | 29.77% | QA 1–12, 15, 24, 26, 43, 46, 48, 49 | QA 13–23, 25, 27–42, 44–45, 47 hold codebook N/A skip codes. |
 | ↳ *Previous Users* | `Ever Ordered == 1` AND `Order Frequency == 1 (Never)` | 80 | 6.33% | QA 1–14, 15, 24, 26, 43, 46, 48, 49 | Retains historical tenure/trial memory; **QA 36–40 (satisfaction/problems) unobserved (coded N/A)**. |

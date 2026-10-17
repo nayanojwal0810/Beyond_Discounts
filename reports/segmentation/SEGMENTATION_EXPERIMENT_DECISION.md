@@ -2,36 +2,38 @@
 
 **Project:** Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce  
 **Repository:** [nayanojwal0810/Beyond_Discounts](https://github.com/nayanojwal0810/Beyond_Discounts)  
-**Branch:** `main`  
+**Branch:** `review/gate-1c1-crm-decision`  
 **Gate:** Gate 1C — Controlled Mixed-Data Customer Segmentation Experiment
-**Status:** COMPLETE / AUDITED / AWAITING PRINCIPAL REVIEW
+**Status:** PRELIMINARY AGGREGATES FROM PRIOR RUN — GATE 1C.1 OPEN; revised code must be rerun
 
 ---
 
 ## 1. Executive Summary & Core Research Question
 
-Gate 1C tests whether the prepared survey data ($N = 1,263$ total; $n = 807$ verified current active quick-commerce users) supports stable, useful, and interpretable customer segments, answering the central research question:
+The original Gate 1C experiment tested whether the questionnaire-defined current-user cohort ($n=807$) could be usefully partitioned. The aggregate figures below are from the previously committed run and have not yet been regenerated with the current branch fixes. The project's primary research question is now lifecycle-based:
 
-> *Do current active quick-commerce users differ in their behaviour and attitudes in ways that correspond to different stated continuation intentions if discounts are reduced?*
+> *Which lifecycle-based CRM actions are best supported by the observed sample's stated future-use intentions, discount-reduction continuation intentions, non-use barriers, and preferred service improvements?*
+>
+> *Do exploratory behavioral clusters add actionable differentiation beyond lifecycle cohorts?*
 
 ### Scope and Population Boundaries
-- **Clustering Population:** Exactly $n = 807$ verified active quick-commerce users ($\text{QA 10} = 1 \text{ [Ever Ordered]} \land \text{QA 15} \in [2, 7] \text{ [Current Frequency] > Never}$).
+- **Clustering Population:** Exactly $n = 807$ respondents in the questionnaire-defined current-user cohort ($\text{QA 10} = 1 \text{ [Ever Ordered]} \land \text{QA 15} \in [2, 7] \text{ [Current Frequency] > Never}$).
 - **Excluded Subgroups:** Never-users ($n = 376$) and previous users ($n = 80$) remain separate descriptive populations and are strictly excluded from clustering inputs.
 - **Empirical Boundaries:** Data is cross-sectional survey responses reflecting stated perceptions and intentions. It contains no transaction telemetry, repeat-purchase logs, or observed churn. No causal claims are asserted.
 
 ---
 
-## 2. Definitive Methodological Decision: Provisionally Usable Only
+## 2. Methodological Decision: Exploratory Only; Not Approved for CRM Targeting
 
 Based on the joint evaluation of internal cluster cohesion, subsampling stability distributions, cluster sizes, and external validation evidence:
 
-> **DECISION:** **The customer segmentation is ONLY PROVISIONALLY USABLE as exploratory behavioral archetypes, and is NOT a dependable, hard customer partition.**
+> **DECISION:** **Do not use the current hard clusters as operational CRM segments.** They may be retained as an exploratory method comparison only. The primary CRM analysis will use questionnaire-defined lifecycle cohorts and stated-intention / preference measures.
 
 ### Supporting Evidence for the Decision:
 1. **Weak Internal Separation:** In the selected Specification A, PAM $k=4$ solution, the average silhouette width is **$0.0500$**, with **$20.20\%$ negative silhouette observations** ($163$ out of $807$ respondents). Clusters exhibit substantial geometric overlap in the high-dimensional mixed-data space rather than distinct, isolated groupings.
 2. **Fragile Subsampling Stability:** While the median Adjusted Rand Index (ARI) across 20 repeated 80% subsamples is **$0.6787$**, **8 of 20 subsamples ($40.0\%$) produce an ARI below $0.50$**, with a minimum ARI of **$0.2853$** and standard deviation of **$0.2771$**. When the respondent pool is perturbed by 20%, cluster assignments change substantially in 40% of cases.
-3. **Orthogonality of Stated Discount Continuation (QA 47):** Clusters formed from general quick-commerce shopping habits (Specification A) exhibit **zero statistically significant divergence** in stated willingness to continue if discounts are reduced ($H = 0.0364, p = 0.9982, \text{Holm } p = 1.0000, \epsilon^2 = 0.0000$). Cluster means are practically identical: $3.440, 3.438, 3.458, 3.447$. General behavioral habits cannot serve as an organic proxy for stated price sensitivity.
-4. **Non-Significant Stated Future Intent (QA 46):** While held-out stated 3-month use intention (QA 46) shows raw variation ($H = 8.3952, p_{\text{raw}} = 0.0385$), after family-wise Holm-Bonferroni correction across the 4 candidate $k$ comparisons, the difference is **not statistically significant** ($p_{\text{Holm}} = 0.1541, \epsilon^2 = 0.0067$).
+3. **No detectable QA47 difference in the current Spec A test:** The current committed output shows very similar cluster means ($3.440, 3.438, 3.458, 3.447$), with Kruskal–Wallis $H=0.0364$, raw $p=0.9982$, Holm-adjusted $p=1.0000$, and reported $\epsilon^2=0.0000$. This is evidence that this particular solution did not differentiate QA47 in this sample; it is **not** a formal equivalence test and does not prove behavioral factors are unrelated to continuation intention in every model.
+4. **QA46 result does not survive correction:** The previous aggregate report recorded raw $p=0.0385$, Holm-adjusted $p=0.1541$, and $\epsilon^2=0.0067$. The current conclusion is that the evidence was insufficient to establish a difference after the predeclared correction; this is not proof of equal future-use intentions.
 
 ---
 
@@ -49,6 +51,8 @@ Before clustering, the distance implementation was hardened with fail-fast valid
 | **Min / Max Pairwise Denominator** | $15.00$ / $15.00$ | $16.00$ / $16.00$ | Invariant across all pairs |
 | **Zero-Denominator Pairs Count** | $0$ ($0.0\%$) | $0$ ($0.0\%$) | PASS |
 | **Matrix Status** | **VALID** | **VALID** | Approved for clustering |
+
+**Denominator note:** the 17/18 feature columns represent 15/16 effective constructs because QA19 basket size and QA26 monthly spend each use a paired representation: an ordinal rank when defined, or a special-response flag when the ordinal rank is undefined. The paired flag is asymmetric and joint absence is omitted. Consequently, the reported constant denominators of 15/16 are consistent with the intended effective-construct weighting; they are not an unexplained loss of two ordinary features.
 
 ---
 
@@ -109,9 +113,9 @@ External validation was evaluated against held-out variables across candidate $k
 
 | Spec | $k$ | Variable | Status | Test Method | $H$ Stat | Raw $p$ | Bonf $p$ | Holm $p$ | $\epsilon^2$ | Interpretation |
 | :--- | :---: | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **SPEC_A** | **4** | **QA 47 Continue If Discounts Reduced** | **Independent Validation Benchmark** | Kruskal-Wallis | **$0.0364$** | **$0.9982$** | **$1.0000$** | **$1.0000$** | **$0.0000$** | **Homogeneous across clusters (No divergence)** |
+| **SPEC_A** | **4** | **QA 47 Continue If Discounts Reduced** | **Independent stated-intention benchmark** | Kruskal-Wallis | **$0.0364$** | **$0.9982$** | **$1.0000$** | **$1.0000$** | **$0.0000$** | **No detectable difference; equivalence not established** |
 | SPEC_A | 4 | QA 46 Next 3 Month Use | Stated Future Intent Benchmark | Kruskal-Wallis | $8.3952$ | $0.0385$ | $0.1541$ | $0.1541$ | $0.0067$ | Non-significant after Holm-Bonferroni correction |
-| **SPEC_B** | **4** | **QA 47 Continue If Discounts Reduced** | **Construct-Defining Input** | Kruskal-Wallis | **$104.75$** | **$0.0000$** | **$0.0000$** | **$0.0000$** | **$0.1267$** | **Significant by construction (descriptive only)** |
+| **SPEC_B** | **4** | **QA 47 Continue If Discounts Reduced** | **Construct-defining input** | Kruskal-Wallis | **$104.75$** | **Reported as 0.0000 after prior rounding** | **Reported as 0.0000 after prior rounding** | **Reported as 0.0000 after prior rounding** | **$0.1267$** | **Circular/construct-defining; exact p-values must be regenerated** |
 | SPEC_B | 4 | QA 46 Next 3 Month Use | Stated Future Intent Benchmark | Kruskal-Wallis | $4.2348$ | $0.2372$ | $0.9488$ | $0.6293$ | $0.0015$ | Non-significant after Holm-Bonferroni correction |
 
 ### Held-Out Means for Selected Specification A ($k=4$):
@@ -120,7 +124,7 @@ External validation was evaluated against held-out variables across candidate $k
   - Cluster 1: $3.438$
   - Cluster 2: $3.458$
   - Cluster 3: $3.447$
-  - *Result:* Difference across clusters is $0.020$ on a 5-point scale. Stated discount sensitivity is totally invariant across behavioral segments.
+  - *Interpretation:* The largest gap between these means is only $0.020$ on this 5-point scale in the previously committed output. That test found no detectable difference; without an equivalence margin and an equivalence test, do not conclude that continuation intention is invariant across all behavior-based partitions.
 - **QA 46 Next 3 Month Use (Scale 1–5):**
   - Cluster 0: $3.588$
   - Cluster 1: $3.661$
@@ -130,65 +134,57 @@ External validation was evaluated against held-out variables across candidate $k
 
 ---
 
-## 7. Reconciled Segment Persona Archetypes (Specification A, PAM, $k=4$)
+## 7. Exploratory Cluster Profiles — Not CRM Personas
 
-All persona descriptions are built strictly from `reports/segmentation/cluster_profile_summary.csv` ($N_{\text{active}} = 807$).
+The following values are from the **previously committed aggregate profile table** and must be regenerated after the revised code passes verification. They are retained to show what the clustering produced, not to justify operational targeting. No custom persona names are assigned because the separation is weak and resampling variability is material.
 
-### Reconciliation Table: Cluster Sizes & Key Profile Means
+### Specification A, PAM, k=4 — descriptive profile only
 
-| Metric / Feature | Cluster 0 | Cluster 1 | Cluster 2 | Cluster 3 | Source Column in Profiles |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **Cluster Size ($n$)** | **$243$** | **$224$** | **$179$** | **$161$** | `cluster_size` (Sum = $807$) |
-| **Cluster Proportion** | **$30.11\%$** | **$27.76\%$** | **$22.18\%$** | **$19.95\%$** | `cluster_proportion` (Sum = $1.0000$) |
-| **Order Frequency (Mean)** | $4.28$ | $3.77$ | $4.05$ | $4.49$ | `order_frequency` |
-| **Usage Duration (Mean)** | $4.01$ | $5.09$ | $4.68$ | $4.16$ | `usage_duration` |
-| **Monthly Spend Tier (Mean)** | $2.74$ | $2.14$ | $2.75$ | $2.87$ | `monthly_spend_ordinal` |
-| **Items Per Order (Mean)** | $2.76$ | $2.38$ | $2.72$ | $2.64$ | `items_per_order_ordinal` |
-| **Platforms Used Count (Mean)** | $2.55$ | $2.16$ | $2.37$ | $2.12$ | `platforms_used_count` |
-| **Physical Price Compare (Mean)** | $2.10$ | $3.44$ | $2.90$ | $2.78$ | `compare_physical_prices` |
-| **Platform Price Compare (Mean)** | $3.13$ | $3.09$ | $3.49$ | $3.19$ | `compare_platform_prices` |
-| **Fast Delivery Importance (Mean)** | $3.88$ | $3.49$ | $3.34$ | $3.91$ | `fast_delivery_importance` |
-| **Composite Satisfaction (Mean)** | $3.76$ | $3.89$ | $3.99$ | $3.82$ | `service_satisfaction_composite` |
-| **Discount Overspend (Mean)** | $2.94$ | $3.01$ | $3.04$ | $3.49$ | `discount_overspend` |
-| **Shopping Routine Dominant Category** | Cat 3 ($65.84\%$) | Cat 3 ($63.39\%$) | Cat 2 ($70.39\%$) | Cat 4 ($69.57\%$) | `shopping_routine_role` |
+| Metric / feature | Cluster 0 | Cluster 1 | Cluster 2 | Cluster 3 | Interpretation boundary |
+|---|---:|---:|---:|---:|---|
+| Cluster size | 243 | 224 | 179 | 161 | Adds to 807; not verified customer-list sizes for deployment |
+| Cluster proportion | 30.11% | 27.76% | 22.18% | 19.95% | Sample shares in this particular fitted partition |
+| Order frequency mean (coded ordinal) | 4.28 | 3.77 | 4.05 | 4.49 | Higher codes denote more frequent self-reported ordering |
+| Usage duration mean (coded ordinal) | 4.01 | 5.09 | 4.68 | 4.16 | Survey-coded tenure category; not a transactional tenure measure |
+| Monthly spend tier mean (coded ordinal) | 2.74 | 2.14 | 2.75 | 2.87 | Ordinal code summary, not average rupee spend |
+| Items per order mean (coded ordinal) | 2.76 | 2.38 | 2.72 | 2.64 | Undefined “varies considerably” responses handled separately in distance |
+| Platforms ever used count mean | 2.55 | 2.16 | 2.37 | 2.12 | Historical platform-repertoire breadth; not current loyalty/multi-homing |
+| Physical-store price comparison mean | 2.10 | 3.44 | 2.90 | 2.78 | Self-reported frequency scale |
+| Cross-platform price comparison mean | 3.13 | 3.09 | 3.49 | 3.19 | Self-reported frequency scale |
+| Fast-delivery importance mean | 3.88 | 3.49 | 3.34 | 3.91 | Stated importance, not willingness to pay a measured premium |
+| Service satisfaction composite mean | 3.76 | 3.89 | 3.99 | 3.82 | Category-level service ratings |
+| Discount-induced overspend mean | 2.94 | 3.01 | 3.04 | 3.49 | Self-reported tendency |
+| Dominant shopping-routine code | 3 (65.84%) | 3 (63.39%) | 2 (70.39%) | 4 (69.57%) | Code meanings per the feature spec: 2 = some grocery replacement; 3 = top-up; 4 = urgent/emergency use |
 
-### Substantive Behavioral Persona Archetypes:
+**What may be said:** the fitted clusters show some descriptive differences in the measured feature means. **What may not be said:** that these are validated customer personas, they have distinct QA47 continuation intention, they will respond differently to CRM interventions, or their assignment should determine an individual offer.
 
-1. **Cluster 0: *Multi-App Emergency Fill-in Shoppers* ($n = 243$, $30.11\%$)**
-   - **Routine Role:** $65.84\%$ cite Category 3 (Emergency / fill-in purchases).
-   - **Multi-Homing:** Highest platforms used count (mean $2.55$).
-   - **Price Habits:** Lowest physical store price comparison (mean $2.10$).
-   - **Service Expectations:** Fast delivery importance mean $3.88$; satisfaction mean $3.76$.
-
-2. **Cluster 1: *Long-Tenured Price-Conscious Light Spenders* ($n = 224$, $27.76\%$)**
-   - **Routine Role:** $63.39\%$ cite Category 3 (Emergency / fill-in purchases).
-   - **Tenure & Spend:** Longest usage duration (mean $5.09$); lowest monthly spend ordinal ($2.14$); smallest items per order ($2.38$).
-   - **Price Habits:** Highest physical store price comparison (mean $3.44$); lowest threshold extra item additions ($2.46$).
-   - **Service Expectations:** Fast delivery importance mean $3.49$; satisfaction mean $3.89$.
-
-3. **Cluster 2: *Regular Supplementers & Cross-Platform Comparers* ($n = 179$, $22.18\%$)**
-   - **Routine Role:** $70.39\%$ cite Category 2 (Regular supplement for specific items).
-   - **Price Habits:** Highest cross-platform price comparison (mean $3.49$).
-   - **Service Expectations:** Highest composite satisfaction (mean $3.99$); lowest fast-delivery urgency (mean $3.34$).
-
-4. **Cluster 3: *High-Frequency Busy Convenience Overspenders* ($n = 161$, $19.95\%$)**
-   - **Routine Role:** $69.57\%$ cite Category 4 (Occasional convenience when busy).
-   - **Order Dynamics:** Highest order frequency (mean $4.49$); highest monthly spend tier ($2.87$).
-   - **Discount Reaction:** Highest discount-induced overspending (mean $3.49$); highest unplanned purchases ($3.37$).
-   - **Service Expectations:** Highest fast delivery importance (mean $3.91$); lowest multi-homing ($2.12$).
+Before any further interpretation, the team must (a) regenerate these aggregate statistics from current source data, (b) check feature/category labels against the codebook, (c) add QA49 preference profiles, and (d) show added decision value beyond lifecycle cohorts. Even after that, targeting use would require independent validation and eventually a real campaign experiment.
 
 ---
 
-## 8. Methodological Limitations & Analytical Next Steps
+## 8. Methodological Limitations & Next Gate
 
-### Limitations:
-1. **Clusters Are Overlapping Archetypes, Not Hard Partitions:** Given the silhouette width of $0.0500$ and 40% subsampling instability, these clusters must not be treated as discrete segments for rigid CRM decision logic.
-2. **Discount Sensitivity Is Orthogonal to Behavioral Habits:** In this survey, customers who buy frequently or spend heavily state the same continuation intention if discounts are reduced as light, emergency buyers.
-3. **No Platform Attribution:** Data reflects the quick-commerce industry generally; platform-specific loyalty cannot be inferred.
+### Limitations
+1. **Weak separation and uncertain reproducibility:** Spec A PAM k=4's prior mean silhouette is 0.0500; 20.20% of observations have negative silhouettes. Eight of 20 subsamples had ARI below 0.50. These metrics do not support hard CRM targeting.
+2. **Independent outcome differentiation has not been established:** In the previous run, Spec A k=4 showed no detectable difference in QA47 after the chosen test; QA46 did not survive the family correction. Non-significance is not equivalence.
+3. **QA49 was missing from the earlier committed clustering outputs:** This branch now adds held-out QA49 cluster profiles and fixed-margin Monte Carlo association tests in the generator. The previous CSVs and decision table have not yet been regenerated, so no QA49 cluster conclusion is available until the real-workbook rerun is reviewed.
+4. **No platform attribution or transactional outcomes:** The data are category-level self-report. It contains no verified platform-specific churn, repeat-purchase logs, customer-level transaction RFM/CLV, or causal campaign-uplift outcome.
+5. **Sampling limitations:** The documented sampling frame and recruitment method are unresolved. Interpret estimates as the observed sample, not a nationally representative Indian customer population.
 
-### Methodological Recommendation for Gate 2:
-- Do not build rule-based CRM logic predicated on hard cluster assignment.
-- Treat the 4 clusters provisionally as exploratory customer archetypes.
-- Model price sensitivity (QA 47) and future intent (QA 46) directly using continuous predictive models (e.g., elastic net or gradient boosting) rather than cluster-conditioned averages.
+### Required technical sign-off (Gate 1C.1)
+The revised code now preserves p-value precision through corrections, separates failed subsamples from measured ARI, writes per-seed stability diagnostics, and adds independent QA49 preference profiling with Monte Carlo association testing. These new outputs are not yet available from a verified real-workbook rerun. **Neither the complete suite nor the real-workbook end-to-end rerun has been independently executed by the project lead yet.** Treat all metrics in this report as prior-run output until regenerated.
 
-*No dashboard development, CRM recommendations, or final reports have been initiated. Gate 1C is complete and submitted for Principal Project Lead review.*
+Gate 1C.1 closes only when tests pass; the regenerated run writes and validates stability run diagnostics; p-values and corrections reconcile; all aggregate reports and text reconcile; the QA49 omission is decided/resolved; and raw/row-level data remain outside Git.
+
+### Next approved analytical gate (Gate 1D)
+Proceed with a lifecycle-first CRM evidence analysis, in this order:
+1. QA49 preference distribution overall, by cohort and—among current users—by QA47 intention tier.
+2. QA46 stated future-use comparison across never-users, previous users, and current-user cohort, with effect sizes and confidence intervals.
+3. QA48 multi-response non-use barriers by never/previous-user cohort using uncertainty intervals and appropriate sparse-cell inference.
+4. A pre-specified ordinal-logit model for QA47 among the 807 current-user cohort, including a proportional-odds/parallel-lines diagnostic and a documented alternative only if the assumption fails.
+5. An evidence-tagged decision matrix that separates descriptive findings, adjusted associations, exploratory observations and pilot candidates.
+6. A bounded comparison of whether Spec A clusters add independent QA46/QA49 differentiation beyond lifecycle cohorts. Do not continue testing algorithms to find attractive personas.
+
+Build the dashboard only after Gate 1D outputs and recommendations have been checked. Then write the final report with a critically synthesised 15+ work literature review, transparent method/reporting, limitations and a practical future A/B test plan. The survey can nominate candidate interventions; only a real experiment with actual transaction outcomes can estimate campaign uplift.
+
+*Current status: revised code and documentation are in a review branch. Gate 1C.1 is OPEN pending automated CI results and a local end-to-end run with the source workbook.*

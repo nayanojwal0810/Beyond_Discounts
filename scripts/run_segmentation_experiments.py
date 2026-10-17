@@ -45,7 +45,7 @@ import json
 import argparse
 import numpy as np
 import pandas as pd
-from scipy.stats import kruskal, chi2_contingency
+from scipy.stats import kruskal, chi2_contingency, random_table
 from sklearn.metrics import silhouette_score, silhouette_samples, adjusted_rand_score
 from sklearn.cluster import AgglomerativeClustering
 
@@ -81,6 +81,7 @@ def parse_arguments(args=None):
     parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="Path to processed data directory.")
     parser.add_argument("--subsamples", type=int, default=20, help="Number of subsamples for stability evaluation.")
     parser.add_argument("--subsample-ratio", type=float, default=0.8, help="Subsample ratio for stability evaluation.")
+    parser.add_argument("--validation-resamples", type=int, default=9999, help="Fixed-margin Monte Carlo resamples for QA49 cluster validation (minimum 999).")
     return parser.parse_args(args)
 
 
@@ -315,39 +316,89 @@ def pam_kmedoids(D, k, max_iter=100, initial_medoids=None):
     return medoids, labels, objective
 
 
-def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_base=101):
+def run_subsampling_stability(
+    D, k, n_subsamples=20, subsample_ratio=0.8, seed_base=101, run_records=None
+):
     """
-    Evaluates cluster solution stability via repeated 80% subsampling:
-    - Draws 20 independent subsamples with recorded seeds.
-    - Re-runs PAM on each subsample distance matrix.
-    - Measures Adjusted Rand Index (ARI) on overlapping respondent assignments.
+    Evaluates clustering stability via repeated subsampling without conflating
+    failed computations with measured low stability.
+
+    Successful runs contribute their ARI to the summary. Failed runs are recorded
+    separately, excluded from ARI statistics, and force an INCOMPLETE verdict.
+    If run_records is supplied, append one aggregate diagnostic row per seed;
+    no respondent identifiers or sampled row indices are exported.
     """
+    if not isinstance(n_subsamples, int) or n_subsamples < 1:
+        raise ValueError("n_subsamples must be a positive integer")
+    if not np.isfinite(subsample_ratio) or not (0.0 < subsample_ratio <= 1.0):
+        raise ValueError("subsample_ratio must be in (0, 1]")
+    if D.ndim != 2 or D.shape[0] != D.shape[1]:
+        raise ValueError("D must be a square distance matrix")
+
     n = D.shape[0]
     n_sub = int(round(subsample_ratio * n))
+    if k < 2 or k >= n_sub:
+        raise ValueError(f"k must be between 2 and n_sub-1; got k={k}, n_sub={n_sub}")
+
+    # A baseline is required to define ARI. If this fails, propagate the error:
+    # no stability comparison can be made without a reference partition.
     _, baseline_labels, _ = pam_kmedoids(D, k)
 
     aris = []
-    unstable_runs = 0
-
+    failed_runs = 0
     for idx, seed in enumerate(range(seed_base, seed_base + n_subsamples)):
         rng = np.random.RandomState(seed)
         sub_idx = np.sort(rng.choice(n, size=n_sub, replace=False))
         D_sub = D[np.ix_(sub_idx, sub_idx)]
+        run_record = {
+            "run_index": idx + 1,
+            "seed": int(seed),
+            "sample_size": int(n_sub),
+            "status": "SUCCESS",
+            "ari": None,
+            "error_type": "",
+            "error_message": ""
+        }
 
         try:
             _, sub_labels, _ = pam_kmedoids(D_sub, k)
-            # Compare overlapping points
             ari = float(adjusted_rand_score(baseline_labels[sub_idx], sub_labels))
             aris.append(ari)
-            if ari < 0.50:
-                unstable_runs += 1
-        except Exception:
-            unstable_runs += 1
-            aris.append(0.0)
+            run_record["ari"] = ari
+        except Exception as exc:
+            failed_runs += 1
+            run_record["status"] = "FAILED"
+            run_record["error_type"] = type(exc).__name__
+            run_record["error_message"] = str(exc)[:240]
 
-    aris = np.array(aris)
+        if run_records is not None:
+            run_records.append(run_record)
+
+    successful_runs = len(aris)
+    unstable_runs = sum(ari < 0.50 for ari in aris)
+
+    if not aris:
+        return {
+            "n_subsamples": n_subsamples,
+            "n_successful_runs": 0,
+            "n_failed_runs": failed_runs,
+            "subsample_ratio": subsample_ratio,
+            "seed_policy": f"Deterministic range({seed_base}, {seed_base + n_subsamples})",
+            "median_ari": None,
+            "mean_ari": None,
+            "std_ari": None,
+            "min_ari": None,
+            "max_ari": None,
+            "iqr_ari": None,
+            "unstable_runs_count": 0,
+            "stability_verdict": "FAILED"
+        }
+
+    aris = np.asarray(aris, dtype=float)
     q25, q75 = np.percentile(aris, [25, 75])
-    if np.median(aris) >= 0.70 and unstable_runs == 0:
+    if failed_runs > 0:
+        verdict = "INCOMPLETE"
+    elif np.median(aris) >= 0.70 and unstable_runs == 0:
         verdict = "HIGH_STABILITY"
     elif np.median(aris) >= 0.60:
         verdict = "PROVISIONALLY_STABLE" if unstable_runs > 0 else "STABLE"
@@ -358,6 +409,8 @@ def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_b
 
     return {
         "n_subsamples": n_subsamples,
+        "n_successful_runs": successful_runs,
+        "n_failed_runs": failed_runs,
         "subsample_ratio": subsample_ratio,
         "seed_policy": f"Deterministic range({seed_base}, {seed_base + n_subsamples})",
         "median_ari": round(float(np.median(aris)), 4),
@@ -366,10 +419,9 @@ def run_subsampling_stability(D, k, n_subsamples=20, subsample_ratio=0.8, seed_b
         "min_ari": round(float(np.min(aris)), 4),
         "max_ari": round(float(np.max(aris)), 4),
         "iqr_ari": round(float(q75 - q25), 4),
-        "unstable_runs_count": unstable_runs,
+        "unstable_runs_count": int(unstable_runs),
         "stability_verdict": verdict
     }
-
 
 def compute_cluster_profiles(df, labels, feature_specs, spec_name, algorithm, k):
     """
@@ -476,7 +528,7 @@ def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k):
             "holdout_variable": var_label,
             "test_method": "Kruskal-Wallis H-test",
             "test_statistic": round(float(h_stat), 4),
-            "p_value": round(float(p_raw), 6),
+            "p_value": float(p_raw),
             "bonferroni_p_value": None,
             "holm_bonferroni_p_value": None,
             "correction_family_size": 4,
@@ -488,6 +540,106 @@ def evaluate_external_validation(df_holdout, labels, spec_name, algorithm, k):
         })
 
     return records
+
+
+def evaluate_qa49_preference_profiles(
+    df_holdout, labels, spec_name, algorithm, k, n_resamples=9999, seed=20261017
+):
+    """Profile held-out QA49 preference choices by cluster and test categorical differentiation."""
+    col = "qa49_preferred_improvement"
+    if col not in df_holdout.columns:
+        return None, []
+    values = pd.to_numeric(df_holdout[col], errors="coerce").to_numpy()
+    labels = np.asarray(labels)
+    if len(values) != len(labels):
+        raise ValueError("QA49 holdout rows do not align with the cluster labels.")
+    if not np.isfinite(values).all() or not np.isin(values, np.arange(1, 11)).all():
+        raise ValueError("QA49 holdout must contain substantive choice codes 1..10.")
+    if n_resamples < 999:
+        raise ValueError("QA49 Monte Carlo inference requires at least 999 resamples.")
+
+    option_labels = {
+        1: "Lower product prices",
+        2: "More discounts and coupons",
+        3: "Lower or no delivery fees",
+        4: "Better product quality and freshness",
+        5: "Wider product range / assortment",
+        6: "More reliable product availability",
+        7: "Faster delivery times",
+        8: "Better refunds / customer support",
+        9: "Service availability in my area",
+        10: "None / I do not intend to use it",
+    }
+    cluster_ids = sorted(np.unique(labels).tolist())
+    codes = np.arange(1, 11)
+    table = np.vstack([
+        np.array([(values[labels == cluster_id] == code).sum() for code in codes], dtype=int)
+        for cluster_id in cluster_ids
+    ])
+    table = table[table.sum(axis=1) > 0, :]
+    table = table[:, table.sum(axis=0) > 0]
+    if table.shape[0] < 2 or table.shape[1] < 2:
+        return {
+            "specification": spec_name, "algorithm": algorithm, "k": k,
+            "holdout_variable": "QA 49 Preferred Improvement",
+            "test_method": "Pearson chi-square with fixed-margin Monte Carlo inference",
+            "test_statistic": np.nan, "p_value": 1.0, "bonferroni_p_value": None,
+            "holm_bonferroni_p_value": None, "correction_family_size": 4,
+            "effect_size_metric": "cramers_v", "effect_size_value": 0.0,
+            "cluster_means_or_proportions": "{}", "substantive_interpretation": "Insufficient non-empty categories for an association test.",
+            "circularity_status": "Independent stated-preference benchmark",
+        }, []
+
+    row_sums, col_sums = table.sum(axis=1), table.sum(axis=0)
+    n = int(table.sum())
+    expected = np.outer(row_sums, col_sums) / n
+    observed_stat = float(np.sum((table - expected) ** 2 / expected))
+    rng = np.random.default_rng(seed)
+    simulated = random_table.rvs(row_sums, col_sums, size=n_resamples, random_state=rng)
+    simulated_stats = np.sum(
+        (simulated - expected[None, :, :]) ** 2 / expected[None, :, :],
+        axis=(1, 2),
+    )
+    p_raw = (int(np.count_nonzero(simulated_stats >= observed_stat - 1e-12)) + 1) / (n_resamples + 1)
+    cramers_v = float(np.sqrt(observed_stat / (n * min(table.shape[0] - 1, table.shape[1] - 1))))
+
+    profile_rows = []
+    profile_json = {}
+    for row_index, cluster_id in enumerate(cluster_ids):
+        cluster_mask = labels == cluster_id
+        cluster_n = int(cluster_mask.sum())
+        profile_json[f"cluster_{cluster_id}"] = {}
+        for code in codes:
+            count = int(np.sum(values[cluster_mask] == code))
+            proportion = count / cluster_n if cluster_n else np.nan
+            profile_json[f"cluster_{cluster_id}"][str(int(code))] = round(float(100 * proportion), 3) if cluster_n else None
+            profile_rows.append({
+                "specification": spec_name,
+                "algorithm": algorithm,
+                "k": int(k),
+                "cluster_id": int(cluster_id),
+                "cluster_size": cluster_n,
+                "cluster_proportion": cluster_n / len(labels),
+                "feature_name": "qa49_preferred_improvement",
+                "response_code": int(code),
+                "response_label": option_labels[int(code)],
+                "count": count,
+                "percent_within_cluster": 100 * proportion if cluster_n else np.nan,
+            })
+
+    record = {
+        "specification": spec_name, "algorithm": algorithm, "k": int(k),
+        "holdout_variable": "QA 49 Preferred Improvement",
+        "test_method": "Pearson chi-square with fixed-margin Monte Carlo inference",
+        "test_statistic": round(observed_stat, 6), "p_value": float(p_raw),
+        "bonferroni_p_value": None, "holm_bonferroni_p_value": None,
+        "correction_family_size": 4, "effect_size_metric": "cramers_v",
+        "effect_size_value": round(cramers_v, 6),
+        "cluster_means_or_proportions": json.dumps(profile_json, sort_keys=True),
+        "substantive_interpretation": "",
+        "circularity_status": "Independent stated-preference benchmark",
+    }
+    return record, profile_rows
 
 
 def apply_multiple_testing_corrections(records):
@@ -518,8 +670,8 @@ def apply_multiple_testing_corrections(records):
             bonf_pvals[idx] = min(1.0, p_raw * m)
 
         for idx, p_raw in items:
-            records[idx]["bonferroni_p_value"] = round(float(bonf_pvals[idx]), 6)
-            records[idx]["holm_bonferroni_p_value"] = round(float(holm_pvals[idx]), 6)
+            records[idx]["bonferroni_p_value"] = float(bonf_pvals[idx])
+            records[idx]["holm_bonferroni_p_value"] = float(holm_pvals[idx])
             records[idx]["correction_family_size"] = m
 
             circ = records[idx]["circularity_status"]
@@ -530,11 +682,11 @@ def apply_multiple_testing_corrections(records):
                 )
             elif p_holm < 0.05:
                 records[idx]["substantive_interpretation"] = (
-                    f"Statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.4f} < 0.05)"
+                    f"Statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.3g} < 0.05)"
                 )
             else:
                 records[idx]["substantive_interpretation"] = (
-                    f"No statistically significant cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.4f} >= 0.05; clusters are homogeneous)"
+                    f"No statistically detectable cluster divergence after Holm-Bonferroni correction (p_holm = {p_holm:.3g} >= 0.05; this is not proof of equivalence)"
                 )
 
     return records
@@ -542,6 +694,8 @@ def apply_multiple_testing_corrections(records):
 
 def run_experiments(args=None):
     parsed = parse_arguments(args)
+    if parsed.validation_resamples < 999:
+        raise ValueError("--validation-resamples must be >= 999.")
     os.makedirs(parsed.reports_dir, exist_ok=True)
     os.makedirs(parsed.data_dir, exist_ok=True)
 
@@ -602,7 +756,9 @@ def run_experiments(args=None):
     candidate_ks = [3, 4, 5, 6]
     metrics_records = []
     stability_records = []
+    stability_run_records = []
     profile_records = []
+    qa49_profile_records = []
     validation_records = []
 
     # Store label assignments locally
@@ -654,7 +810,17 @@ def run_experiments(args=None):
             print(f"  PAM {spec_name} k={k}: sil={sil_avg:.4f}, neg_sil={pct_neg}%, obj={obj:.2f}, sizes={cluster_sizes}, warning={small_warning}")
 
             # Subsampling Stability
-            stab = run_subsampling_stability(D, k, n_subsamples=parsed.subsamples, subsample_ratio=parsed.subsample_ratio)
+            stab_run_batch = []
+            stab = run_subsampling_stability(
+                D, k, n_subsamples=parsed.subsamples,
+                subsample_ratio=parsed.subsample_ratio,
+                run_records=stab_run_batch
+            )
+            for run_rec in stab_run_batch:
+                run_rec["specification"] = spec_name
+                run_rec["algorithm"] = "PAM"
+                run_rec["k"] = k
+            stability_run_records.extend(stab_run_batch)
             stab_rec = dict(stab)
             stab_rec["specification"] = spec_name
             stab_rec["algorithm"] = "PAM"
@@ -669,6 +835,14 @@ def run_experiments(args=None):
             # External Validation
             ext_val = evaluate_external_validation(df_holdout, labels, spec_name, "PAM", k)
             validation_records.extend(ext_val)
+            qa49_validation, qa49_profiles = evaluate_qa49_preference_profiles(
+                df_holdout, labels, spec_name, "PAM", k,
+                n_resamples=parsed.validation_resamples,
+                seed=20261017 + k + (0 if spec_name == "SPEC_A" else 1000)
+            )
+            if qa49_validation is not None:
+                validation_records.append(qa49_validation)
+                qa49_profile_records.extend(qa49_profiles)
 
         # 2. Benchmark Algorithm: HAC Average Linkage
         for k in candidate_ks:
@@ -752,6 +926,12 @@ def run_experiments(args=None):
     stability_df.to_csv(stability_path, index=False)
     print(f"Saved stability summary to: {stability_path} ({len(stability_df)} rows)")
 
+    # One diagnostic row per seed makes the summary independently auditable.
+    stability_runs_df = pd.DataFrame(stability_run_records)
+    stability_runs_path = os.path.join(parsed.reports_dir, "stability_runs.csv")
+    stability_runs_df.to_csv(stability_runs_path, index=False)
+    print(f"Saved stability run diagnostics to: {stability_runs_path} ({len(stability_runs_df)} rows)")
+
     profile_df = pd.DataFrame(profile_records)
     profile_path = os.path.join(parsed.reports_dir, "cluster_profile_summary.csv")
     profile_df.to_csv(profile_path, index=False)
@@ -762,6 +942,11 @@ def run_experiments(args=None):
     validation_path = os.path.join(parsed.reports_dir, "external_validation_summary.csv")
     validation_df.to_csv(validation_path, index=False)
     print(f"Saved external validation summary to: {validation_path} ({len(validation_df)} rows)")
+
+    qa49_profile_path = os.path.join(parsed.reports_dir, "cluster_preferred_improvement_profile.csv")
+    qa49_profile_df = pd.DataFrame(qa49_profile_records)
+    qa49_profile_df.to_csv(qa49_profile_path, index=False)
+    print(f"Saved QA49 cluster preference profile to: {qa49_profile_path} ({len(qa49_profile_df)} rows)")
 
     print("\n[Step 5/5] All experiments and aggregate reports successfully generated.")
     print("=" * 80)

@@ -21,9 +21,12 @@ import unittest
 import os
 import re
 import json
+from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from sklearn.metrics import silhouette_score, silhouette_samples
+
+import scripts.run_segmentation_experiments as segmentation_module
 
 from scripts.run_segmentation_experiments import (
     compute_gower_distance_matrix,
@@ -50,15 +53,74 @@ class TestSegmentationExperiments(unittest.TestCase):
         with open(cls.spec_b_path, "r", encoding="utf-8") as f:
             cls.spec_b = json.load(f)
 
-        cls.df_a = pd.read_csv(cls.mat_a_path)
-        cls.df_b = pd.read_csv(cls.mat_b_path)
-        cls.df_hold = pd.read_csv(cls.holdout_path)
+        cls.using_synthetic_fixture = not all(
+            os.path.exists(path)
+            for path in (cls.mat_a_path, cls.mat_b_path, cls.holdout_path)
+        )
+        if cls.using_synthetic_fixture:
+            # Clean-clone fallback: deterministic synthetic rows test software behavior only.
+            # These rows never reproduce or stand in for the real survey results.
+            cls.df_a, cls.df_b, cls.df_hold = cls._build_synthetic_fixture(
+                cls.spec_a["features"], cls.spec_b["features"], n_rows=80, seed=1907
+            )
+        else:
+            cls.df_a = pd.read_csv(cls.mat_a_path)
+            cls.df_b = pd.read_csv(cls.mat_b_path)
+            cls.df_hold = pd.read_csv(cls.holdout_path)
 
         cls.metrics_csv_path = os.path.join("reports", "segmentation", "clustering_metrics.csv")
         cls.profiles_csv_path = os.path.join("reports", "segmentation", "cluster_profile_summary.csv")
         cls.stability_csv_path = os.path.join("reports", "segmentation", "stability_summary.csv")
+        cls.stability_runs_path = os.path.join("reports", "segmentation", "stability_runs.csv")
         cls.validation_csv_path = os.path.join("reports", "segmentation", "external_validation_summary.csv")
         cls.decision_md_path = os.path.join("reports", "segmentation", "SEGMENTATION_EXPERIMENT_DECISION.md")
+
+    @staticmethod
+    def _build_synthetic_fixture(specs_a, specs_b, n_rows=80, seed=1907):
+        """Build deterministic synthetic inputs for code tests when private survey data is absent."""
+        rng = np.random.RandomState(seed)
+        df_a = pd.DataFrame({"survey_row_id": np.arange(1, n_rows + 1)})
+        for spec in specs_a:
+            name = spec["name"]
+            dtype = spec["data_type"]
+            value_range = spec.get("range", [0, 1])
+            lo, hi = float(value_range[0]), float(value_range[1])
+
+            if dtype == "asymmetric_binary":
+                values = rng.binomial(1, 0.20, size=n_rows).astype(float)
+            elif dtype in ("nominal", "binary", "binary_indicator"):
+                domain = spec.get("active_domain", [int(lo), int(hi)])
+                values = rng.choice(domain, size=n_rows)
+            elif dtype in ("continuous", "continuous_composite"):
+                values = rng.uniform(lo, hi, size=n_rows).astype(float)
+            elif dtype in ("ordinal", "discrete_count"):
+                # Use integer ranks for ordinal/count fields in the synthetic test fixture.
+                values = rng.randint(int(lo), int(hi) + 1, size=n_rows).astype(float)
+            else:
+                raise ValueError(f"Unsupported synthetic fixture type: {dtype}")
+            df_a[name] = values
+
+        # Special categories are paired with their separate indicators as specified by the contract.
+        if "monthly_spend_not_sure" in df_a and "monthly_spend_ordinal" in df_a:
+            df_a.loc[df_a["monthly_spend_not_sure"] == 1, "monthly_spend_ordinal"] = np.nan
+        if "items_varies_considerably" in df_a and "items_per_order_ordinal" in df_a:
+            df_a.loc[df_a["items_varies_considerably"] == 1, "items_per_order_ordinal"] = np.nan
+
+        df_b = df_a.copy()
+        df_b["continue_if_discounts_reduced"] = rng.randint(1, 6, size=n_rows)
+        df_hold = pd.DataFrame({
+            "survey_row_id": np.arange(1, n_rows + 1),
+            "qa47_continue_if_discounts_reduced": rng.randint(1, 6, size=n_rows),
+            "qa46_next_3_month_use": rng.randint(1, 6, size=n_rows),
+            "qa49_preferred_improvement": rng.randint(1, 11, size=n_rows)
+        })
+        expected_a = [item["name"] for item in specs_a]
+        expected_b = [item["name"] for item in specs_b]
+        if list(df_a.columns[1:]) != expected_a:
+            raise AssertionError("Synthetic Spec A columns do not match feature specification")
+        if list(df_b.columns[1:]) != expected_a + ["continue_if_discounts_reduced"]:
+            raise AssertionError("Synthetic Spec B columns do not match feature specification")
+        return df_a, df_b, df_hold
 
     def test_01_feature_spec_exclusions_and_inclusions(self):
         """Verify Spec A excludes QA47, both exclude QA46, Spec B includes QA47."""
@@ -100,6 +162,33 @@ class TestSegmentationExperiments(unittest.TestCase):
         self.assertEqual(audit["matrix_status"], "VALID")
         self.assertEqual(audit["zero_denominator_pairs_count"], 0)
 
+    def test_02b_asymmetric_binary_omits_joint_absence(self):
+        """QA19/QA26-style flags are omitted for (0,0), but count for mismatch/match pairs."""
+        df = pd.DataFrame({
+            "special_flag": [0, 0, 1],
+            "category": [1, 2, 1]
+        })
+        specs = [
+            {"name": "special_flag", "data_type": "asymmetric_binary", "range": [0, 1]},
+            {"name": "category", "data_type": "nominal", "range": [1, 2]}
+        ]
+        D, denom = compute_gower_distance_matrix(df, specs)
+
+        # Rows 0 and 1 both have the asymmetric feature absent, so only the
+        # nominal mismatch contributes (distance 1, denominator 1).
+        self.assertAlmostEqual(D[0, 1], 1.0)
+        self.assertAlmostEqual(denom[0, 1], 1.0)
+
+        # Row 0 vs 2: one flag mismatch and one matching nominal feature.
+        self.assertAlmostEqual(D[0, 2], 0.5)
+        self.assertAlmostEqual(denom[0, 2], 2.0)
+
+        # Row 1 vs 2: both eligible features mismatch.
+        self.assertAlmostEqual(D[1, 2], 1.0)
+        self.assertAlmostEqual(denom[1, 2], 2.0)
+        np.testing.assert_allclose(D, D.T, atol=1e-12)
+        np.testing.assert_allclose(np.diag(D), np.zeros(3), atol=1e-12)
+
     def test_03_pam_deterministic_and_valid_structure(self):
         """Verify PAM BUILD+SWAP converges deterministically and returns valid assignments."""
         sub_df = self.df_a.head(40)
@@ -134,18 +223,94 @@ class TestSegmentationExperiments(unittest.TestCase):
         self.assertGreaterEqual(n_neg, 0)
         self.assertLessEqual(n_neg, 50)
 
+    def test_02c_qa49_cluster_profiles_use_independent_stated_preference(self):
+        """Verify the QA49 cluster profile covers every cluster/choice and returns a bounded association test."""
+        labels = np.arange(len(self.df_hold)) % 4
+        result, profile_rows = segmentation_module.evaluate_qa49_preference_profiles(
+            self.df_hold, labels, "SPEC_A", "PAM", k=4, n_resamples=999, seed=31
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["holdout_variable"], "QA 49 Preferred Improvement")
+        self.assertEqual(result["circularity_status"], "Independent stated-preference benchmark")
+        self.assertTrue(0.0 <= result["p_value"] <= 1.0)
+        self.assertIn("cramers_v", result["effect_size_metric"])
+        self.assertEqual(len(profile_rows), 4 * 10)
+        for cluster_id in range(4):
+            rows = [r for r in profile_rows if r["cluster_id"] == cluster_id]
+            self.assertEqual(len(rows), 10)
+            self.assertAlmostEqual(sum(r["percent_within_cluster"] for r in rows), 100.0, places=5)
+
     def test_05_subsampling_stability_structure(self):
-        """Verify stability pipeline produces valid ARI metrics."""
+        """Verify run-level ARIs reproduce the summary when all subsamples succeed."""
         sub_df = self.df_a.head(50)
         D, _ = compute_gower_distance_matrix(sub_df, self.spec_a["features"])
+        run_rows = []
 
         res = run_subsampling_stability(
-            D, k=3, n_subsamples=3, subsample_ratio=0.8, seed_base=42
+            D, k=3, n_subsamples=3, subsample_ratio=0.8, seed_base=42,
+            run_records=run_rows
         )
         self.assertEqual(res["n_subsamples"], 3)
+        self.assertEqual(res["n_successful_runs"], 3)
+        self.assertEqual(res["n_failed_runs"], 0)
+        self.assertEqual(len(run_rows), 3)
+        self.assertTrue(all(row["status"] == "SUCCESS" for row in run_rows))
+        self.assertTrue(all(-1.0 <= row["ari"] <= 1.0 for row in run_rows))
+        self.assertAlmostEqual(res["median_ari"], round(float(np.median([r["ari"] for r in run_rows])), 4))
         self.assertGreaterEqual(res["median_ari"], -1.0)
         self.assertLessEqual(res["median_ari"], 1.0)
         self.assertIn("stability_verdict", res)
+
+    def test_05b_failed_subsample_is_not_counted_as_zero_ari(self):
+        """A failed resample is logged separately and makes the summary incomplete."""
+        sub_df = self.df_a.head(50)
+        D, _ = compute_gower_distance_matrix(sub_df, self.spec_a["features"])
+        original_pam = segmentation_module.pam_kmedoids
+        calls = {"n": 0}
+
+        def fail_one_subsample(distance_matrix, k, max_iter=100):
+            calls["n"] += 1
+            # Call 1 is the baseline. Fail exactly the second sampled run (call 3).
+            if calls["n"] == 3:
+                raise RuntimeError("synthetic resample failure")
+            return original_pam(distance_matrix, k, max_iter=max_iter)
+
+        run_rows = []
+        with patch.object(segmentation_module, "pam_kmedoids", side_effect=fail_one_subsample):
+            res = run_subsampling_stability(
+                D, k=3, n_subsamples=3, subsample_ratio=0.8, seed_base=42,
+                run_records=run_rows
+            )
+
+        self.assertEqual(res["n_successful_runs"], 2)
+        self.assertEqual(res["n_failed_runs"], 1)
+        self.assertEqual(res["stability_verdict"], "INCOMPLETE")
+        self.assertEqual(run_rows[1]["status"], "FAILED")
+        self.assertEqual(run_rows[1]["error_type"], "RuntimeError")
+        self.assertIsNone(run_rows[1]["ari"])
+        self.assertNotEqual(run_rows[1]["ari"], 0.0)
+
+    def test_05c_multiple_testing_does_not_round_raw_p_values_to_zero(self):
+        """Holm and Bonferroni use unrounded raw p-values and preserve small positive values."""
+        raw_p = [1.2e-12, 1.0e-8, 0.03, 0.20]
+        records = [{
+            "specification": "SPEC_A",
+            "algorithm": "PAM",
+            "holdout_variable": "QA 46",
+            "p_value": p,
+            "circularity_status": "Independent stated-intention benchmark",
+            "substantive_interpretation": ""
+        } for p in raw_p]
+
+        corrected = apply_multiple_testing_corrections(records)
+        by_raw = sorted(corrected, key=lambda row: row["p_value"])
+
+        self.assertGreater(by_raw[0]["p_value"], 0.0)
+        self.assertAlmostEqual(by_raw[0]["p_value"], 1.2e-12)
+        self.assertGreater(by_raw[0]["bonferroni_p_value"], 0.0)
+        self.assertGreater(by_raw[0]["holm_bonferroni_p_value"], 0.0)
+        self.assertAlmostEqual(by_raw[0]["holm_bonferroni_p_value"], 4.8e-12)
+        self.assertAlmostEqual(by_raw[1]["holm_bonferroni_p_value"], 3.0e-8)
 
     def test_06_cluster_profiling_retains_nominal_proportions(self):
         """Verify cluster profiling retains category distributions for nominal features without averaging codes."""
@@ -264,10 +429,7 @@ class TestSegmentationExperiments(unittest.TestCase):
                                    msg=f"Cluster proportions in {spec} {algo} k={k} sum to {sum(props)}, expected ~1.0")
 
     def test_12_reported_stability_summaries_match_saved_results(self):
-        """
-        Regression Test: Verify stability summary statistics are internally valid and match
-        actual calculations across all candidate configurations.
-        """
+        """Validate summary ranges and, when available, reconstruct metrics from run-level ARIs."""
         stab_df = pd.read_csv(self.stability_csv_path)
 
         for _, row in stab_df.iterrows():
@@ -279,44 +441,72 @@ class TestSegmentationExperiments(unittest.TestCase):
             self.assertGreaterEqual(row["unstable_runs_count"], 0)
             self.assertLessEqual(row["unstable_runs_count"], row["n_subsamples"])
 
-        # Specific check for SPEC_A PAM k=4:
-        row_a4 = stab_df[(stab_df["specification"] == "SPEC_A") & (stab_df["k"] == 4)].iloc[0]
-        self.assertEqual(row_a4["median_ari"], 0.6787)
-        self.assertEqual(row_a4["mean_ari"], 0.6425)
-        self.assertEqual(row_a4["min_ari"], 0.2853)
-        self.assertEqual(row_a4["unstable_runs_count"], 8)
-        self.assertEqual(row_a4["stability_verdict"], "PROVISIONALLY_STABLE")
+        # New runs must be reconstructible from one diagnostic row per seed.
+        # Existing committed summaries predate this file; the real-data Gate 1C.1
+        # rerun is required to produce it before that gate can close.
+        if os.path.exists(self.stability_runs_path):
+            runs = pd.read_csv(self.stability_runs_path)
+            required = {"specification", "algorithm", "k", "status", "ari"}
+            self.assertTrue(required.issubset(runs.columns))
+            self.assertEqual(len(runs), int(stab_df["n_subsamples"].sum()))
+            for _, summary in stab_df.iterrows():
+                subset = runs[
+                    (runs["specification"] == summary["specification"]) &
+                    (runs["algorithm"] == summary["algorithm"]) &
+                    (runs["k"] == summary["k"])
+                ]
+                successful = subset[subset["status"] == "SUCCESS"]["ari"].dropna().to_numpy(float)
+                failures = int((subset["status"] == "FAILED").sum())
+                self.assertEqual(len(successful), int(summary["n_successful_runs"]))
+                self.assertEqual(failures, int(summary["n_failed_runs"]))
+                if len(successful):
+                    self.assertAlmostEqual(float(np.median(successful)), float(summary["median_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.mean(successful)), float(summary["mean_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.std(successful)), float(summary["std_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.min(successful)), float(summary["min_ari"]), places=4)
+                    self.assertAlmostEqual(float(np.max(successful)), float(summary["max_ari"]), places=4)
+                    self.assertEqual(int(np.sum(successful < 0.50)), int(summary["unstable_runs_count"]))
 
-    def test_13_persona_feature_claims_match_aggregate_profiles(self):
-        """
-        Regression Test: Persona claims in SEGMENTATION_EXPERIMENT_DECISION.md must strictly match
-        the aggregate profile values in cluster_profile_summary.csv.
-        """
+    def test_13_exploratory_profile_table_matches_aggregates_and_rejects_persona_overclaim(self):
+        """Validate exact profile-to-report mapping and the current no-targeting decision."""
         self.assertTrue(os.path.exists(self.decision_md_path))
         with open(self.decision_md_path, "r", encoding="utf-8") as f:
             md_content = f.read()
+
+        self.assertIn("Exploratory Cluster Profiles — Not CRM Personas", md_content)
+        self.assertIn("Do not use the current hard clusters as operational CRM segments", md_content)
+        self.assertIn("equivalence not established", md_content.lower())
+        self.assertNotIn("Multi-App Emergency Fill-in Shoppers", md_content)
+        self.assertNotIn("Stated discount sensitivity is totally invariant", md_content)
 
         prof_df = pd.read_csv(self.profiles_csv_path)
         sub_prof = prof_df[(prof_df["specification"] == "SPEC_A") &
                            (prof_df["algorithm"] == "PAM") &
                            (prof_df["k"] == 4)]
 
-        # Check cluster sizes: 243, 224, 179, 161
-        expected_sizes = [243, 224, 179, 161]
-        for c, sz in enumerate(expected_sizes):
-            self.assertIn(str(sz), md_content, f"Cluster {c} size {sz} not found in decision report")
+        def parse_report_row(label):
+            prefix = "| " + label + " |"
+            for line in md_content.splitlines():
+                if line.startswith(prefix):
+                    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+            self.fail(f"Could not find exact cluster profile row {label!r}")
 
-        # Check fast_delivery_importance means: [3.88, 3.49, 3.34, 3.91]
-        fast_del = sub_prof[(sub_prof["feature_name"] == "fast_delivery_importance") & (sub_prof["metric_type"] == "mean")]
-        for c in range(4):
-            val = round(fast_del[fast_del["cluster_id"] == c]["metric_value"].iloc[0], 2)
-            self.assertIn(f"{val:.2f}", md_content, f"Fast delivery mean {val:.2f} for cluster {c} missing from report")
+        # Parse report table cells instead of checking values anywhere in the document.
+        size_cells = parse_report_row("Cluster size")
+        self.assertEqual([int(size_cells[i]) for i in range(1, 5)],
+                         [int(sub_prof[sub_prof["cluster_id"] == k]["cluster_size"].iloc[0]) for k in range(4)])
 
-        # Check service_satisfaction_composite means: [3.76, 3.89, 3.99, 3.82]
-        sat = sub_prof[(sub_prof["feature_name"] == "service_satisfaction_composite") & (sub_prof["metric_type"] == "mean")]
-        for c in range(4):
-            val = round(float(sat[sat["cluster_id"] == c]["metric_value"].iloc[0]), 2)
-            self.assertIn(f"{val:.2f}", md_content, f"Satisfaction mean {val:.2f} for cluster {c} missing from report")
+        fast_cells = parse_report_row("Fast-delivery importance mean")
+        fast_del = sub_prof[(sub_prof["feature_name"] == "fast_delivery_importance") &
+                            (sub_prof["metric_type"] == "mean")]
+        self.assertEqual([round(float(fast_cells[i]), 2) for i in range(1, 5)],
+                         [round(float(fast_del[fast_del["cluster_id"] == k]["metric_value"].iloc[0]), 2) for k in range(4)])
+
+        sat_cells = parse_report_row("Service satisfaction composite mean")
+        sat = sub_prof[(sub_prof["feature_name"] == "service_satisfaction_composite") &
+                       (sub_prof["metric_type"] == "mean")]
+        self.assertEqual([round(float(sat_cells[i]), 2) for i in range(1, 5)],
+                         [round(float(sat[sat["cluster_id"] == k]["metric_value"].iloc[0]), 2) for k in range(4)])
 
     def test_14_corrected_p_values_match_multiple_testing_procedure(self):
         """
