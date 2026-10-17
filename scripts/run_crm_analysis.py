@@ -374,11 +374,7 @@ def build_qa49_association_tests(df: pd.DataFrame, *, n_resamples: int, seed: in
     full = pd.crosstab(df["user_subgroup"], df["Improvement"]).reindex(
         index=["Never User", "Previous User", "Current Active User"], columns=list(range(1, 11)), fill_value=0
     )
-    action = pd.crosstab(df["user_subgroup"], df["qa49_action_family"]).reindex(
-        index=["Never User", "Previous User", "Current Active User"],
-        columns=list(QA49_ACTION_FAMILIES.values()), fill_value=0
-    )
-    # Remove repeated column labels produced by mapping 1/2 and 4..9 to the same family.
+    # Build each action-family column once: several QA49 options map to the same family.
     action = pd.DataFrame({family: df.loc[df["qa49_action_family"] == family].groupby("user_subgroup").size()
                            for family in dict.fromkeys(QA49_ACTION_FAMILIES.values())}).reindex(
         index=["Never User", "Previous User", "Current Active User"], fill_value=0
@@ -532,9 +528,6 @@ def fit_qa47_models(df: pd.DataFrame, out_dir: str) -> None:
     y = y.reset_index(drop=True)
     if X.isna().any().any() or not np.isfinite(X.to_numpy(dtype=float)).all():
         raise ValueError("QA47 model features contain missing or non-finite values after documented preprocessing.")
-    if len(y) != 807:
-        raise ValueError(f"Expected 807 current-user records for QA47 model; found {len(y)}.")
-
     model_rows, coefficient_rows, diagnostic_rows, comparison_rows = [], [], [], []
     base_result, base_info = _fit_ordered_model(y, X, distribution="logit", model_name="QA47 ordered logit — prespecified trend model")
     model_rows.append(base_info)
@@ -601,7 +594,8 @@ def fit_qa47_models(df: pd.DataFrame, out_dir: str) -> None:
 
 
 def run_analysis(df: pd.DataFrame, out_dir: str, *, mc_resamples: int = 10000, seed: int = 20261017,
-                 strict: bool = False, skip_model: bool = False) -> dict[str, pd.DataFrame]:
+                 strict: bool = False, skip_model: bool = False,
+                 source_file_name: str = "Data.xlsx") -> dict[str, pd.DataFrame]:
     os.makedirs(out_dir, exist_ok=True)
     data = derive_cohorts(df, strict=strict)
 
@@ -631,7 +625,7 @@ def run_analysis(df: pd.DataFrame, out_dir: str, *, mc_resamples: int = 10000, s
 
     metadata = pd.DataFrame([{
         "analysis_run_utc": datetime.now(timezone.utc).isoformat(),
-        "source_file_name": os.path.basename(DEFAULT_FILE),
+        "source_file_name": os.path.basename(source_file_name),
         "rows": int(len(data)), "columns_in_source": int(len(df.columns)),
         "cohort_never_users": int((data["user_subgroup"] == "Never User").sum()),
         "cohort_previous_users": int((data["user_subgroup"] == "Previous User").sum()),
@@ -665,7 +659,7 @@ def main(args=None) -> int:
     if df.shape != EXPECTED_SHAPE:
         raise ValueError(f"Unexpected workbook shape {df.shape}; expected {EXPECTED_SHAPE}.")
     run_analysis(df, parsed.out_dir, mc_resamples=parsed.mc_resamples, seed=parsed.seed, strict=True,
-                 skip_model=parsed.skip_model)
+                 skip_model=parsed.skip_model, source_file_name=parsed.file)
     print(f"Gate 1D aggregate outputs written to {parsed.out_dir}")
     print("QA46/QA47 are stated intentions, QA48 is stated current non-use, and QA49 is a stated preference.")
     print("No row-level data or respondent assignments are written by this script.")
