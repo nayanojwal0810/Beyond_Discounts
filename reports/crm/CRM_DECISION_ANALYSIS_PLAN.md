@@ -1,6 +1,6 @@
 # Gate 1D — Lifecycle-Based CRM Decision Analysis Plan
 
-**Project:** Beyond Discounts: Customer Segmentation and Retention Strategy for Indian Quick Commerce  
+**Project:** Beyond Discounts: A Lifecycle-Based CRM Decision Framework for Indian Quick Commerce  
 **Status:** Analytical direction approved; implementation drafted in `scripts/run_crm_analysis.py`; synthetic tests pending CI; real-data results not yet produced  
 **Data:** Chandra, *A Large-Scale Survey Dataset on Quick-Commerce Adoption* (Mendeley Data, DOI 10.17632/cw88nb7822.1; repository record declares CC BY 4.0).  
 **Unit of analysis:** One survey respondent.  
