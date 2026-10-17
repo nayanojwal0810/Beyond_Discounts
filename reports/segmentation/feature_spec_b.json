@@ -1,11 +1,11 @@
 {
-  "specification_name": "Specification B: Discount Intention Included",
+  "specification_name": "Specification B: QA47 Construct-Defining Sensitivity Check",
   "specification_code": "SPEC_B",
-  "purpose": "Constructs customer segments by directly embedding stated price elasticity (QA 47 Continue If Discounts Reduced) alongside behavioral and attitudinal features. Generates segments explicitly partitioned by discount sensitivity.",
+  "purpose": "Constructs an explicitly non-independent sensitivity-check partition by including QA 47 stated continuation intention under a hypothetical discount/promotion reduction. Differences on QA 47 are construct-defining, not independent validation.",
   "qa47_status": "INCLUDED as segment-defining feature (feat_18). WARNING: Prohibits treating post-cluster differences in QA 47 as independent external validation.",
   "qa46_status": "EXCLUDED from clustering inputs; reserved as stated future-use intention holdout.",
   "target_population": {
-    "name": "Current Active Quick-Commerce Users",
+    "name": "Current-User Quick-Commerce Cohort",
     "sample_size": 807,
     "filter_rule": "Ever Ordered == 1 and Order Frequency > 1",
     "excluded_groups": [
@@ -324,7 +324,7 @@
         6
       ],
       "special_codes": "None",
-      "description": "Multi-homing footprint count (1 to 6 apps ever used). Captures platform promiscuity vs single-app loyalty."
+      "description": "Count of platforms ever used. Measures historical platform-repertoire breadth; does not establish current multi-homing or loyalty."
     },
     {
       "feature_id": "feat_16",
@@ -387,7 +387,7 @@
         5
       ],
       "special_codes": "Code 6 N/A is absent in active users. Substantive Likert 1=Definitely no to 5=Definitely yes.",
-      "description": "Segment-defining price elasticity feature in Specification B. Stated continuation intention if discounts reduced."
+      "description": "Segment-defining stated continuation-intention feature in Specification B. Measures stated intention if discounts/promotions are reduced; not observed price elasticity."
     }
   ],
   "holdout_and_profiling": {
