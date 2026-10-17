@@ -1,0 +1,10 @@
+# Runtime dependencies for data audit, EDA, mixed-data clustering, and Gate 1D inference.
+# Developed against Python 3.11; keep exact pins until a deliberate dependency update is tested.
+numpy==2.4.6
+pandas==3.0.6
+scipy==1.17.1
+scikit-learn==1.9.1
+statsmodels==0.15.0
+openpyxl==3.1.5
+matplotlib==3.11.2
+seaborn==0.13.2
