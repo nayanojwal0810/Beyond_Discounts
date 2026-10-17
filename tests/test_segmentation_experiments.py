@@ -161,6 +161,33 @@ class TestSegmentationExperiments(unittest.TestCase):
         self.assertEqual(audit["matrix_status"], "VALID")
         self.assertEqual(audit["zero_denominator_pairs_count"], 0)
 
+    def test_02b_asymmetric_binary_omits_joint_absence(self):
+        """QA19/QA26-style flags are omitted for (0,0), but count for mismatch/match pairs."""
+        df = pd.DataFrame({
+            "special_flag": [0, 0, 1],
+            "category": [1, 2, 1]
+        })
+        specs = [
+            {"name": "special_flag", "data_type": "asymmetric_binary", "range": [0, 1]},
+            {"name": "category", "data_type": "nominal", "range": [1, 2]}
+        ]
+        D, denom = compute_gower_distance_matrix(df, specs)
+
+        # Rows 0 and 1 both have the asymmetric feature absent, so only the
+        # nominal mismatch contributes (distance 1, denominator 1).
+        self.assertAlmostEqual(D[0, 1], 1.0)
+        self.assertAlmostEqual(denom[0, 1], 1.0)
+
+        # Row 0 vs 2: one flag mismatch and one matching nominal feature.
+        self.assertAlmostEqual(D[0, 2], 0.5)
+        self.assertAlmostEqual(denom[0, 2], 2.0)
+
+        # Row 1 vs 2: both eligible features mismatch.
+        self.assertAlmostEqual(D[1, 2], 1.0)
+        self.assertAlmostEqual(denom[1, 2], 2.0)
+        np.testing.assert_allclose(D, D.T, atol=1e-12)
+        np.testing.assert_allclose(np.diag(D), np.zeros(3), atol=1e-12)
+
     def test_03_pam_deterministic_and_valid_structure(self):
         """Verify PAM BUILD+SWAP converges deterministically and returns valid assignments."""
         sub_df = self.df_a.head(40)
