@@ -52,6 +52,8 @@ Before clustering, the distance implementation was hardened with fail-fast valid
 | **Zero-Denominator Pairs Count** | $0$ ($0.0\%$) | $0$ ($0.0\%$) | PASS |
 | **Matrix Status** | **VALID** | **VALID** | Approved for clustering |
 
+**Denominator note:** the 17/18 feature columns represent 15/16 effective constructs because QA19 basket size and QA26 monthly spend each use a paired representation: an ordinal rank when defined, or a special-response flag when the ordinal rank is undefined. The paired flag is asymmetric and joint absence is omitted. Consequently, the reported constant denominators of 15/16 are consistent with the intended effective-construct weighting; they are not an unexplained loss of two ordinary features.
+
 ---
 
 ## 4. Candidate Algorithms & Quality Metrics
